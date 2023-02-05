@@ -14,11 +14,8 @@ env:
   GITHUB_OWNER: ${{ secrets.GH_OWNER }}
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
-  tests-matrix:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test-kind: ['lint', 'test', 'build']
     steps:
       - uses: actions/checkout@v3
       - uses: pnpm/action-setup@v2
@@ -31,4 +28,7 @@ jobs:
           cache: 'pnpm'
       - name: install
         run: pnpm install --frozen-lockfile
-      - run: pnpm ${{ matrix.test-kind }}
+      - run: lint
+        run: pnpm lint
+      - name: test
+        run: pnpm test

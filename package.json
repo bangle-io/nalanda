@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "lint": "tsc",
+    "lint": "eslint . & prettier src --check & tsc --noEmit",
     "build": "tsup",
     "format": "prettier src --write"
   },
