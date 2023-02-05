@@ -10,9 +10,6 @@ concurrency:
   group: nalanda-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  GITHUB_OWNER: ${{ secrets.GH_OWNER }}
-  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
   build:
     runs-on: ubuntu-latest
