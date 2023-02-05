@@ -7,6 +7,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
     "noEmit": true,
     "noEmitOnError": false,
     "noFallthroughCasesInSwitch": true,
