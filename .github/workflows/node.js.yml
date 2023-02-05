@@ -34,3 +34,6 @@ jobs:
         run: pnpm test
       - name: buid
         run: pnpm build
+      - name: release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: pnpm semantic-release
