@@ -1,0 +1,34 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [main, test]
+  pull_request:
+    branches: [main, test]
+
+concurrency:
+  group: nalanda-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITHUB_OWNER: ${{ secrets.GH_OWNER }}
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+jobs:
+  tests-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-kind: ['lint', 'test', 'build']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Run test "${{ matrix.test-kind }}"
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+          cache: 'pnpm'
+      - name: install
+        run: pnpm install
+      - run: pnpm ${{ matrix.test-kind }}

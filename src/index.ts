@@ -1,1 +1,1 @@
-export const f = 4;
+export const ok = 4;
