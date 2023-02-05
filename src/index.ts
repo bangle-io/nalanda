@@ -1,1 +1,1 @@
-export const ok = 4;
+export const ok = '';
