@@ -12,4 +12,8 @@ module.exports = {
     project: ['./tsconfig.json'],
     tsconfigRootDir: __dirname,
   },
+  rules: {
+    '@typescript-eslint/no-unsafe-assignment': 'warn',
+    'prefer-const': 'off',
+  },
 };
