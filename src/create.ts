@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 // 3 Generics that are optional
 
 import type { SliceConfig } from './slice';

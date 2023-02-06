@@ -2,6 +2,15 @@ import type { AnySliceBase } from './types';
 
 export const expectType = <Type>(_: Type): void => void 0;
 
+export function assertNotUndefined(
+  value: unknown,
+  message: string,
+): asserts value {
+  if (value === undefined) {
+    throw new Error(`assertion failed: ${message}`);
+  }
+}
+
 export function typed<T>(value: T): T {
   return value;
 }

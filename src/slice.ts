@@ -56,7 +56,7 @@ type ResolvedSelectors<SE extends Record<string, SelectorFn<any, any, any>>> = {
   [K in keyof SE]: SE[K] extends AnyFn ? ReturnType<SE[K]> : never;
 };
 
-export interface SliceConfig {}
+export type SliceConfig = Record<string, never>;
 
 export class Slice<
   K extends string = any,

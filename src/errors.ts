@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
 import type { StoreState } from './state';
 import type { SliceBase } from './types';
 

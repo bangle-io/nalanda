@@ -1,6 +1,6 @@
 // import { actionToActionSnapshot, Slice, SliceKey } from '../slice';
 
-import { expectType } from '../common';
+import { assertNotUndefined, expectType } from '../common';
 import { key, slice } from '../create';
 import type { Slice } from '../slice';
 import { parseRawActions, testOverrideSlice } from '../slice';
@@ -159,7 +159,9 @@ describe('dependencies', () => {
       prev = slice;
     }
 
-    expect([...prev?._flatDependencies!].sort()).toEqual(
+    assertNotUndefined(prev, 'prev should not be undefined');
+
+    expect([...prev._flatDependencies].sort()).toEqual(
       ['g', 'f', 'e', 'd', 'c', 'b', 'a'].sort(),
     );
 
@@ -626,7 +628,7 @@ describe('creating with slice', () => {
     const slice1State = { slice1Count: 3 };
     const slice1 = slice({
       key: key('slice1', dependencies, slice1State, {
-        numSquared(state, storeState) {
+        numSquared: (state, storeState) => {
           // @ts-expect-error - should error since testSlice2 is not a dependency
           testSlice2.getState(storeState);
 

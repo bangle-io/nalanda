@@ -63,15 +63,17 @@ describe('applyTransaction', () => {
 
     expectType<number[]>(mySlice.actions.myAction(5).payload);
     expectType<[number, string, () => void]>(
-      mySlice.actions.action2(5, 'str', () => {}).payload,
+      mySlice.actions.action2(5, 'str', () => {
+        return;
+      }).payload,
     );
 
     expect(mySlice.actions.myAction(5).payload).toEqual([5]);
-    expect(mySlice.actions.action2(5, 'str', () => {}).payload).toEqual([
-      5,
-      'str',
-      expect.any(Function),
-    ]);
+    expect(
+      mySlice.actions.action2(5, 'str', () => {
+        return;
+      }).payload,
+    ).toEqual([5, 'str', expect.any(Function)]);
 
     const newState = state.applyTransaction(mySlice.actions.myAction(5))!;
 
@@ -236,7 +238,9 @@ describe('test override helper', () => {
       key: key('test1', [], { num: 1 }),
       actions: {},
       effects: {
-        update: (sl) => {},
+        update: (sl) => {
+          return;
+        },
       },
     });
 

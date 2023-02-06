@@ -136,6 +136,7 @@ export class SideEffectsManager {
 
   private _debugBeforeQueue(sliceKey: string, actionId: string) {
     if (!this._debug) {
+      return;
     }
     const { record } = this._effects;
 

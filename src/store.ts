@@ -21,7 +21,7 @@ type DispatchTx<TX extends Transaction<any, any>, SB extends AnySliceBase> = (
 
 let counter = 0;
 function incrementalId() {
-  return '' + counter++;
+  return `${counter++}`;
 }
 
 export class Store<SB extends AnySliceBase> {
@@ -38,7 +38,6 @@ export class Store<SB extends AnySliceBase> {
 
       store.updateState(newState, tx);
     },
-    onError = (error) => {},
     scheduler,
     state,
     storeName,
@@ -46,7 +45,6 @@ export class Store<SB extends AnySliceBase> {
   }: {
     disableSideEffects?: boolean;
     dispatchTx?: DispatchTx<Transaction<any, any>, SB>;
-    onError?: (error: Error) => void;
     scheduler?: Scheduler;
     state: StoreState<SB> | StoreStateConfig<SB>;
     storeName: string;
@@ -61,7 +59,6 @@ export class Store<SB extends AnySliceBase> {
       storeName,
       dispatchTx,
       scheduler,
-      onError,
       disableSideEffects,
       debug,
     );
@@ -108,7 +105,6 @@ export class Store<SB extends AnySliceBase> {
     public storeName: string,
     private _dispatchTx: DispatchTx<any, SB>,
     scheduler?: Scheduler,
-    onError?: (error: Error) => void,
     disableSideEffects?: boolean,
     private _debug?: DebugFunc,
   ) {
