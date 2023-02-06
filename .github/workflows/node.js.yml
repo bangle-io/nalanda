@@ -2,9 +2,9 @@ name: Node.js CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, alpha]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, alpha]
 
 concurrency:
   group: nalanda-${{ github.event.pull_request.number || github.ref }}
@@ -32,7 +32,7 @@ jobs:
       - name: buid
         run: pnpm build
       - run: pnpx semantic-release --branches main
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/alpha'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
