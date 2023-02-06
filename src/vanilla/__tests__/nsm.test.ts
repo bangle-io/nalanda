@@ -2,7 +2,7 @@ import { expectType } from '../common';
 import { key, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 import { Store } from '../store';
-import { waitUntil } from '../test-helpers';
+import { waitUntil } from '../../test-helpers';
 import type { RawAction } from '../types';
 
 function sleep(t = 20): Promise<void> {

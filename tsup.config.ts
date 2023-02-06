@@ -7,6 +7,7 @@ export default defineConfig({
     'src/react/index.ts',
     'src/sync/index.ts',
     'src/test-helpers/index.ts',
+    'src/vanilla/index.ts',
   ],
   splitting: true,
   dts: true,
