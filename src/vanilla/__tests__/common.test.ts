@@ -1,4 +1,4 @@
-import { ActionSerializer } from '../sync/action-serializer';
+import { ActionSerializer } from '../../sync/action-serializer';
 import {
   calcDependencies,
   calcReverseDependencies,

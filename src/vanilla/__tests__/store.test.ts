@@ -2,7 +2,7 @@ import { key, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 import { StoreState } from '../state';
 import { ReducedStore, Store } from '../store';
-import { waitUntil } from '../test-helpers';
+import { waitUntil } from '../../test-helpers';
 import {
   TX_META_DISPATCH_SOURCE,
   TX_META_STORE_NAME,

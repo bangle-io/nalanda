@@ -40,6 +40,11 @@
       "types": "./dist/test-helpers/index.d.ts",
       "import": "./dist/test-helpers/index.mjs",
       "require": "./dist/test-helpers/index.js"
+    },
+    "./vanilla": {
+      "types": "./dist/vanilla/index.d.ts",
+      "import": "./dist/vanilla/index.mjs",
+      "require": "./dist/vanilla/index.js"
     }
   },
   "scripts": {

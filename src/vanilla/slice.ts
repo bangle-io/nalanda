@@ -1,4 +1,4 @@
-import { ActionSerializer } from './sync/action-serializer';
+import { ActionSerializer } from '../sync/action-serializer';
 import { mapObjectValues } from './common';
 import type { StoreState } from './state';
 import { Transaction } from './transaction';
