@@ -1,4 +1,4 @@
-import type { ActionSerializer } from './action-serializer';
+import type { ActionSerializer } from './sync/action-serializer';
 import type { Slice } from './slice';
 import type { StoreState } from './state';
 import type { ReducedStore } from './store';

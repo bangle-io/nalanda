@@ -2,10 +2,15 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   format: ['esm', 'cjs'],
-  entry: ['src/index.ts'],
+  entry: [
+    'src/index.ts',
+    'src/react/index.ts',
+    'src/sync/index.ts',
+    'src/test-helpers/index.ts',
+  ],
   splitting: true,
   dts: true,
   clean: true,
   shims: false,
-  external: [],
+  external: ['react', 'zod'],
 });

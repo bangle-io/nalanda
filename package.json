@@ -1,15 +1,45 @@
 {
   "name": "nalanda",
-  "version": "0.0.0-semantic-release",
+  "version": "0.0.0-semantically-release",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "authors": [
+    {
+      "name": "Kushan Joshi",
+      "email": "0o3ko0@gmail.com",
+      "web": "http://github.com/kepta"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bangle-io/nalanda.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bangle-io/nalanda/issues"
+  },
   "exports": {
+    "./package.json": "./package.json",
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.mjs",
+      "require": "./dist/react/index.js"
+    },
+    "./sync": {
+      "types": "./dist/sync/index.d.ts",
+      "import": "./dist/sync/index.mjs",
+      "require": "./dist/sync/index.js"
+    },
+    "./test-helpers": {
+      "types": "./dist/test-helpers/index.d.ts",
+      "import": "./dist/test-helpers/index.mjs",
+      "require": "./dist/test-helpers/index.js"
     }
   },
   "scripts": {
@@ -19,7 +49,6 @@
     "format": "prettier src --write"
   },
   "keywords": [],
-  "author": "",
   "license": "MIT",
   "dependencies": {
     "use-sync-external-store": "^1.2.0"
@@ -27,6 +56,8 @@
   "devDependencies": {
     "@swc/core": "^1.3.32",
     "@swc/jest": "^0.2.24",
+    "@types/react": "^18.0.27",
+    "@types/react-dom": "^18.0.10",
     "@types/jest": "^29.4.0",
     "@typescript-eslint/eslint-plugin": "^5.50.0",
     "@typescript-eslint/parser": "^5.50.0",
@@ -39,8 +70,6 @@
     "zod": "^3.20.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@types/react": "^18.0.27",
-    "@types/react-dom": "^18.0.10",
     "@types/use-sync-external-store": "^0.0.3"
   },
   "prettier": {
@@ -49,5 +78,17 @@
     "quoteProps": "consistent",
     "arrowParens": "always",
     "printWidth": 80
+  },
+  "peerDependencies": {
+    "react": ">=17.0",
+    "zod": ">=3.20.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
   }
 }

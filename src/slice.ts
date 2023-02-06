@@ -1,4 +1,4 @@
-import { ActionSerializer } from './action-serializer';
+import { ActionSerializer } from './sync/action-serializer';
 import { mapObjectValues } from './common';
 import type { StoreState } from './state';
 import { Transaction } from './transaction';
@@ -84,6 +84,7 @@ export class Slice<
       .map((d) => d.fingerPrint)
       .join(',')})`;
     this.actions = parseRawActions(key.key, _rawActions);
+    // TODO decouple from action serializer
     this._actionSerializer = new ActionSerializer(key, _rawActions);
     this._flatDependencies = this.key.dependencies.reduce((acc, dep) => {
       acc.add(dep.key.key);
