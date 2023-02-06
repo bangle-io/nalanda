@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 import { serialAction } from '../action-serializer';
-import { expectType } from '../common';
-import { key, slice } from '../create';
+import { expectType } from '../../common';
+import { key, slice } from '../../create';
 import { zodFindUnsafeTypes } from '../zod';
 
 test('checks work', () => {

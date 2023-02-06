@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'use-sync-external-store';
 import type { Slice } from '../slice';
 import type { Store } from '../store';
 
-export function useSlice2<S extends Slice>(
+export function useSlice<S extends Slice>(
   slice: S,
   store: Store<any>,
 ): S['key']['initState'] {
