@@ -6,20 +6,21 @@ import type { Store } from '../vanilla/store';
 
 const { useSyncExternalStore } = useSyncExternalStoreExports;
 
-export function useSlice<S extends Slice>(
-  slice: S,
-  store: Store<any>,
-): S['key']['initState'] {
-  let data: S['key']['initState'] = useSyncExternalStore(
-    (cb) => {
-      return store._tempRegisterOnChange(cb);
-    },
-    () => {
-      return slice.getState(store?.state);
-    },
-  );
+export function createUseSliceHook<SSL extends Slice>(store: Store<SSL>) {
+  return function useSlice<SL extends Slice>(
+    sl: SL['key']['key'] extends SSL['key']['key'] ? SL : never,
+  ) {
+    const data: SL['key']['initState'] = useSyncExternalStore(
+      (cb) => {
+        return store._tempRegisterOnSyncChange(sl, cb);
+      },
+      () => {
+        return sl.getState(store.state);
+      },
+    );
 
-  useDebugValue(data);
+    useDebugValue(data);
 
-  return data;
+    return data;
+  };
 }

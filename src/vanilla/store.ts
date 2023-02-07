@@ -99,7 +99,6 @@ export class Store<SB extends AnySliceBase> {
 
   private _effectsManager: SideEffectsManager | undefined;
 
-  _tempOnChange = new Set<() => void>();
   constructor(
     public state: StoreState<SB>,
     public storeName: string,
@@ -174,12 +173,12 @@ export class Store<SB extends AnySliceBase> {
     }
   }
 
-  _tempRegisterOnChange(cb: () => void) {
-    this._tempOnChange.add(cb);
-
-    return () => {
-      this._tempOnChange.delete(cb);
-    };
+  // TODO: this will be removed once we have better way of adding dynamic slices
+  _tempRegisterOnSyncChange(sl: Slice, cb: () => void) {
+    return (
+      this._effectsManager?._tempRegisterOnSyncChange(sl.key.key, cb) ||
+      (() => {})
+    );
   }
 }
 
