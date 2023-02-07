@@ -82,6 +82,27 @@ export class SideEffectsManager {
     });
   }
 
+  // TODO: this will be removed once we have better way of adding dynamic slices
+  _tempRegisterOnSyncChange(sliceKey: string, cb: () => void) {
+    let set = this._tempOnSyncChange.get(sliceKey);
+
+    if (!set) {
+      set = new Set();
+      this._tempOnSyncChange.set(sliceKey, set);
+    }
+
+    set.add(cb);
+
+    return () => {
+      set?.delete(cb);
+      if (set?.size === 0) {
+        this._tempOnSyncChange.delete(sliceKey);
+      }
+    };
+  }
+  // TODO: this will be removed once we have better way of adding dynamic slices
+  private _tempOnSyncChange = new Map<string, Set<() => void>>();
+
   queueSideEffectExecution(
     store: Store<any>,
     {
@@ -130,6 +151,13 @@ export class SideEffectsManager {
       // what the user expected.
       queueMicrotask(() => {
         this._runLoop(store);
+      });
+
+      // TODO remove this once we have better way of adding dynamic slices
+      queueMicrotask(() => {
+        this._tempOnSyncChange.get(sliceKey)?.forEach((cb) => {
+          cb();
+        });
       });
     }
   }
