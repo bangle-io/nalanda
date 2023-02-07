@@ -47,6 +47,19 @@ export type InferSliceDep<SL extends AnySliceBase> = SL extends Slice<
 >
   ? DS[number]
   : never;
+export type InferSliceSelector<SL extends AnySliceBase> = SL extends Slice<
+  any,
+  any,
+  any,
+  any,
+  infer SE
+>
+  ? SE
+  : never;
+
+export type InferSliceResolvedState<SL extends AnySliceBase> = SL extends Slice
+  ? ReturnType<SL['resolveState']>
+  : never;
 
 // returns a slice if it is registered in the slice registry
 export type ResolveSliceIfRegistered<
