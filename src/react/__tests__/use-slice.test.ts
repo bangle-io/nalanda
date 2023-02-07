@@ -1,6 +1,10 @@
 import { key, slice, Store } from '../../vanilla';
+import { expectType } from '../../vanilla/common';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { createUseSliceHook } from '../use-slice';
+
+export type IsNeverAny<Type> = true extends false & Type ? never : Type;
+export const isNeverAny = <Type>(_: IsNeverAny<Type>) => {};
 
 const testSlice1 = slice({
   key: key('test-1', [], { num: 4 }),
@@ -15,7 +19,14 @@ const testSlice1 = slice({
 });
 
 const testSlice2 = slice({
-  key: key('test-2', [], { name: 'tame' }),
+  key: key(
+    'test-2',
+    [],
+    { name: 'tame' },
+    {
+      fancy: (state) => state.name.padEnd(10, ' ').toUpperCase(),
+    },
+  ),
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -51,5 +62,21 @@ test.todo('useSlice with store, types are correct', () => {
 
   // @ts-expect-error - should not be able to use a slice that isn't registered
   useSlice(testSlice3);
-  useSlice(testSlice1);
+  let [val] = useSlice(testSlice1);
+
+  isNeverAny(val);
+  expectType<{ num: number }>(val);
+
+  let [val2] = useSlice(testSlice1, (state) => state.num + 1);
+
+  isNeverAny(val2);
+  expectType<number>(val2);
+
+  let [val3] = useSlice(testSlice2, (state) => {
+    expectType<string>(state.fancy);
+    return state.name + state.fancy;
+  });
+
+  isNeverAny(val3);
+  expectType<string>(val3);
 });
