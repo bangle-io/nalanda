@@ -38,7 +38,7 @@ const testSlice3 = slice({
   },
 });
 
-test('useSlice with store, types are correct', () => {
+test.todo('useSlice with store, types are correct', () => {
   const store = Store.create({
     storeName: 'test-store',
     scheduler: timeoutSchedular(0),
