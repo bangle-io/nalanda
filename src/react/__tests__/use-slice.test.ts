@@ -49,7 +49,7 @@ const testSlice3 = slice({
   },
 });
 
-test.todo('useSlice with store, types are correct', () => {
+test.skip('useSlice with store, types are correct', () => {
   const store = Store.create({
     storeName: 'test-store',
     scheduler: timeoutSchedular(0),
