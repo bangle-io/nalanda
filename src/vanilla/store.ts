@@ -1,3 +1,4 @@
+import { uuid } from './common';
 import { CORE_ACTION_ON_READY } from './constants';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
@@ -19,9 +20,11 @@ type DispatchTx<TX extends Transaction<any, any>, SB extends AnySliceBase> = (
   tx: TX,
 ) => void;
 
+const contextId = uuid(6);
+
 let counter = 0;
 function incrementalId() {
-  return `${counter++}`;
+  return `${contextId}-${counter++}`;
 }
 
 export class Store<SB extends AnySliceBase> {

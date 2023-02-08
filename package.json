@@ -1,5 +1,6 @@
 {
   "name": "nalanda",
+  "sideEffects": false,
   "version": "0.0.0-semantically-release",
   "description": "",
   "main": "dist/index.js",

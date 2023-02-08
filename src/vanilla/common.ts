@@ -120,3 +120,7 @@ export function weakCache<T extends object, R>(
 
   return res;
 }
+
+export function uuid(len = 10) {
+  return Math.random().toString(36).substring(2, 15).slice(0, len);
+}
