@@ -70,7 +70,7 @@ describe('store', () => {
 
     myStore.dispatch(tx, 'test-location');
 
-    expect(tx.getMetadata(TX_META_STORE_TX_ID)).toBe('0');
+    expect(tx.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-0')).toBe(true);
     expect(tx.getMetadata(TX_META_STORE_NAME)).toBe('myStore');
     expect(tx.getMetadata(TX_META_DISPATCH_SOURCE)).toBe('test-location');
 
@@ -78,7 +78,7 @@ describe('store', () => {
 
     myStore.dispatch(tx2);
 
-    expect(tx2.getMetadata(TX_META_STORE_TX_ID)).toBe('1');
+    expect(tx2.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-1')).toBe(true);
   });
 
   test('logs', async () => {
@@ -108,7 +108,7 @@ describe('store', () => {
           ],
           "slice": "test-1",
           "store": "myStore",
-          "txId": "2",
+          "txId": "g1wnxp-2",
           "type": "TX",
         },
       ]
