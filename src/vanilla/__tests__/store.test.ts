@@ -96,7 +96,11 @@ describe('store', () => {
 
     myStore.dispatch(testSlice1.actions.increment({ increment: true }));
 
-    expect(log).toMatchInlineSnapshot(`
+    expect(
+      log.map((r) => {
+        return { ...r, txId: 'rand' + r.txId.slice(6) };
+      }),
+    ).toMatchInlineSnapshot(`
       [
         {
           "actionId": "increment",
@@ -108,7 +112,7 @@ describe('store', () => {
           ],
           "slice": "test-1",
           "store": "myStore",
-          "txId": "g1wnxp-2",
+          "txId": "rand-2",
           "type": "TX",
         },
       ]
