@@ -27,7 +27,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "node ./scripts/post-release"
+        "successCmd": "node ./scripts/post-release"
       }
     ],
     "@semantic-release/github"
