@@ -29,10 +29,8 @@ jobs:
         run: pnpm lint
       - name: test
         run: pnpm test
-      - name: buid
+      - name: build
         run: pnpm build
-      - name: prep release
-        run: pnpm node ./scripts/prepare-release.js
       - run: pnpx semantic-release
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/alpha'
         env:

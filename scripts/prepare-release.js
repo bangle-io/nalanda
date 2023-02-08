@@ -47,4 +47,4 @@ fs.writeFileSync(
   newPkgPath,
   JSON.stringify({ ...packageJson, version: nextVersion }, null, 2),
 );
-console.log('\nUPDATING PACKAGE JSON VERSION TO: ', nextVersion);
+console.log('\nUPDATING PACKAGE: ', JSON.stringify(publishPkgJson, null, 2));
