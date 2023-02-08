@@ -23,12 +23,6 @@
     ],
     "@semantic-release/release-notes-generator",
     "@semantic-release/npm",
-    [
-      "@semantic-release/exec",
-      {
-        "successCmd": "node ./scripts/post-release.js ${nextRelease.version}"
-      }
-    ],
     "@semantic-release/changelog",
     [
       "@semantic-release/git",

@@ -23,7 +23,8 @@
     "test": "jest",
     "lint": "eslint . & prettier src --check & tsc --noEmit",
     "build": "tsup",
-    "format": "prettier src --write"
+    "format": "prettier src --write",
+    "postversion": "node ./scripts/post-release.js"
   },
   "keywords": [],
   "license": "MIT",
