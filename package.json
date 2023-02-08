@@ -32,7 +32,7 @@
       "import": "./dist/vanilla/index.mjs",
       "require": "./dist/vanilla/index.js"
     }
-  }
+  },
   "authors": [
     {
       "name": "Kushan Joshi",
