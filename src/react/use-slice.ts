@@ -1,4 +1,4 @@
-import { useDebugValue } from 'react';
+import { useDebugValue, useState } from 'react';
 import useSyncExternalStoreExports from 'use-sync-external-store/shim';
 
 import type { Slice } from '../vanilla/slice';
@@ -19,18 +19,23 @@ export function createUseSliceHook<SSL extends Slice>(store: Store<SSL>) {
     sl: SL['key']['key'] extends SSL['key']['key'] ? SL : never,
     selector?: (p: SL['key']['initState']) => SLS,
   ): [SLS, Store<SSL>['dispatch']] {
-    const data = useSyncExternalStore(
-      (cb) => {
+    const [subscribe] = useState(() => {
+      return (cb: () => void) => {
         return store._tempRegisterOnSyncChange(sl, cb);
-      },
-      () => {
+      };
+    });
+
+    const [snap] = useState(() => {
+      return () => {
         const result = sl.resolveState(store.state);
         if (selector) {
           return selector(result);
         }
         return result;
-      },
-    );
+      };
+    });
+
+    const data = useSyncExternalStore(subscribe, snap);
 
     useDebugValue(data);
 

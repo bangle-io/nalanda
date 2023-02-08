@@ -30,6 +30,8 @@ StoreState {
         "key": "mySlice",
         "selectors": {},
       },
+      "resolveSelectors": [Function],
+      "resolveState": [Function],
     },
   ],
   "opts": undefined,

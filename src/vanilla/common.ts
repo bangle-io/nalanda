@@ -102,3 +102,21 @@ export function calcDependencies(
     ]),
   );
 }
+
+export function weakCache<T extends object, R>(
+  fn: (arg: T) => R,
+): (arg: T) => R {
+  const cache = new WeakMap<T, R>();
+  const res = (arg: T): R => {
+    if (cache.has(arg)) {
+      return cache.get(arg)!;
+    }
+
+    const value = fn(arg);
+    cache.set(arg, value);
+
+    return value;
+  };
+
+  return res;
+}

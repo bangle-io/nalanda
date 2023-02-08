@@ -287,6 +287,7 @@ describe('selectors', () => {
     expect(sliceState.num).toBe(3);
 
     let resolvedSelectors = mySlice.resolveSelectors(state);
+    let resolvedState = mySlice.resolveState(state);
 
     // @ts-expect-error - should not allow access of unknown field in the state
     let testVal1 = resolvedSelectors.xyzWrong;
@@ -294,6 +295,10 @@ describe('selectors', () => {
     expectType<{ numSquared: number }>(resolvedSelectors);
 
     expect(resolvedSelectors.numSquared).toEqual(9);
+
+    // instance should be the same
+    expect(mySlice.resolveSelectors(state)).toBe(resolvedSelectors);
+    expect(mySlice.resolveState(state)).toBe(resolvedState);
   });
 
   test('selectors works with dependencies', () => {
