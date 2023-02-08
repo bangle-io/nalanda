@@ -36,10 +36,7 @@ const publishPkgJson = {
   main: 'dist/index.js',
   module: 'dist/index.mjs',
   types: 'dist/index.d.ts',
-  description: 'update-h',
 };
-
-console.log('\nUPDATING EXPORTS: ', publishPkgJson);
 
 fs.writeFileSync(pkgPath, JSON.stringify(publishPkgJson, null, 2));
 
