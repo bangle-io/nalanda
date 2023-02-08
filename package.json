@@ -2,9 +2,7 @@
   "name": "nalanda",
   "version": "0.0.0-semantically-release",
   "description": "",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "main": "src/index.ts",
   "authors": [
     {
       "name": "Kushan Joshi",
@@ -18,34 +16,6 @@
   },
   "bugs": {
     "url": "https://github.com/bangle-io/nalanda/issues"
-  },
-  "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.mjs",
-      "require": "./dist/react/index.js"
-    },
-    "./sync": {
-      "types": "./dist/sync/index.d.ts",
-      "import": "./dist/sync/index.mjs",
-      "require": "./dist/sync/index.js"
-    },
-    "./test-helpers": {
-      "types": "./dist/test-helpers/index.d.ts",
-      "import": "./dist/test-helpers/index.mjs",
-      "require": "./dist/test-helpers/index.js"
-    },
-    "./vanilla": {
-      "types": "./dist/vanilla/index.d.ts",
-      "import": "./dist/vanilla/index.mjs",
-      "require": "./dist/vanilla/index.js"
-    }
   },
   "scripts": {
     "test": "jest",
@@ -87,6 +57,40 @@
   "peerDependencies": {
     "react": ">=17.0",
     "zod": ">=3.20.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "exports": {
+      "./package.json": "./package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js"
+      },
+      "./react": {
+        "types": "./dist/react/index.d.ts",
+        "import": "./dist/react/index.mjs",
+        "require": "./dist/react/index.js"
+      },
+      "./sync": {
+        "types": "./dist/sync/index.d.ts",
+        "import": "./dist/sync/index.mjs",
+        "require": "./dist/sync/index.js"
+      },
+      "./test-helpers": {
+        "types": "./dist/test-helpers/index.d.ts",
+        "import": "./dist/test-helpers/index.mjs",
+        "require": "./dist/test-helpers/index.js"
+      },
+      "./vanilla": {
+        "types": "./dist/vanilla/index.d.ts",
+        "import": "./dist/vanilla/index.mjs",
+        "require": "./dist/vanilla/index.js"
+      }
+    }
   },
   "peerDependenciesMeta": {
     "react": {

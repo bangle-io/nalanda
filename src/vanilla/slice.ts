@@ -1,5 +1,5 @@
 import { ActionSerializer } from '../sync/action-serializer';
-import { mapObjectValues } from './common';
+import { mapObjectValues, weakCache } from './common';
 import type { StoreState } from './state';
 import { Transaction } from './transaction';
 import type {
@@ -80,6 +80,9 @@ export class Slice<
     public effects: Array<EffectsBase<Slice>>,
     public config: SliceConfig,
   ) {
+    this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
+    this.resolveState = weakCache(this.resolveState.bind(this));
+
     this.fingerPrint = `${key.key}(${(key.dependencies || [])
       .map((d) => d.fingerPrint)
       .join(',')})`;
