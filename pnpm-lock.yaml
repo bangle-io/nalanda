@@ -48,12 +48,12 @@ importers:
       '@types/react': ^18.0.27
       '@types/react-dom': ^18.0.10
       '@vitejs/plugin-react': ^3.1.0
-      nalanda: ^1.0.2
+      nalanda: workspace:*
       react: ^18.2.0
       react-dom: ^18.2.0
       vite: ^4.1.1
     dependencies:
-      nalanda: 1.0.2_react@18.2.0
+      nalanda: link:../..
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
     devDependencies:
@@ -4090,14 +4090,6 @@ packages:
       object-assign: 4.1.1
       thenify-all: 1.6.0
     dev: true
-
-  /nalanda/1.0.2_react@18.2.0:
-    resolution: {integrity: sha512-kDZTv6ZBa/Qk/4dwinGNrqG0kgLOGvnjNI7y2zyk+Uq1Kh+muwffD+T288OVNJa1o6khEUJTanxuLzhlKFQvYA==}
-    dependencies:
-      use-sync-external-store: 1.2.0_react@18.2.0
-    transitivePeerDependencies:
-      - react
-    dev: false
 
   /nanoid/3.3.4:
     resolution: {integrity: sha512-MqBkQh/OHTS2egovRtLk45wEyNXwF+cokD+1YPf9u5VfJiRdAiRwB2froX5Co9Rh20xs4siNPm8naNotSD6RBw==}
