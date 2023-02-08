@@ -24,6 +24,12 @@
     ],
     "@semantic-release/npm",
     "@semantic-release/changelog",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "node ./scripts/post-release"
+      }
+    ],
     "@semantic-release/github"
   ]
 }
