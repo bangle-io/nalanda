@@ -1,8 +1,11 @@
-import { expectType } from '../common';
-import { changeEffect, onceEffect, syncOnceEffect } from '../common-effects';
-import { key, slice } from '../create';
-import { timeoutSchedular } from '../effect';
-import { Store } from '../store';
+import { expectType } from '../../vanilla/common';
+import { changeEffect, onceEffect, syncOnceEffect } from '../index';
+import { key, slice } from '../../vanilla/create';
+import { timeoutSchedular } from '../../vanilla/effect';
+import { Store } from '../../vanilla/store';
+import waitForExpect from 'wait-for-expect';
+waitForExpect.defaults.timeout = 600;
+waitForExpect.defaults.interval = 30;
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
@@ -199,9 +202,9 @@ describe('changeEffect', () => {
       },
     });
 
-    await sleep(20);
-
-    expect(fn).toBeCalledTimes(2);
+    await waitForExpect(() => {
+      expect(fn).toBeCalledTimes(2);
+    });
     expect(fn).nthCalledWith(1, 4);
     // second update is thanks to myEffect
     expect(fn).nthCalledWith(2, 5);
@@ -256,13 +259,9 @@ describe('changeEffect', () => {
         sl2Name: testSlice2.pick((state) => state.name),
         sl1Square: testSlice1.pick((state) => state.numSq),
       },
-      (result, dispatch, signal) => {
+      (result, dispatch) => {
         let count = counter++;
         call.push('run' + count);
-
-        signal.addEventListener('abort', () => {
-          call.push('abort' + count);
-        });
 
         return () => {
           call.push('cleanup' + count);
@@ -278,44 +277,37 @@ describe('changeEffect', () => {
       },
     });
 
-    await sleep(5);
-    expect(call).toMatchInlineSnapshot(`
-      [
-        "run0",
-      ]
-    `);
+    await waitForExpect(() => {
+      expect(call).toEqual(['run0']);
+    });
 
     store.dispatch(testSlice1.actions.increment({ increment: true }));
 
-    await sleep(5);
-
-    expect(call).toMatchInlineSnapshot(`
-      [
-        "run0",
-        "cleanup0",
-        "abort0",
-        "run1",
-      ]
-    `);
+    await waitForExpect(() => {
+      expect(call).toEqual(['run0', 'cleanup0', 'run1']);
+    });
 
     // should still call cleanup only once
     store.dispatch(testSlice1.actions.increment({ increment: true }));
     store.dispatch(testSlice1.actions.increment({ increment: true }));
     store.dispatch(testSlice1.actions.increment({ increment: true }));
 
-    await sleep(5);
+    await waitForExpect(() => {
+      expect(call).toEqual(['run0', 'cleanup0', 'run1', 'cleanup1', 'run2']);
+    });
 
-    expect(call).toMatchInlineSnapshot(`
-      [
-        "run0",
-        "cleanup0",
-        "abort0",
-        "run1",
-        "cleanup1",
-        "abort1",
-        "run2",
-      ]
-    `);
+    store.destroy();
+
+    await waitForExpect(() => {
+      expect(call).toEqual([
+        'run0',
+        'cleanup0',
+        'run1',
+        'cleanup1',
+        'run2',
+        'cleanup2',
+      ]);
+    });
   });
 
   describe('only updates when deps change', () => {
@@ -391,7 +383,7 @@ describe('changeEffect', () => {
       `);
     });
 
-    test('is not called is data does not change', async () => {
+    test('is called once if data does not change', async () => {
       const store = Store.create({
         storeName: 'test-store',
         scheduler: timeoutSchedular(0),
@@ -400,12 +392,13 @@ describe('changeEffect', () => {
         },
       });
 
-      await sleep(5);
-      expect(fn).toBeCalledTimes(1);
+      await waitForExpect(() => {
+        expect(fn).toBeCalledTimes(1);
+      });
 
       store.dispatch(testSlice2.actions.age(0));
 
-      await sleep(5);
+      await sleep(15);
       expect(fn).toBeCalledTimes(1);
     });
   });

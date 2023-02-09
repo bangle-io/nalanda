@@ -1,6 +1,9 @@
 import { key, slice } from '../create';
-import { SyncUpdateEffectHandler } from '../effect';
+import { EffectHandler, timeoutSchedular } from '../effect';
 import { Store } from '../store';
+import waitForExpect from 'wait-for-expect';
+waitForExpect.defaults.timeout = 600;
+waitForExpect.defaults.interval = 30;
 
 const testSlice1 = slice({
   key: key('test-1', [], { num: 4 }),
@@ -38,15 +41,16 @@ const testSlice3 = slice({
   },
 });
 
-test('SyncUpdateEffectHandler works', () => {
+test('EffectHandler works', () => {
   const store = Store.create({
     storeName: 'test-store',
+    scheduler: timeoutSchedular(0),
     state: {
       slices: [testSlice1],
     },
   });
 
-  const effect = new SyncUpdateEffectHandler(
+  const effect = new EffectHandler(
     {
       updateSync: () => {},
     },
@@ -57,7 +61,93 @@ test('SyncUpdateEffectHandler works', () => {
   expect(effect.sliceAndDeps).toEqual([testSlice1]);
 });
 
-test('SyncUpdateEffectHandler with deps', () => {
+describe('init and destroy ', () => {
+  test('init and destroy are called', async () => {
+    const init = jest.fn();
+    const onDestroy = jest.fn();
+    const mySlice = slice({
+      key: key('myslice', [testSlice1], { name: 'tame' }),
+      actions: {},
+      effects: {
+        init,
+        destroy: onDestroy,
+      },
+    });
+
+    const store = Store.create({
+      storeName: 'test-store',
+      state: {
+        slices: [testSlice1, mySlice],
+      },
+    });
+
+    // is not called immediately
+    expect(init).toBeCalledTimes(0);
+
+    await waitForExpect(() => {
+      expect(init).toBeCalledTimes(1);
+    });
+
+    store.destroy();
+
+    expect(onDestroy).toBeCalledTimes(1);
+  });
+
+  test('calls init before update', async () => {
+    let order: string[] = [];
+    const init = jest.fn(() => {
+      order.push('init');
+    });
+    const update = jest.fn(() => {
+      order.push('update');
+    });
+    const updateSync = jest.fn(() => {
+      order.push('updateSync');
+    });
+    const onDestroy = jest.fn(() => {
+      order.push('destroy');
+    });
+    const mySlice = slice({
+      key: key('myslice', [testSlice1], { name: 'tame' }),
+      actions: {
+        lowercase: () => (state) => {
+          return { ...state, name: state.name.toLocaleLowerCase() };
+        },
+      },
+      effects: {
+        init,
+        update: update,
+        updateSync,
+        destroy: onDestroy,
+      },
+    });
+
+    const store = Store.create({
+      storeName: 'test-store',
+      scheduler: timeoutSchedular(0),
+      state: {
+        slices: [testSlice1, mySlice],
+      },
+    });
+    store.dispatch(mySlice.actions.lowercase());
+    // is not called immediately
+    expect(init).toBeCalledTimes(0);
+
+    await waitForExpect(() => {
+      expect(init).toBeCalledTimes(1);
+    });
+
+    await waitForExpect(() => {
+      expect(order).toEqual(['init', 'updateSync', 'update']);
+    });
+
+    store.destroy();
+
+    expect(order).toEqual(['init', 'updateSync', 'update', 'destroy']);
+  });
+});
+
+test('EffectHandler with deps', () => {
   const mySlice = slice({
     key: key('myslice', [testSlice1, testSlice2], { name: 'tame' }),
     actions: {
@@ -73,7 +163,7 @@ test('SyncUpdateEffectHandler with deps', () => {
     },
   });
 
-  const effect = new SyncUpdateEffectHandler(
+  const effect = new EffectHandler(
     {
       updateSync: () => {},
     },

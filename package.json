@@ -39,6 +39,7 @@
     "!**/.gitattributes"
   ],
   "devDependencies": {
+    "wait-for-expect": "^3.0.2",
     "@swc/core": "^1.3.32",
     "@swc/jest": "^0.2.24",
     "@types/react": "^18.0.27",

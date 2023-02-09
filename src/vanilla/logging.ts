@@ -6,7 +6,7 @@ import {
 } from './transaction';
 
 export interface EffectLog {
-  type: 'EFFECT';
+  type: 'SYNC_UPDATE_EFFECT' | 'UPDATE_EFFECT';
   name: string;
   source: Array<{ sliceKey: string; actionId: string }>;
 }
@@ -26,9 +26,9 @@ export function txLog(tx: Transaction<any, any>): TransactionLog {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     slice: tx.sliceKey,
     actionId: tx.actionId,
-    dispatcher: tx.getMetadata(TX_META_DISPATCH_SOURCE),
-    store: tx.getMetadata(TX_META_STORE_NAME),
-    txId: tx.getMetadata(TX_META_STORE_TX_ID),
+    dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
+    store: tx.metadata.getMetadata(TX_META_STORE_NAME),
+    txId: tx.metadata.getMetadata(TX_META_STORE_TX_ID),
     payload: tx.payload,
   };
 }
