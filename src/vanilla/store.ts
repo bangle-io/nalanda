@@ -1,5 +1,4 @@
 import { uuid } from './common';
-import { CORE_ACTION_ON_READY } from './constants';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 import type { DebugFunc } from './logging';
@@ -66,15 +65,6 @@ export class Store<SB extends AnySliceBase> {
       debug,
     );
 
-    // Trigger some core actions
-    for (const slice of state._slices) {
-      let val = (slice as unknown as Slice).actions?.[CORE_ACTION_ON_READY]?.();
-
-      if (val) {
-        store.dispatch(val);
-      }
-    }
-
     return store;
   }
 
@@ -87,11 +77,11 @@ export class Store<SB extends AnySliceBase> {
     }
     // TODO add a check to make sure tx is actually allowed
     // based on the slice dependencies
-    tx.setMetadata(TX_META_STORE_TX_ID, incrementalId());
-    tx.setMetadata(TX_META_STORE_NAME, this.storeName);
+    tx.metadata.setMetadata(TX_META_STORE_TX_ID, incrementalId());
+    tx.metadata.setMetadata(TX_META_STORE_NAME, this.storeName);
 
     if (debugDispatch) {
-      tx.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
+      tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
     }
 
     this._dispatchTx(this, tx);
@@ -117,6 +107,9 @@ export class Store<SB extends AnySliceBase> {
         scheduler,
         this._debug,
       );
+      queueMicrotask(() => {
+        this._effectsManager?.initEffects(this);
+      });
     }
 
     this._abortController.signal.addEventListener(
@@ -136,6 +129,8 @@ export class Store<SB extends AnySliceBase> {
 
   destroy() {
     this._destroyed = true;
+    this._effectsManager?.destroy(this.state);
+    this._effectsManager = undefined;
     this._abortController.abort();
   }
 
@@ -149,12 +144,6 @@ export class Store<SB extends AnySliceBase> {
     debugDispatch?: string,
   ): ReducedStore<SB> {
     return new ReducedStore(this, slices, debugDispatch);
-  }
-
-  onDestroy(cb: () => void) {
-    this._abortController.signal.addEventListener('abort', cb, {
-      once: true,
-    });
   }
 
   updateState(newState: StoreState<SB>, tx?: Transaction<any, any>) {
@@ -191,10 +180,13 @@ export class ReducedStore<SB extends Slice> {
     debugDispatch?: string,
   ) => {
     if (this._debugDispatchSrc) {
-      tx.appendMetadata(TX_META_DISPATCH_SOURCE, this._debugDispatchSrc);
+      tx.metadata.appendMetadata(
+        TX_META_DISPATCH_SOURCE,
+        this._debugDispatchSrc,
+      );
     }
     if (debugDispatch) {
-      tx.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
+      tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
     }
     // TODO add a developer check to make sure tx slice is actually allowed
     this._store.dispatch(tx);
