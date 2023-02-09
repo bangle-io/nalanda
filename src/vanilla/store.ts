@@ -1,5 +1,4 @@
 import { uuid } from './common';
-import { CORE_ACTION_ON_READY } from './constants';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 import type { DebugFunc } from './logging';
@@ -66,15 +65,6 @@ export class Store<SB extends AnySliceBase> {
       debug,
     );
 
-    // Trigger some core actions
-    for (const slice of state._slices) {
-      let val = (slice as unknown as Slice).actions?.[CORE_ACTION_ON_READY]?.();
-
-      if (val) {
-        store.dispatch(val);
-      }
-    }
-
     return store;
   }
 
@@ -117,6 +107,9 @@ export class Store<SB extends AnySliceBase> {
         scheduler,
         this._debug,
       );
+      queueMicrotask(() => {
+        this._effectsManager?.initEffects(this);
+      });
     }
 
     this._abortController.signal.addEventListener(

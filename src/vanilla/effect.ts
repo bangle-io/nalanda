@@ -46,12 +46,18 @@ export class SideEffectsManager {
 
   private _flatReverseDep: Record<string, Set<string>>;
 
+  private *_effectHandlerEntries(): Iterable<EffectHandler> {
+    for (const handlers of Object.values(this._effects.record)) {
+      for (const handler of handlers) {
+        yield handler;
+      }
+    }
+  }
+
   destroy(state: StoreState) {
-    Object.values(this._effects.record).forEach((effectHandlers) => {
-      effectHandlers.forEach((effectHandler) => {
-        effectHandler.destroy?.(state);
-      });
-    });
+    for (const effectHandler of this._effectHandlerEntries()) {
+      effectHandler.destroy?.(state);
+    }
   }
 
   constructor(
@@ -96,6 +102,12 @@ export class SideEffectsManager {
   }
   // TODO: this will be removed once we have better way of adding dynamic slices
   private _tempOnSyncChange = new Map<string, Set<() => void>>();
+
+  initEffects(store: Store<any>) {
+    for (const effectHandler of this._effectHandlerEntries()) {
+      effectHandler.runInit(store);
+    }
+  }
 
   queueSideEffectExecution(
     store: Store<any>,
@@ -277,6 +289,13 @@ export class EffectHandler {
 
   get sliceKey() {
     return this._slice.key.key;
+  }
+
+  runInit(store: Store<any>) {
+    this.effect.init?.(
+      this._slice as Slice,
+      store.getReducedStore(this.sliceAndDeps as Slice[], this.effect.name),
+    );
   }
 
   runSyncUpdate(store: Store<any>) {

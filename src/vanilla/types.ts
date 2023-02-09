@@ -79,13 +79,14 @@ export interface SliceKeyBase<K extends string, SS> {
 export interface EffectsBase<SL extends Slice = any> {
   name?: string;
   destroy?: (state: ReducedStore<SL | InferSliceDep<SL>>['state']) => void;
+  init?: (slice: SL, store: ReducedStore<SL | InferSliceDep<SL>>) => void;
   updateSync?: (
-    sl: SL,
+    slice: SL,
     store: ReducedStore<SL | InferSliceDep<SL>>,
     prevStoreState: ReducedStore<SL | InferSliceDep<SL>>['state'],
   ) => void;
   update?: (
-    sl: SL,
+    slice: SL,
     store: ReducedStore<SL | InferSliceDep<SL>>,
     prevStoreState: ReducedStore<SL | InferSliceDep<SL>>['state'],
   ) => void;

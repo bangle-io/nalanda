@@ -1,4 +1,3 @@
-import { CORE_ACTION_ON_READY } from '../vanilla/constants';
 import { key, slice } from '../vanilla/create';
 import type { Slice } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
@@ -38,11 +37,7 @@ export const onceEffect = <K extends string, DS extends Slice[]>(
     key: key(name, deps, {
       ready: false,
     }),
-    actions: {
-      [CORE_ACTION_ON_READY]: () => () => ({
-        ready: true,
-      }),
-    },
+    actions: {},
     effects: {
       update(sl, store, prevStoreState) {
         //  ts is unable to deal with DS as part of the type
@@ -69,13 +64,7 @@ export const syncOnceEffect = <K extends string, DS extends Slice[]>(
     key: key(name, deps, {
       ready: false,
     }),
-    actions: {
-      [CORE_ACTION_ON_READY]: () => () => {
-        return {
-          ready: true,
-        };
-      },
-    },
+    actions: {},
     effects: {
       updateSync(sl, store, prevStoreState) {
         //  ts is unable to deal with DS as part of the type
@@ -169,11 +158,7 @@ export const baseChangeEffect = <
         ready: false,
       },
     ),
-    actions: {
-      [CORE_ACTION_ON_READY]: () => () => ({
-        ready: true,
-      }),
-    },
+    actions: {},
     effects: {
       update(sl, store, prevStoreState) {
         if (!isSync) {
