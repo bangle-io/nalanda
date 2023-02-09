@@ -4,19 +4,8 @@ exports[`State creation with a slice 1`] = `
 StoreState {
   "_slices": [
     Slice {
-      "_actionSerializer": ActionSerializer {
-        "getRawAction": [Function],
-        "key": SliceKey {
-          "dependencies": [],
-          "initState": {
-            "val": null,
-          },
-          "key": "mySlice",
-          "selectors": {},
-        },
-        "rawActions": {},
-      },
       "_flatDependencies": Set {},
+      "_getRawAction": [Function],
       "_rawActions": {},
       "actions": {},
       "config": {},

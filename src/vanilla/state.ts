@@ -70,7 +70,7 @@ export class StoreState<SB extends AnySliceBase = any> {
     for (const slice of this._slices) {
       if (slice.key.key === tx.sliceKey) {
         found = true;
-        const rawAction = slice._actionSerializer.getRawAction(tx.actionId);
+        const rawAction = slice._getRawAction(tx.actionId);
 
         if (!rawAction) {
           throw new Error(

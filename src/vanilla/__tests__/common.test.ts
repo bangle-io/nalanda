@@ -1,20 +1,9 @@
-import { ActionSerializer } from '../../sync/action-serializer';
 import {
   calcDependencies,
   calcReverseDependencies,
   flattenReverseDependencies,
 } from '../common';
 import type { AnySliceBase } from '../types';
-
-const actionSerializer = new ActionSerializer(
-  {
-    key: 'any',
-    initState: {},
-    dependencies: [],
-    selectors: {},
-  },
-  {},
-);
 
 describe('calcReverseDependencies', () => {
   const createAnySliceBase = (key: string, deps: string[]): AnySliceBase => {
@@ -26,8 +15,10 @@ describe('calcReverseDependencies', () => {
           return createAnySliceBase(dep, []);
         }),
       },
-      _actionSerializer: actionSerializer,
       fingerPrint: '',
+      _getRawAction() {
+        return undefined;
+      },
     };
   };
 

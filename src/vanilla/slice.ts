@@ -1,4 +1,3 @@
-import { ActionSerializer } from '../sync/action-serializer';
 import { mapObjectValues, weakCache } from './common';
 import type { StoreState } from './state';
 import { Transaction } from './transaction';
@@ -69,8 +68,6 @@ export class Slice<
   fingerPrint: string;
   actions: RawActionsToActions<K, A>;
 
-  _actionSerializer: ActionSerializer<K, SS, DS, A>;
-
   _flatDependencies: Set<string>;
 
   constructor(
@@ -88,7 +85,6 @@ export class Slice<
       .join(',')})`;
     this.actions = parseRawActions(key.key, _rawActions);
     // TODO decouple from action serializer
-    this._actionSerializer = new ActionSerializer(key, _rawActions);
     this._flatDependencies = this.key.dependencies.reduce((acc, dep) => {
       acc.add(dep.key.key);
       dep._flatDependencies.forEach((d) => {
@@ -152,6 +148,16 @@ export class Slice<
       ...this.resolveSelectors(storeState),
     };
   }
+
+  _getRawAction = (actionId: string): RawAction<any, any, any> | undefined => {
+    const action = this._rawActions[actionId];
+
+    if (!action) {
+      return undefined;
+    }
+
+    return action;
+  };
 
   protected _fork(opts: {
     key?: SliceKey<K, SS, SE, DS>;

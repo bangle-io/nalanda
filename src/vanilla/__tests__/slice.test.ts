@@ -665,7 +665,7 @@ describe('creating with slice', () => {
 
     expectType<Action<'slice1', number[]>>(slice1.actions.myAction);
 
-    const rawMyAction = slice1._actionSerializer.rawActions.myAction;
+    const rawMyAction = slice1._rawActions.myAction;
 
     // @ts-expect-error - should error since raw my accepts a number
     rawMyAction('s');

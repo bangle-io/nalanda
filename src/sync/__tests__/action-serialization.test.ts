@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { serialAction } from '../action-serializer';
+import { ActionSerializer, serialAction } from '../action-serializer';
 import { expectType } from '../../vanilla/common';
 import { key, slice } from '../../vanilla/create';
 import { zodFindUnsafeTypes } from '../zod';
@@ -16,7 +16,9 @@ test('checks work', () => {
     },
   });
 
-  expect(case1._actionSerializer.isSyncReady()).toBe(false);
+  const actionS1 = ActionSerializer.create(case1);
+
+  expect(actionS1.isSyncReady()).toBe(false);
 
   let case2 = slice({
     key: key('ji', [], {
@@ -27,7 +29,9 @@ test('checks work', () => {
     },
   });
 
-  expect(case2._actionSerializer.isSyncReady()).toBe(true);
+  const actionS2 = ActionSerializer.create(case2);
+
+  expect(actionS2.isSyncReady()).toBe(true);
 
   let case3 = slice({
     key: key('ji', [], {
@@ -36,7 +40,9 @@ test('checks work', () => {
     actions: {},
   });
 
-  expect(case3._actionSerializer.isSyncReady()).toBe(true);
+  const actionS3 = ActionSerializer.create(case3);
+
+  expect(actionS3.isSyncReady()).toBe(true);
 
   let case4 = slice({
     key: key('ji', [], {
@@ -45,7 +51,9 @@ test('checks work', () => {
     actions: {},
   });
 
-  expect(case4._actionSerializer.isSyncReady()).toBe(true);
+  const actionS4 = ActionSerializer.create(case4);
+
+  expect(actionS4.isSyncReady()).toBe(true);
 
   let case5 = slice({
     key: key('ji', [], {
@@ -57,7 +65,9 @@ test('checks work', () => {
     },
   });
 
-  expect(case5._actionSerializer.isSyncReady()).toBe(true);
+  const actionS5 = ActionSerializer.create(case5);
+
+  expect(actionS5.isSyncReady()).toBe(true);
 });
 
 test('typing is correct', () => {
@@ -152,27 +162,21 @@ test('serialization works', () => {
     map: new Map([['key', 3]]),
   };
 
-  let serial1 = mySlice._actionSerializer.serializeActionPayload('myAction1', [
-    val1,
-  ]);
+  const actionS1 = ActionSerializer.create(mySlice);
+
+  let serial1 = actionS1.serializeActionPayload('myAction1', [val1]);
 
   expect(serial1).toMatchInlineSnapshot(
     `"{"number":3,"key":"key","map":[["key",3]]}"`,
   );
 
-  expect(
-    mySlice._actionSerializer.parseActionPayload('myAction1', serial1),
-  ).toEqual([val1]);
+  expect(actionS1.parseActionPayload('myAction1', serial1)).toEqual([val1]);
 
-  let serial2 = mySlice._actionSerializer.serializeActionPayload('myAction2', [
-    false,
-  ]);
+  let serial2 = actionS1.serializeActionPayload('myAction2', [false]);
 
   expect(serial2).toMatchInlineSnapshot(`"false"`);
 
-  expect(
-    mySlice._actionSerializer.parseActionPayload('myAction2', serial2),
-  ).toEqual([false]);
+  expect(actionS1.parseActionPayload('myAction2', serial2)).toEqual([false]);
 });
 
 describe('zodFindUnsafeTypes', () => {

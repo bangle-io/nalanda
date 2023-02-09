@@ -53,6 +53,10 @@ export class ActionSerializer<
   A extends Record<string, RawAction<any[], SS, DS>> = any,
   SE extends Record<string, SelectorFn<SS, DS, any>> = any,
 > {
+  static create<SL extends Slice>(slice: SL) {
+    return new ActionSerializer(slice.key, slice._rawActions);
+  }
+
   getRawAction = (actionId: string): RawAction<any, any, any> | undefined => {
     const action = this.rawActions[actionId];
 

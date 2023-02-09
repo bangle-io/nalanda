@@ -1,4 +1,3 @@
-import type { ActionSerializer } from '../sync/action-serializer';
 import type { Slice } from './slice';
 import type { StoreState } from './state';
 import type { ReducedStore } from './store';
@@ -95,6 +94,6 @@ export interface SliceBase<K extends string, SS> {
   key: SliceKeyBase<K, SS>;
   fingerPrint: string;
   effects?: EffectsBase[];
-  // TODO make any to SS
-  _actionSerializer: ActionSerializer<K>;
+
+  _getRawAction: (actionId: string) => RawAction<any, any, any> | undefined;
 }
