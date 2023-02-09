@@ -238,8 +238,10 @@ describe('actions', () => {
 
     expect(result.myAction(1)).toMatchInlineSnapshot(`
       Transaction {
-        "_metadata": {},
         "actionId": "myAction",
+        "metadata": Metadata {
+          "_metadata": {},
+        },
         "payload": [
           1,
         ],

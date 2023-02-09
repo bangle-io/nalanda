@@ -70,15 +70,21 @@ describe('store', () => {
 
     myStore.dispatch(tx, 'test-location');
 
-    expect(tx.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-0')).toBe(true);
-    expect(tx.getMetadata(TX_META_STORE_NAME)).toBe('myStore');
-    expect(tx.getMetadata(TX_META_DISPATCH_SOURCE)).toBe('test-location');
+    expect(tx.metadata.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-0')).toBe(
+      true,
+    );
+    expect(tx.metadata.getMetadata(TX_META_STORE_NAME)).toBe('myStore');
+    expect(tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE)).toBe(
+      'test-location',
+    );
 
     const tx2 = testSlice1.actions.increment({ increment: true });
 
     myStore.dispatch(tx2);
 
-    expect(tx2.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-1')).toBe(true);
+    expect(tx2.metadata.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-1')).toBe(
+      true,
+    );
   });
 
   test('logs', async () => {
@@ -140,7 +146,7 @@ describe('store', () => {
             sliceKey: 'test-3',
           },
         ],
-        type: 'EFFECT',
+        type: 'SYNC_UPDATE_EFFECT',
       },
       {
         actionId: 'lowercase',
@@ -159,7 +165,7 @@ describe('store', () => {
             sliceKey: 'test-3',
           },
         ],
-        type: 'EFFECT',
+        type: 'SYNC_UPDATE_EFFECT',
       },
     ]);
   });

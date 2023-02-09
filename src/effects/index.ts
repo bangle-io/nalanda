@@ -1,13 +1,13 @@
-import { CORE_ACTION_ON_READY } from './constants';
-import { key, slice } from './create';
-import type { Slice } from './slice';
-import type { StoreState } from './state';
-import type { ReducedStore } from './store';
-import type { ExtractReturnTypes } from './types';
+import { CORE_ACTION_ON_READY } from '../vanilla/constants';
+import { key, slice } from '../vanilla/create';
+import type { Slice } from '../vanilla/slice';
+import type { StoreState } from '../vanilla/state';
+import type { ReducedStore } from '../vanilla/store';
+import type { ExtractReturnTypes } from '../vanilla/types';
 
 const keys: { [k: string]: number } = Object.create(null);
 
-export function createKey(name: string) {
+function createKey(name: string) {
   if (name in keys) {
     return name + '#' + ++keys[name];
   }

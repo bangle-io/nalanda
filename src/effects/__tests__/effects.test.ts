@@ -1,8 +1,8 @@
-import { expectType } from '../common';
-import { changeEffect, onceEffect, syncOnceEffect } from '../common-effects';
-import { key, slice } from '../create';
-import { timeoutSchedular } from '../effect';
-import { Store } from '../store';
+import { expectType } from '../../vanilla/common';
+import { changeEffect, onceEffect, syncOnceEffect } from '../index';
+import { key, slice } from '../../vanilla/create';
+import { timeoutSchedular } from '../../vanilla/effect';
+import { Store } from '../../vanilla/store';
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));

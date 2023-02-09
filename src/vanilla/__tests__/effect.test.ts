@@ -1,5 +1,5 @@
 import { key, slice } from '../create';
-import { SyncUpdateEffectHandler } from '../effect';
+import { EffectHandler } from '../effect';
 import { Store } from '../store';
 
 const testSlice1 = slice({
@@ -38,7 +38,7 @@ const testSlice3 = slice({
   },
 });
 
-test('SyncUpdateEffectHandler works', () => {
+test('EffectHandler works', () => {
   const store = Store.create({
     storeName: 'test-store',
     state: {
@@ -46,7 +46,7 @@ test('SyncUpdateEffectHandler works', () => {
     },
   });
 
-  const effect = new SyncUpdateEffectHandler(
+  const effect = new EffectHandler(
     {
       updateSync: () => {},
     },
@@ -57,7 +57,7 @@ test('SyncUpdateEffectHandler works', () => {
   expect(effect.sliceAndDeps).toEqual([testSlice1]);
 });
 
-test('SyncUpdateEffectHandler with deps', () => {
+test('EffectHandler with deps', () => {
   const mySlice = slice({
     key: key('myslice', [testSlice1, testSlice2], { name: 'tame' }),
     actions: {
@@ -73,7 +73,7 @@ test('SyncUpdateEffectHandler with deps', () => {
     },
   });
 
-  const effect = new SyncUpdateEffectHandler(
+  const effect = new EffectHandler(
     {
       updateSync: () => {},
     },
