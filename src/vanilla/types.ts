@@ -78,18 +78,25 @@ export interface SliceKeyBase<K extends string, SS> {
 
 export interface EffectsBase<SL extends Slice = any> {
   name?: string;
-  destroy?: (state: ReducedStore<SL | InferSliceDep<SL>>['state']) => void;
+  destroy?: (
+    slice: SL,
+    state: ReducedStore<SL | InferSliceDep<SL>>['state'],
+  ) => void;
   init?: (slice: SL, store: ReducedStore<SL | InferSliceDep<SL>>) => void;
-  updateSync?: (
-    slice: SL,
-    store: ReducedStore<SL | InferSliceDep<SL>>,
-    prevStoreState: ReducedStore<SL | InferSliceDep<SL>>['state'],
-  ) => void;
-  update?: (
-    slice: SL,
-    store: ReducedStore<SL | InferSliceDep<SL>>,
-    prevStoreState: ReducedStore<SL | InferSliceDep<SL>>['state'],
-  ) => void;
+  updateSync?:
+    | undefined
+    | ((
+        slice: SL,
+        store: ReducedStore<SL | InferSliceDep<SL>>,
+        prevStoreState: ReducedStore<SL | InferSliceDep<SL>>['state'],
+      ) => void);
+  update?:
+    | undefined
+    | ((
+        slice: SL,
+        store: ReducedStore<SL | InferSliceDep<SL>>,
+        prevStoreState: ReducedStore<SL | InferSliceDep<SL>>['state'],
+      ) => void);
 }
 
 export interface SliceBase<K extends string, SS> {

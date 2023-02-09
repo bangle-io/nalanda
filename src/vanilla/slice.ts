@@ -32,14 +32,20 @@ export class SliceKey<
     ) as SE;
   }
 
-  // /**
-  //  * Helper function to get a typed action record
-  //  * @param actions
-  //  * @returns
-  //  */
-  // action<T extends any[]>(action: RawAction<T, SS, DS>): RawAction<T, SS, DS> {
-  //   return action;
-  // }
+  /**
+   * Helper function to get a typed action record
+   * @param actions
+   * @returns
+   */
+  action<T extends RawAction<any[], SS, DS>>(action: T): T {
+    return action;
+  }
+
+  actions<T extends RawAction<any[], SS, DS>, A extends Record<string, T>>(
+    actions: A,
+  ): A {
+    return actions;
+  }
 }
 
 type ResolveStoreStateIfRegistered<

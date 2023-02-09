@@ -1,3 +1,4 @@
+import { typed } from '../vanilla/common';
 import { key, slice } from '../vanilla/create';
 import type { Slice } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
@@ -33,12 +34,17 @@ export const onceEffect = <K extends string, DS extends Slice[]>(
     dispatch: ReducedStoreFromDS<DS>['dispatch'],
   ) => void,
 ): OpaqueSlice<K, DS> => {
-  return slice({
+  const effect = slice({
     key: key(name, deps, {
       ready: false,
     }),
-    actions: {},
+    actions: {
+      ready: () => (state) => ({ ...state, ready: true }),
+    },
     effects: {
+      init(slice, store) {
+        store.dispatch(slice.actions.ready());
+      },
       update(sl, store, prevStoreState) {
         //  ts is unable to deal with DS as part of the type
         let _store: ReducedStore<typeof sl> = store;
@@ -50,6 +56,8 @@ export const onceEffect = <K extends string, DS extends Slice[]>(
       },
     },
   });
+
+  return effect as unknown as OpaqueSlice<K, DS>;
 };
 
 export const syncOnceEffect = <K extends string, DS extends Slice[]>(
@@ -61,19 +69,11 @@ export const syncOnceEffect = <K extends string, DS extends Slice[]>(
   ) => void,
 ): OpaqueSlice<K, DS> => {
   return slice({
-    key: key(name, deps, {
-      ready: false,
-    }),
+    key: key(name, deps, {}),
     actions: {},
     effects: {
-      updateSync(sl, store, prevStoreState) {
-        //  ts is unable to deal with DS as part of the type
-        let _store: ReducedStore<typeof sl> = store;
-        let _prevState: ReducedStore<typeof sl>['state'] = prevStoreState;
-
-        if (sl.getState(_store.state).ready && !sl.getState(_prevState).ready) {
-          cb(store.state, store.dispatch);
-        }
+      init(slice, store) {
+        cb(store.state, store.dispatch);
       },
     },
   });
@@ -85,7 +85,7 @@ export type ExtractSliceFromEffectSelectors<
   ? S
   : never;
 
-export const baseChangeEffect = <
+const baseChangeEffect = <
   K extends string,
   ES extends Record<string, [Slice, (storeState: StoreState) => any]>,
 >(
@@ -96,27 +96,34 @@ export const baseChangeEffect = <
       [K in keyof ES]: ES[K][1];
     }>,
     dispatch: ReducedStore<ExtractSliceFromEffectSelectors<ES>>['dispatch'],
-    signal: AbortSignal,
-  ) => void | (() => void) | Promise<void>,
+  ) => void | (() => void),
   isSync = false,
 ) => {
-  const array = Object.entries(effectSelectors).map(
+  const comparisonEntries = Object.entries(effectSelectors).map(
     (r): [string, (storeState: StoreState) => any] => [r[0], r[1][1]],
   );
 
-  let prevCleanup: void | (() => void);
-  let prevAbort: AbortController = new AbortController();
+  type SliceState = {
+    ref?: {
+      firstRun: boolean;
+      prevCleanup: void | (() => void);
+    };
+  };
 
   const run = (
-    sl: Slice,
+    sl: Slice<K, SliceState>,
     store: ReducedStore<any>,
-    prevStoreState: StoreState,
+    prevStoreState: ReducedStore<any>['state'],
   ) => {
-    let hasNew = false;
-    const firstRun =
-      sl.getState(store.state).ready && !sl.getState(prevStoreState).ready;
+    const sliceStateRef = sl.getState(store.state).ref;
+    // sliceStateRef should always be defined, since `init` is called before `update`
+    if (!sliceStateRef) {
+      throw new Error('sliceStateRef cannot be undefined');
+    }
 
-    let result = array.map(([k, v]) => {
+    let hasNew = false;
+
+    const newObjectEntries = comparisonEntries.map(([k, v]) => {
       const newVal = v(store.state);
       const oldVal = v(prevStoreState);
 
@@ -127,49 +134,53 @@ export const baseChangeEffect = <
       return [k, newVal];
     });
 
-    if (hasNew || firstRun) {
-      prevCleanup?.();
-
-      if (!isSync) {
-        prevAbort?.abort();
+    if (hasNew || sliceStateRef.firstRun) {
+      if (sliceStateRef.firstRun) {
+        sliceStateRef.firstRun = false;
       }
-      // so that abort is called before running the next
-      queueMicrotask(() => {
-        if (!isSync) {
-          prevAbort = new AbortController();
-        }
-        let res = cb(
-          Object.fromEntries(result),
-          store.dispatch,
-          prevAbort.signal,
-        );
+      sliceStateRef.prevCleanup?.();
 
-        if (typeof res === 'function') {
-          prevCleanup = res;
-        }
-      });
+      const res = cb(Object.fromEntries(newObjectEntries), store.dispatch);
+
+      if (typeof res === 'function') {
+        sliceStateRef.prevCleanup = res;
+      }
     }
   };
+
+  const sliceKey = key(
+    name,
+    Object.values(effectSelectors).map((r) => r[0]) as any,
+    typed<SliceState>({}),
+  );
+
   let result = slice({
-    key: key(
-      name,
-      Object.values(effectSelectors).map((r) => r[0]),
-      {
-        ready: false,
+    key: sliceKey,
+    actions: sliceKey.actions({
+      ready: (initState: SliceState) => () => {
+        return initState;
       },
-    ),
-    actions: {},
+    }),
     effects: {
-      update(sl, store, prevStoreState) {
-        if (!isSync) {
-          run(sl, store, prevStoreState);
-        }
+      init(slice, store) {
+        // we need to save a unique reference per initialization in the state
+        // since we are going to mutate it in place. If we don't do this, it
+        // will cause issues if multiple store use the same instance of slice.
+        // this has another benefit of calling update on the first run.
+        store.dispatch(
+          slice.actions.ready({
+            ref: {
+              firstRun: true,
+              prevCleanup: undefined,
+            },
+          }),
+        );
       },
-      updateSync(sl, store, prevStoreState) {
-        if (isSync) {
-          run(sl, store, prevStoreState);
-        }
+      destroy(slice, state) {
+        slice.getState(state).ref?.prevCleanup?.();
       },
+      update: isSync ? undefined : run,
+      updateSync: isSync ? run : undefined,
     },
   });
 
@@ -187,8 +198,7 @@ export const changeEffect = <
       [K in keyof ES]: ES[K][1];
     }>,
     dispatch: ReducedStore<ExtractSliceFromEffectSelectors<ES>>['dispatch'],
-    signal: AbortSignal,
-  ) => void | (() => void) | Promise<void>,
+  ) => void | (() => void),
 ) => {
   return baseChangeEffect(name, effectSelectors, cb, false);
 };
@@ -204,7 +214,7 @@ export const changeEffectSync = <
       [K in keyof ES]: ES[K][1];
     }>,
     dispatch: ReducedStore<ExtractSliceFromEffectSelectors<ES>>['dispatch'],
-  ) => void | (() => void) | Promise<void>,
+  ) => void | (() => void),
 ) => {
   return baseChangeEffect(name, effectSelectors, cb, true);
 };

@@ -4,6 +4,7 @@ import { Store } from '../store';
 import waitForExpect from 'wait-for-expect';
 waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
+
 const testSlice1 = slice({
   key: key('test-1', [], { num: 4 }),
   actions: {

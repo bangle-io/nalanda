@@ -238,10 +238,6 @@ export class EffectHandler {
   public debugSyncLastRanBy: { sliceKey: string; actionId: string }[] = [];
   public debugDeferredLastRanBy: { sliceKey: string; actionId: string }[] = [];
 
-  destroy(state: StoreState) {
-    this.effect.destroy?.(state);
-  }
-
   constructor(
     public effect: EffectsBase,
     public readonly initStoreState: StoreState,
@@ -296,6 +292,10 @@ export class EffectHandler {
       this._slice as Slice,
       store.getReducedStore(this.sliceAndDeps as Slice[], this.effect.name),
     );
+  }
+
+  destroy(state: StoreState) {
+    this.effect.destroy?.(this._slice, state);
   }
 
   runSyncUpdate(store: Store<any>) {
