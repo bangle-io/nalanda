@@ -58,3 +58,75 @@ export function slice<
 }): Slice<SK['key'], SK['initState'], SK['dependencies'], A, SK['selectors']> {
   return new Slice(key, actions, effects ? [effects] : [], config);
 }
+
+export function createSlice<
+  K extends string,
+  DS extends Slice[],
+  SS extends object,
+  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  A extends Record<string, RawAction<any[], SS, DS>>,
+>(
+  dependencies: DS,
+  config: {
+    key: K;
+    init: SS;
+    computed: SE;
+    actions: A;
+  },
+): Slice<K, SS, DS, A, SE>;
+export function createSlice<
+  K extends string,
+  DS extends Slice[],
+  SS extends object,
+  A extends Record<string, RawAction<any[], SS, DS>>,
+>(
+  dependencies: DS,
+  config: {
+    key: K;
+    init: SS;
+    actions: A;
+  },
+): Slice<K, SS, DS, A, {}>;
+
+export function createSlice<
+  K extends string,
+  DS extends Slice[],
+  SS extends object,
+  SE extends Record<string, SelectorFn<SS, DS, any>>,
+>(
+  dependencies: DS,
+  config: {
+    key: K;
+    init: SS;
+    computed: SE;
+  },
+): Slice<K, SS, DS, {}, SE>;
+
+export function createSlice<
+  K extends string,
+  DS extends Slice[],
+  SS extends object,
+>(
+  dependencies: DS,
+  config: {
+    key: K;
+    init: SS;
+  },
+): Slice<K, SS, DS, {}, {}>;
+
+export function createSlice<DS extends Slice[]>(
+  dependencies: DS,
+  config: {
+    key: string;
+    init: object;
+    computed?: any;
+    actions?: any;
+  },
+): Slice {
+  return new Slice(
+    key(config.key, dependencies, config.init, config.computed),
+    config.actions,
+    [],
+    {},
+  );
+}
