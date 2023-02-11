@@ -1,3 +1,3 @@
-export * from './vanilla';
-export * from './react';
-export * from './effects';
+export function foo(r: number) {
+    
+}
