@@ -33,7 +33,7 @@ export interface BareSlice<K extends string = any, SS = any> {
   }>;
 
   readonly config: {
-    dependencies: AnySlice[];
+    dependencies: BareSlice[];
   };
 
   applyTx(
