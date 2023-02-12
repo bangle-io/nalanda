@@ -1,4 +1,4 @@
-import { mapObjectValues } from './helpers';
+import { mapObjectValues, weakCache } from './helpers';
 import { AnyFn, TxApplicator } from './internal-types';
 import { KeyMapping } from './merge';
 import {
@@ -22,16 +22,25 @@ type IfSliceRegistered<
   : never;
 
 export interface BareSlice<K extends string = any, SS = any> {
-  key: K;
+  readonly key: K;
   //   Duplicated for ease of doing BareSlice['initState'] type
-  initState: SS;
+  readonly initState: SS;
   // Internal things are here
-  _bare: {
-    dependencies: AnySlice[];
+  readonly _bare: Readonly<{
     keyMapping: KeyMapping;
     txCreators: Record<string, TxCreator>;
     txApplicators: Record<string, TxApplicator<string, any>>;
+  }>;
+
+  readonly config: {
+    dependencies: AnySlice[];
   };
+
+  applyTx(
+    sliceState: SS,
+    storeState: StoreState<any>,
+    tx: Transaction<K, unknown[]>,
+  ): SS;
 }
 
 export interface SliceConfig<
@@ -61,9 +70,12 @@ export class Slice<
   public readonly initState: SS;
 
   // This to expose internally
-  public readonly _bare: BareSlice<K, SS>['_bare'];
+  public _bare: BareSlice<K, SS>['_bare'];
 
   constructor(public readonly config: SliceConfig<K, SS, DS, A, SE>) {
+    this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
+    this.resolveState = weakCache(this.resolveState.bind(this));
+
     const key = config.key;
     this.key = key;
     this.initState = config.initState;
@@ -100,7 +112,6 @@ export class Slice<
       keyMapping,
       txCreators,
       txApplicators,
-      dependencies: config.dependencies,
     };
   }
 
@@ -120,7 +131,75 @@ export class Slice<
     return result as any;
   }
 
-  actions!: ActionsToTxCreator<K, A>;
+  resolveState<SState extends StoreState<any>>(
+    storeState: IfSliceRegistered<SState, K, SState>,
+  ): SS & ResolvedSelectors<SE> {
+    return {
+      ...this.getState(storeState),
+      ...this.resolveSelectors(storeState),
+    };
+  }
+
+  get actions(): ActionsToTxCreator<K, A> {
+    return this._bare.txCreators as any;
+  }
+
+  get selectors(): SE {
+    return this.config.selectors;
+  }
+
+  applyTx(
+    sliceState: SS,
+    storeState: StoreState<any>,
+    tx: Transaction<K, unknown[]>,
+  ): SS {
+    const apply = this._bare.txApplicators[tx.actionId];
+
+    if (!apply) {
+      throw new Error(
+        `Action "${tx.actionId}" not found in Slice "${this.key}"`,
+      );
+    }
+
+    return apply(sliceState, storeState, tx);
+  }
+
+  _fork(
+    config: Partial<SliceConfig<K, SS, DS, A, SE>>,
+    bare?: Partial<Slice<K, SS, any, any, any>['_bare']>,
+  ): Slice<K, SS, DS, A, SE> {
+    const slice = new Slice({ ...this.config, ...config });
+    if (bare) {
+      slice._bare = { ...slice._bare, ...bare };
+    }
+    return slice;
+  }
+
+  static _addToParent(
+    slice: AnySlice,
+    parentKey: string,
+    childrenKeys: string[],
+  ): AnySlice {
+    const newMapping = slice._bare.keyMapping.augment(parentKey, childrenKeys);
+    const newKey = newMapping.get(slice.key);
+    if (!newKey) {
+      throw new Error('Slice key not found in mapping');
+    }
+
+    const existingCreators = slice._bare.txCreators;
+
+    return slice._fork(
+      { key: newKey },
+      {
+        keyMapping: newMapping,
+        txCreators: mapObjectValues(existingCreators, (fn): TxCreator => {
+          return (...params: unknown[]) => {
+            return fn(...params).changeKey(newKey);
+          };
+        }),
+      },
+    );
+  }
 }
 
 export type ActionsToTxCreator<

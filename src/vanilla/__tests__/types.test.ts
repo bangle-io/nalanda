@@ -2,8 +2,6 @@ import { expectType, rejectAny } from '../internal-types';
 import { Slice } from '../slice';
 import { InternalStoreState } from '../state';
 
-test.todo('slice');
-
 const testSlice0 = new Slice({
   key: 'testSlice0',
   initState: {
@@ -131,7 +129,6 @@ describe('types', () => {
       },
       dependencies: [],
     });
-
     const storeState = InternalStoreState.create([
       testSlice0,
       testSlice1,
@@ -147,10 +144,19 @@ describe('types', () => {
     expectType<{ a: number }>(res2);
     expectType<{ a: number }>(res2Reverse);
 
-    // @ts-expect-error - since not registered
-    let result2 = testSlice2.getState(storeState);
-    // @ts-expect-error - since not registered
-    let result2Reverse = storeState.getSliceState(testSlice2);
+    expect(() => {
+      // @ts-expect-error - since not registered
+      let result2 = testSlice2.getState(storeState);
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"Slice "testSlice2" not found in store"`,
+    );
+
+    expect(() => {
+      // @ts-expect-error - since not registered
+      let result2Reverse = storeState.getSliceState(testSlice2);
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"Slice "testSlice2" not found in store"`,
+    );
 
     let mySliceSelectors = mySlice.resolveSelectors(storeState);
     expectType<number>(mySliceSelectors.majin);
