@@ -1,5 +1,6 @@
 import { expectType, rejectAny } from '../internal-types';
 import { Slice } from '../slice';
+import { InternalStoreState } from '../state';
 
 test.todo('slice');
 
@@ -129,7 +130,25 @@ describe('types', () => {
       dependencies: [],
     });
 
-    // expectType<Slice<'mySlice', number, {}, {}>>(mySlice);
+    const storeState = InternalStoreState.create([
+      testSlice0,
+      testSlice1,
+      mySlice,
+    ]);
+
+    let result = mySlice.getState(storeState);
+
+    expectType<number>(result);
+
+    let res2 = testSlice1.getState(storeState);
+    let res2Reverse = storeState.getSliceState(testSlice1);
+    expectType<{ a: number }>(res2);
+    expectType<{ a: number }>(res2Reverse);
+
+    // @ts-expect-error - since not registered
+    let result2 = testSlice2.getState(storeState);
+    // @ts-expect-error - since not registered
+    let result2Reverse = storeState.getSliceState(testSlice2);
 
     expect(mySlice).toBeDefined();
   });

@@ -15,9 +15,13 @@ export interface StoreState<RegSlices extends BareSlice> {
   ): SL['initState'];
 }
 
-export class InternalStoreState<SL extends BareSlice>
-  implements StoreState<SL>
-{
+export class InternalStoreState implements StoreState<any> {
+  static create<SL extends BareSlice>(slices: SL[]): StoreState<SL> {
+    return new InternalStoreState(slices);
+  }
+
+  constructor(public readonly slices: BareSlice[]) {}
+
   getSliceState(sl: BareSlice): unknown {
     return {};
   }
