@@ -34,6 +34,8 @@ export interface BareSlice<K extends string = any, SS = any> {
 
   readonly config: {
     dependencies: BareSlice[];
+    // Adding effects breaks everything
+    effects?: any[];
   };
 
   applyTx(

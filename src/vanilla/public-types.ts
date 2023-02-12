@@ -1,6 +1,6 @@
 import type { BareSlice, Slice } from './slice';
-import type { StoreState } from './state';
-import type { ReducedStore } from './store';
+import type { InternalStoreState, StoreState } from './state';
+import type { ReducedStore, Store } from './store';
 import type { Transaction } from './transaction';
 
 export type SelectorFn<SS, DS extends BareSlice, T> = (
