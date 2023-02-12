@@ -1,4 +1,9 @@
-import type { Action, AnySlice, Effect } from '../vanilla/public-types';
+import type {
+  Action,
+  AnySlice,
+  BareStore,
+  Effect,
+} from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
 
 /**
@@ -29,4 +34,29 @@ export function testOverrideSlice<SL extends AnySlice>(
     dependencies,
     effects: effects || [],
   }) as any;
+}
+
+export function waitUntil<B extends BareStore<any>>(
+  store: B,
+  condition: (state: B['state']) => boolean,
+  waitUntil = 100,
+  pollFrequency = 5,
+): Promise<B['state']> {
+  let interval: ReturnType<typeof setInterval> | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  return new Promise<B['state']>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      clearInterval(interval);
+      reject(new Error('Timeout condition not met'));
+    }, waitUntil);
+
+    interval = setInterval(() => {
+      if (condition(store.state)) {
+        clearTimeout(timeout);
+        clearInterval(interval);
+        resolve(store.state);
+      }
+    }, pollFrequency);
+  });
 }

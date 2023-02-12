@@ -1,6 +1,5 @@
 import type { BareSlice, Slice } from './slice';
-import type { InternalStoreState, StoreState } from './state';
-import type { ReducedStore, Store } from './store';
+import type { StoreState } from './state';
 import type { Transaction } from './transaction';
 
 export type SelectorFn<SS, DS extends BareSlice, T> = (
@@ -18,6 +17,13 @@ export type Action<P extends any[], SS, DS extends BareSlice> = (
 
 export type AnySlice = Slice<string, any, any, any, any>;
 
+export interface BareStore<SL extends BareSlice> {
+  state: StoreState<SL>;
+  dispatch: (tx: Transaction<SL['key'], any>, debugDispatch?: string) => void;
+  destroy: () => void;
+  destroyed: boolean;
+}
+
 export interface Effect<
   SL extends AnySlice,
   //   sibblings must include SL in their union
@@ -25,19 +31,19 @@ export interface Effect<
 > {
   name?: string;
   destroy?: (slice: SL, state: StoreState<Sibblings>) => void;
-  init?: (slice: SL, store: ReducedStore<Sibblings>) => void;
+  init?: (slice: SL, store: BareStore<Sibblings>) => void;
   updateSync?:
     | undefined
     | ((
         slice: SL,
-        store: ReducedStore<Sibblings>,
+        store: BareStore<Sibblings>,
         prevStoreState: StoreState<Sibblings>,
       ) => void);
   update?:
     | undefined
     | ((
         slice: SL,
-        store: ReducedStore<Sibblings>,
+        store: BareStore<Sibblings>,
         prevStoreState: StoreState<Sibblings>,
       ) => void);
 }

@@ -9,6 +9,9 @@ InternalStoreState {
           "_mapping": {
             "mySlice": "mySlice",
           },
+          "_reverseMapping": {
+            "mySlice": "mySlice",
+          },
         },
         "txApplicators": {},
         "txCreators": {},
