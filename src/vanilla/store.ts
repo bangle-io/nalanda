@@ -1,4 +1,4 @@
-import { BareSlice } from './internal-types';
+import { BareSlice } from './slice';
 import { StoreState } from './state';
 import { Transaction } from './transaction';
 

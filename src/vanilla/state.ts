@@ -1,4 +1,4 @@
-import { BareSlice } from './internal-types';
+import { BareSlice } from './slice';
 
 export type ResolveSliceIfRegistered<
   SL extends BareSlice,

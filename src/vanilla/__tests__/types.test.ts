@@ -126,7 +126,9 @@ describe('types', () => {
       key: 'mySlice',
       initState: 0,
       actions: {},
-      selectors: {},
+      selectors: {
+        majin: (state) => state + 1,
+      },
       dependencies: [],
     });
 
@@ -149,6 +151,12 @@ describe('types', () => {
     let result2 = testSlice2.getState(storeState);
     // @ts-expect-error - since not registered
     let result2Reverse = storeState.getSliceState(testSlice2);
+
+    let mySliceSelectors = mySlice.resolveSelectors(storeState);
+    expectType<number>(mySliceSelectors.majin);
+
+    // @ts-expect-error - since not registered
+    let otherSelectors = testSlice2.resolveSelectors(storeState);
 
     expect(mySlice).toBeDefined();
   });
