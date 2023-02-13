@@ -55,8 +55,6 @@ test('EffectHandler works', () => {
     store.state,
     testSlice1,
   );
-
-  expect(effect.sliceAndDeps).toEqual([testSlice1]);
 });
 
 describe('init and destroy ', () => {
@@ -167,6 +165,5 @@ test('EffectHandler with deps', () => {
     mySlice,
   );
 
-  expect(effect.sliceAndDeps).toEqual([testSlice1, testSlice2, mySlice]);
   expect(effect.sliceKey).toMatchInlineSnapshot(`"myslice"`);
 });

@@ -4,8 +4,8 @@ import {
   flattenReverseDependencies,
 } from '../helpers';
 import { rejectAny } from '../internal-types';
-import { KeyMapping } from '../merge';
-import { BareSlice } from '../slice';
+import { AnySlice } from '../public-types';
+import { BareSlice, Slice } from '../slice';
 
 test('reject any', () => {
   let _control: any = {};
@@ -25,22 +25,15 @@ test('reject any', () => {
 
 describe('calcReverseDependencies', () => {
   const createAnySliceBase = (key: string, deps: string[]): BareSlice => {
-    return {
+    return new Slice({
       key,
       initState: {},
-      applyTx: () => {},
-
-      config: {
-        dependencies: deps.map((dep) => {
-          return createAnySliceBase(dep, []);
-        }),
-      },
-      _bare: {
-        keyMapping: new KeyMapping({}),
-        txApplicators: {},
-        txCreators: {},
-      },
-    };
+      dependencies: deps.map((dep) => {
+        return createAnySliceBase(dep, []) as AnySlice;
+      }),
+      actions: {},
+      selectors: {},
+    });
   };
 
   describe.each([

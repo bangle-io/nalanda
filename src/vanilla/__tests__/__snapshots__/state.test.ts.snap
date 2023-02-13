@@ -5,14 +5,7 @@ InternalStoreState {
   "_slices": [
     Slice {
       "_bare": {
-        "keyMapping": KeyMapping {
-          "_mapping": {
-            "mySlice": "mySlice",
-          },
-          "_reverseMapping": {
-            "mySlice": "mySlice",
-          },
-        },
+        "mappedDependencies": {},
         "txApplicators": {},
         "txCreators": {},
       },

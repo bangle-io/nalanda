@@ -230,8 +230,6 @@ export class SideEffectsManager {
 }
 
 export class EffectHandler {
-  sliceAndDeps: BareSlice[];
-
   private _syncPrevState: InternalStoreState;
   private _deferredPrevState: InternalStoreState;
 
@@ -244,7 +242,6 @@ export class EffectHandler {
     protected _slice: BareSlice,
     private _debug?: DebugFunc,
   ) {
-    this.sliceAndDeps = [...this._slice.config.dependencies, _slice];
     this._deferredPrevState = this.initStoreState;
     this._syncPrevState = this.initStoreState;
   }
@@ -290,7 +287,7 @@ export class EffectHandler {
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.sliceAndDeps as AnySlice[], this.effect.name),
+      store.getReducedStore(this.effect.name, this._slice),
     );
   }
 
@@ -311,8 +308,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.updateSync?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.sliceAndDeps as AnySlice[], this.effect.name),
-      previouslySeenState,
+      store.getReducedStore(this.effect.name, this._slice),
+      previouslySeenState._withKeyMapping(this._slice._bare.keyMapping),
     );
   }
 
@@ -325,8 +322,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.update?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.sliceAndDeps as AnySlice[], this.effect.name),
-      previouslySeenState,
+      store.getReducedStore(this.effect.name, this._slice),
+      previouslySeenState._withKeyMapping(this._slice._bare.keyMapping),
     );
   }
 }

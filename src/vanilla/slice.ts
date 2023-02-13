@@ -1,6 +1,6 @@
 import { mapObjectValues, weakCache } from './helpers';
 import { AnyFn, TxApplicator } from './internal-types';
-import { KeyMapping } from './merge';
+import type { KeyMapping } from './state';
 import {
   Effect,
   SelectorFn,
@@ -21,15 +21,31 @@ type IfSliceRegistered<
     : never
   : never;
 
+function actionsToTxCreators(
+  key: string,
+  actions: Record<string, Action<any[], any, any>>,
+) {
+  return mapObjectValues(actions, (action, actionId): TxCreator => {
+    return (...params) => {
+      return new Transaction(key, params, actionId);
+    };
+  });
+}
+
 export interface BareSlice<K extends string = any, SS = any> {
   readonly key: K;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
   // Internal things are here
   readonly _bare: Readonly<{
-    keyMapping: KeyMapping;
     txCreators: Record<string, TxCreator>;
     txApplicators: Record<string, TxApplicator<string, any>>;
+    children?: BareSlice[];
+    siblingAndDependencies?: string[];
+    siblingAndDependenciesAccessModifier?: string;
+    mappedDependencies: Record<string, BareSlice>;
+    keyMapping?: KeyMapping;
+    reverseKeyMapping?: KeyMapping;
   }>;
 
   readonly config: {
@@ -82,22 +98,11 @@ export class Slice<
     this.key = key;
     this.initState = config.initState;
 
-    const keys: [string, string][] = config.dependencies.map((k) => [
-      k.key,
-      k.key,
-    ]);
-    // add self to key mapping
-    keys.push([key, key]);
-
-    const keyMapping = new KeyMapping(Object.fromEntries(keys));
-    const txCreators: Record<string, TxCreator> = mapObjectValues(
+    const txCreators: Record<string, TxCreator> = actionsToTxCreators(
+      key,
       config.actions,
-      (action, actionId): TxCreator => {
-        return (...params) => {
-          return new Transaction(key, params, actionId);
-        };
-      },
     );
+
     const txApplicators: Record<
       string,
       TxApplicator<string, any>
@@ -110,10 +115,14 @@ export class Slice<
       },
     );
 
+    const mappedDependencies = Object.fromEntries(
+      config.dependencies.map((d) => [d.key, d]),
+    );
+
     this._bare = {
-      keyMapping,
       txCreators,
       txApplicators,
+      mappedDependencies,
     };
   }
 
@@ -178,23 +187,51 @@ export class Slice<
   }
 
   static _addToParent(
-    slice: AnySlice,
+    slice: Slice<string, any, AnySlice, any, any>,
     parentKey: string,
-    childrenKeys: string[],
+    siblingKeys: string[],
   ): AnySlice {
-    const newMapping = slice._bare.keyMapping.augment(parentKey, childrenKeys);
-    const newKey = newMapping.get(slice.key);
-    if (!newKey) {
-      throw new Error('Slice key not found in mapping');
+    let siblingAndDependencies = slice._bare.siblingAndDependencies;
+    if (!siblingAndDependencies) {
+      const depKeys = new Set(slice.config.dependencies.map((d) => d.key));
+      siblingAndDependencies = siblingKeys.filter((k) => depKeys.has(k));
     }
 
-    const existingCreators = slice._bare.txCreators;
+    const newKey = parentKey + ':' + slice.key;
 
+    const siblingAndDependenciesAccessModifier = [
+      parentKey,
+      slice._bare.siblingAndDependenciesAccessModifier,
+    ]
+      .filter(Boolean)
+      .join(':');
+
+    const txCreators = actionsToTxCreators(slice.key, slice.config.actions);
+
+    const keyMapping = (key: string): string => {
+      if (!siblingAndDependencies) {
+        throw new Error('siblingAndDependencies not set');
+      }
+
+      if (siblingAndDependencies.includes(key)) {
+        return siblingAndDependenciesAccessModifier + ':' + key;
+      }
+      return key;
+    };
     return slice._fork(
       { key: newKey },
       {
-        keyMapping: newMapping,
-        txCreators: mapObjectValues(existingCreators, (fn): TxCreator => {
+        siblingAndDependencies,
+        siblingAndDependenciesAccessModifier,
+        keyMapping,
+
+        mappedDependencies: Object.fromEntries(
+          slice.config.dependencies.map((d: BareSlice): [string, BareSlice] => {
+            return [keyMapping(d.key), d];
+          }),
+        ),
+
+        txCreators: mapObjectValues(txCreators, (fn): TxCreator => {
           return (...params: unknown[]) => {
             return fn(...params).changeKey(newKey);
           };

@@ -52,7 +52,10 @@ export class Store implements BareStore<any> {
   }): BareStore<SB> {
     if (!(state instanceof InternalStoreState)) {
       if (Array.isArray(state)) {
-        state = InternalStoreState.create(state);
+        let slices = state.flatMap((s) => {
+          return [...(s._bare.children || []), s];
+        });
+        state = InternalStoreState.create(slices);
       }
     }
 
@@ -137,10 +140,10 @@ export class Store implements BareStore<any> {
    * @returns
    */
   getReducedStore<SB extends BareSlice>(
-    slices: SB[],
     debugDispatch?: string,
+    slice?: BareSlice,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, slices, debugDispatch);
+    return new ReducedStore(this, debugDispatch, slice);
   }
 
   updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
@@ -187,8 +190,8 @@ export class ReducedStore<SB extends BareSlice> {
 
   constructor(
     private _store: Store | BareStore<any>,
-    private _slices: SB[],
     public _debugDispatchSrc?: string,
+    public _slice?: BareSlice,
   ) {}
 
   get destroyed() {
@@ -196,6 +199,11 @@ export class ReducedStore<SB extends BareSlice> {
   }
 
   get state(): StoreState<SB> {
+    if (this._slice && this._slice._bare.keyMapping) {
+      return (this._store.state as InternalStoreState)._withKeyMapping(
+        this._slice._bare.keyMapping,
+      );
+    }
     return this._store.state;
   }
 
