@@ -282,7 +282,41 @@ describe('State creation', () => {
     const appState = InternalStoreState.create([mySlice]);
 
     expect(appState.getSliceState(mySlice)).toEqual({ val: null });
-    expect(appState).toMatchSnapshot();
+    expect(appState).toEqual({
+      _slices: [
+        {
+          _bare: {
+            mappedDependencies: [],
+            children: [],
+          },
+          config: {
+            actions: {},
+            dependencies: [],
+            effects: [],
+            initState: {
+              val: null,
+            },
+            key: 'mySlice',
+            selectors: {},
+          },
+          initState: {
+            val: null,
+          },
+          key: 'mySlice',
+          resolveSelectors: expect.any(Function),
+          resolveState: expect.any(Function),
+          sliceUid: expect.any(String),
+          txApplicators: {},
+          txCreators: {},
+        },
+      ],
+      opts: undefined,
+      slicesCurrentState: {
+        mySlice: {
+          val: null,
+        },
+      },
+    });
   });
 
   test('throws error if action not found', () => {

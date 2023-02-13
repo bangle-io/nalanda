@@ -199,11 +199,12 @@ export class ReducedStore<SB extends BareSlice> {
   }
 
   get state(): StoreState<SB> {
-    if (this._slice && this._slice._bare.keyMapping) {
+    if (this._slice) {
       return (this._store.state as InternalStoreState)._withKeyMapping(
-        this._slice._bare.keyMapping,
+        this._slice.keyMapping.bind(this._slice),
       );
     }
+    // }
     return this._store.state;
   }
 

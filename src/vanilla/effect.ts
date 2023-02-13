@@ -309,7 +309,9 @@ export class EffectHandler {
     this.effect.updateSync?.(
       this._slice as AnySlice,
       store.getReducedStore(this.effect.name, this._slice),
-      previouslySeenState._withKeyMapping(this._slice._bare.keyMapping),
+      previouslySeenState._withKeyMapping(
+        this._slice.keyMapping.bind(this._slice),
+      ),
     );
   }
 
@@ -323,7 +325,9 @@ export class EffectHandler {
     this.effect.update?.(
       this._slice as AnySlice,
       store.getReducedStore(this.effect.name, this._slice),
-      previouslySeenState._withKeyMapping(this._slice._bare.keyMapping),
+      previouslySeenState._withKeyMapping(
+        this._slice.keyMapping.bind(this._slice),
+      ),
     );
   }
 }

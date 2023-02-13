@@ -1,7 +1,8 @@
 import { findDuplications } from './helpers';
-import { KeyMapping } from './merge';
 import { BareSlice } from './slice';
 import { Transaction } from './transaction';
+
+export type KeyMapping = (key: string) => string;
 
 export type ResolveSliceIfRegistered<
   SL extends BareSlice,
@@ -24,7 +25,7 @@ export interface StoreState<RegSlices extends BareSlice> {
 
 interface StoreStateOptions {
   debug?: boolean;
-  keyMapping?: KeyMapping | undefined;
+  keyMapping?: KeyMapping;
 }
 
 export class InternalStoreState implements StoreState<any> {
@@ -32,6 +33,7 @@ export class InternalStoreState implements StoreState<any> {
 
   static create<SL extends BareSlice>(slices: SL[]): StoreState<SL> {
     InternalStoreState.checkUniqueKeys(slices);
+    InternalStoreState.checkUniqDependency(slices);
     InternalStoreState.circularCheck(slices);
     InternalStoreState.checkDependencyOrder(slices);
 
@@ -68,7 +70,7 @@ export class InternalStoreState implements StoreState<any> {
         }
 
         const scopedStoreState = newStoreState._withKeyMapping(
-          slice._bare.keyMapping,
+          slice.keyMapping.bind(slice),
         );
 
         newState[slice.key] = slice.applyTx(
@@ -87,7 +89,6 @@ export class InternalStoreState implements StoreState<any> {
   }
 
   getSliceState(sl: BareSlice): unknown {
-    debugger;
     let result = this._getDirectSliceState(sl.key);
     if (!result.found) {
       throw new Error(`Slice "${sl.key}" not found in store`);
@@ -97,13 +98,13 @@ export class InternalStoreState implements StoreState<any> {
 
   private _getDirectSliceState(key: string) {
     if (this.opts?.keyMapping) {
-      const mappedKey = this.opts.keyMapping.get(key);
+      const mappedKey = this.opts.keyMapping(key);
       if (mappedKey === undefined) {
         throw new Error(
           `Key "${key}" not found in keyMapping. Did you forget to add it as a dependency it?`,
         );
       }
-      console.debug(`Augmented key "${key}" to "${mappedKey}`);
+      // console.debug(`Augmented key "${key}" to "${mappedKey}`);
       key = mappedKey;
     }
 
@@ -118,7 +119,10 @@ export class InternalStoreState implements StoreState<any> {
   }
 
   _withKeyMapping(keyMapping?: KeyMapping) {
-    return this._fork(this.slicesCurrentState, { keyMapping });
+    if (keyMapping) {
+      return this._fork(this.slicesCurrentState, { keyMapping });
+    }
+    return this;
   }
 
   private _fork(
@@ -137,14 +141,40 @@ export class InternalStoreState implements StoreState<any> {
     return newInstance;
   }
 
+  // TODO add test
+  static checkUniqDependency(slices: BareSlice[]) {
+    for (const slice of slices) {
+      const dependencies = slice._bare.mappedDependencies;
+      if (
+        new Set(dependencies.map((d) => d.key)).size !== dependencies.length
+      ) {
+        throw new Error(
+          `Slice "${slice.key}" has duplicate dependencies: ${dependencies
+            .map((d) => d.key)
+            .join(', ')}`,
+        );
+      }
+    }
+    for (const slice of slices) {
+      const dependencies = slice.config.dependencies;
+      if (
+        new Set(dependencies.map((d) => d.key)).size !== dependencies.length
+      ) {
+        throw new Error(
+          `Slice "${slice.key}" has duplicate dependencies: ${dependencies
+            .map((d) => d.key)
+            .join(', ')}`,
+        );
+      }
+    }
+  }
+
   static checkDependencyOrder(slices: BareSlice[]) {
     let seenKeys = new Set<string>();
     for (const slice of slices) {
-      const { dependencies } = slice.config;
-
+      const dependencies = slice._bare.mappedDependencies;
       if (dependencies !== undefined) {
         const depKeys = dependencies.map((d) => d.key);
-
         for (const depKey of depKeys) {
           if (!seenKeys.has(depKey)) {
             throw new Error(
@@ -179,7 +209,7 @@ export class InternalStoreState implements StoreState<any> {
       visited.add(key);
       stack.add(key);
 
-      for (const dep of slice.config.dependencies) {
+      for (const dep of slice._bare.mappedDependencies) {
         if (checkCycle(dep)) {
           return true;
         }

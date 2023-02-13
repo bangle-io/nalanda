@@ -1,5 +1,5 @@
 import { AnySlice } from '../vanilla/public-types';
-import { Slice } from '../vanilla/slice';
+import { BareSlice, Slice } from '../vanilla/slice';
 
 export function mergeSlices<K extends string, SL extends AnySlice>({
   key,
@@ -8,24 +8,30 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
   key: K;
   children: SL[];
 }): Slice<K, object, any, any, any> {
-  let childrenKeys = [...children.map((child) => child.key)];
-
-  const newChildren = children.flatMap((child) => {
+  let newChildren = children.flatMap((child) => {
     return [
-      ...children
-        .filter((child) => child._bare.children)
-        .flatMap((child) => {
-          return (
-            child._bare.children?.map((c) =>
-              Slice._addToParent(c as AnySlice, key, childrenKeys),
-            ) || []
-          );
-        }),
-      Slice._addToParent(child, key, childrenKeys),
+      ...children.flatMap((child) => {
+        const childChildren = child._bare.children as AnySlice[];
+        const siblingUids = new Set(childChildren.map((c) => c.sliceUid));
+        return childChildren.map((c) => {
+          return c._nestSlice(key, siblingUids);
+        });
+      }),
+      child._nestSlice(key, new Set(children.map((c) => c.sliceUid))),
     ];
   });
 
-  //   console.log(newChildren.map((r) => r?.key));
+  const newChildrenMapping = new Map(newChildren.map((c) => [c.sliceUid, c]));
+
+  newChildren = newChildren.map((c) => {
+    return c._fork({
+      mappedDependencies: c._bare.mappedDependencies.map((dep) => {
+        const mappedDep = newChildrenMapping.get(dep.sliceUid);
+        return mappedDep || dep;
+      }),
+    });
+  });
+
   const mergedSlice = new Slice({
     key: key,
     dependencies: [],
@@ -34,7 +40,7 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
     selectors: {},
   });
 
-  return mergedSlice._fork(mergedSlice.config, {
+  return mergedSlice._fork({
     children: newChildren,
   });
 }

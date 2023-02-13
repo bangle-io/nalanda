@@ -30,15 +30,15 @@ describe('merging', () => {
     expect(
       x0._bare.children?.map((r) => ({
         key: r.key,
-        sDebs: r._bare.siblingAndDependencies,
-        sMod: r._bare.siblingAndDependenciesAccessModifier,
+        sDebs: r._bare.mappedDependencies.map((r) => r.key),
       })),
     ).toMatchInlineSnapshot(`
       [
         {
           "key": "x0:t1",
-          "sDebs": [],
-          "sMod": "x0",
+          "sDebs": [
+            "g1",
+          ],
         },
       ]
     `);
@@ -47,28 +47,26 @@ describe('merging', () => {
       children: [x0],
     });
 
-    expect(z0._bare.siblingAndDependencies).toMatchInlineSnapshot(`undefined`);
-    expect(z0._bare.siblingAndDependenciesAccessModifier).toMatchInlineSnapshot(
-      `undefined`,
+    expect(z0._bare.mappedDependencies.map((r) => r.key)).toMatchInlineSnapshot(
+      `[]`,
     );
 
     expect(
       z0._bare.children?.map((r) => ({
         key: r.key,
-        sDebs: r._bare.siblingAndDependencies,
-        sMod: r._bare.siblingAndDependenciesAccessModifier,
+        sDebs: r._bare.mappedDependencies.map((d) => d.key),
       })),
     ).toMatchInlineSnapshot(`
       [
         {
           "key": "z0:x0:t1",
-          "sDebs": [],
-          "sMod": "z0:x0",
+          "sDebs": [
+            "g1",
+          ],
         },
         {
           "key": "z0:x0",
           "sDebs": [],
-          "sMod": "z0",
         },
       ]
     `);
@@ -112,7 +110,6 @@ describe('merging', () => {
         {
           name: 't1Effect',
           updateSync(slice, store, prevStoreState) {
-            debugger;
             if (
               g1.getState(store.state).g1State === 1 &&
               g1.getState(prevStoreState).g1State === 0
@@ -187,112 +184,102 @@ describe('merging', () => {
       expect(
         x0._bare.children?.map((r) => ({
           key: r.key,
-          sDebs: r._bare.siblingAndDependencies,
-          sMod: r._bare.siblingAndDependenciesAccessModifier,
+          sDebs: r._bare.mappedDependencies.map((d) => d.key),
         })),
       ).toMatchInlineSnapshot(`
-              [
-                {
-                  "key": "x0:t1",
-                  "sDebs": [],
-                  "sMod": "x0",
-                },
-                {
-                  "key": "x0:t2",
-                  "sDebs": [
-                    "t1",
-                  ],
-                  "sMod": "x0",
-                },
-                {
-                  "key": "x0:t3",
-                  "sDebs": [
-                    "t1",
-                  ],
-                  "sMod": "x0",
-                },
-              ]
-          `);
-
-      expect(z0._bare.siblingAndDependencies).toMatchInlineSnapshot(
-        `undefined`,
-      );
-      expect(
-        z0._bare.siblingAndDependenciesAccessModifier,
-      ).toMatchInlineSnapshot(`undefined`);
+        [
+          {
+            "key": "x0:t1",
+            "sDebs": [
+              "g1",
+            ],
+          },
+          {
+            "key": "x0:t2",
+            "sDebs": [
+              "x0:t1",
+            ],
+          },
+          {
+            "key": "x0:t3",
+            "sDebs": [
+              "g1",
+              "x0:t1",
+            ],
+          },
+        ]
+      `);
 
       let result: any[] = [];
 
       [...(z0._bare.children || []), z0]?.map((r) => {
         let miniResult: string[] = [];
         for (const sl of [g1, t1, t2, t3, x0, z0]) {
-          miniResult.push([sl.key, r._bare.keyMapping?.(sl.key)].join('>'));
+          miniResult.push([sl.key, r.keyMapping?.(sl.key)].join('>'));
         }
         result.push([r.key, miniResult.join(', ')]);
       });
 
       expect(result).toMatchInlineSnapshot(`
-              [
-                [
-                  "z0:x0:t1",
-                  "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
-                ],
-                [
-                  "z0:x0:t2",
-                  "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
-                ],
-                [
-                  "z0:x0:t3",
-                  "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
-                ],
-                [
-                  "z0:x0",
-                  "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
-                ],
-                [
-                  "z0",
-                  "g1>, t1>, t2>, t3>, x0>, z0>",
-                ],
-              ]
-          `);
+        [
+          [
+            "z0:x0:t1",
+            "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
+          ],
+          [
+            "z0:x0:t2",
+            "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
+          ],
+          [
+            "z0:x0:t3",
+            "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
+          ],
+          [
+            "z0:x0",
+            "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
+          ],
+          [
+            "z0",
+            "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
+          ],
+        ]
+      `);
 
       expect(
         z0._bare.children?.map((r) => ({
           key: r.key,
-          sDebs: r._bare.siblingAndDependencies,
-          sMod: r._bare.siblingAndDependenciesAccessModifier,
+          sDebs: r._bare.mappedDependencies.map((d) => d.key),
         })),
       ).toMatchInlineSnapshot(`
-              [
-                {
-                  "key": "z0:x0:t1",
-                  "sDebs": [],
-                  "sMod": "z0:x0",
-                },
-                {
-                  "key": "z0:x0:t2",
-                  "sDebs": [
-                    "t1",
-                  ],
-                  "sMod": "z0:x0",
-                },
-                {
-                  "key": "z0:x0:t3",
-                  "sDebs": [
-                    "t1",
-                  ],
-                  "sMod": "z0:x0",
-                },
-                {
-                  "key": "z0:x0",
-                  "sDebs": [],
-                  "sMod": "z0",
-                },
-              ]
-          `);
+        [
+          {
+            "key": "z0:x0:t1",
+            "sDebs": [
+              "g1",
+            ],
+          },
+          {
+            "key": "z0:x0:t2",
+            "sDebs": [
+              "z0:x0:t1",
+            ],
+          },
+          {
+            "key": "z0:x0:t3",
+            "sDebs": [
+              "g1",
+              "z0:x0:t1",
+            ],
+          },
+          {
+            "key": "z0:x0",
+            "sDebs": [],
+          },
+        ]
+      `);
     });
 
-    test.only('state looks okay', async () => {
+    test('state looks okay', async () => {
       const store = Store.create({
         scheduler: timeoutSchedular(0),
         storeName: 'test-store',

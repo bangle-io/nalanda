@@ -67,7 +67,7 @@ export function calcDependencies(
   return Object.fromEntries(
     slices.map((slice) => [
       slice.key,
-      new Set(slice.config.dependencies.map((dep) => dep.key)),
+      new Set(slice._bare.mappedDependencies.map((dep) => dep.key)),
     ]),
   );
 }
@@ -114,7 +114,7 @@ export function calcReverseDependencies(
   let reverseDependencies: Record<string, Set<string>> = {};
 
   for (const slice of slices) {
-    for (const dep of slice.config.dependencies) {
+    for (const dep of slice._bare.mappedDependencies) {
       let result = reverseDependencies[dep.key];
 
       if (!result) {
