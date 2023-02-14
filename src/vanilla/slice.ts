@@ -1,5 +1,5 @@
 import { mapObjectValues, uuid, weakCache } from './helpers';
-import { AnyFn, TxApplicator } from './internal-types';
+import { AnyFn, NoInfer, TxApplicator } from './internal-types';
 import {
   Effect,
   SelectorFn,
