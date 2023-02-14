@@ -47,3 +47,7 @@ export interface Effect<
         prevStoreState: StoreState<Sibblings>,
       ) => void);
 }
+
+export function typed<T>(value: T): T {
+  return value;
+}

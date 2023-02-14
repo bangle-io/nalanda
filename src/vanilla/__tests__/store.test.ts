@@ -102,7 +102,7 @@ describe('store', () => {
 
     expect(
       log.map((r) => {
-        return { ...r, txId: 'rand' + r.txId.slice(6) };
+        return { ...r, txId: 'rand' + r.txId.slice(4) };
       }),
     ).toMatchInlineSnapshot(`
       [

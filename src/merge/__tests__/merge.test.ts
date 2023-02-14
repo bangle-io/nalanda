@@ -1,4 +1,5 @@
 import { mergeSlices } from '..';
+import { createDispatchSpy } from '../../test-heleprs';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { Slice } from '../../vanilla/slice';
@@ -153,7 +154,8 @@ describe('merging', () => {
       ],
     });
 
-    const t3 = createSlice([g1, t1], {
+    const t3 = new Slice({
+      dependencies: [g1, t1],
       key: 't3',
       initState: {
         g1State: '<unknown>',
@@ -168,6 +170,20 @@ describe('merging', () => {
           self: state.self + 1,
         }),
       },
+      selectors: {},
+      effects: [
+        {
+          name: 't3Effect',
+          updateSync(slice, store, prevStoreState) {
+            if (
+              t1.getState(store.state).self === 2 &&
+              slice.getState(store.state).self === 0
+            ) {
+              store.dispatch(slice.actions.updateT3State());
+            }
+          },
+        },
+      ],
     });
 
     const x0 = mergeSlices({
@@ -280,8 +296,10 @@ describe('merging', () => {
     });
 
     test('state looks okay', async () => {
+      let dispatchSpy = createDispatchSpy();
       const store = Store.create({
         scheduler: timeoutSchedular(0),
+        dispatchTx: dispatchSpy.dispatch,
         storeName: 'test-store',
         state: [g1, z0],
       });
@@ -321,20 +339,47 @@ describe('merging', () => {
           "z0": {},
           "z0:x0": {},
           "z0:x0:t1": {
-            "self": 1,
-            "t1State": "(1+<unknown>)",
+            "self": 2,
+            "t1State": "(1+(1+<unknown>))",
           },
           "z0:x0:t2": {
             "self": 0,
             "t1State": "<unknown>",
           },
           "z0:x0:t3": {
-            "g1State": "<unknown>",
-            "self": 0,
-            "t1State": "<unknown>",
+            "g1State": "1",
+            "self": 1,
+            "t1State": "(1+(1+<unknown>))",
           },
         }
       `);
+
+      expect(dispatchSpy.getSimplifiedTransactions()).toEqual([
+        {
+          actionId: 'updateG1State',
+          dispatchSource: undefined,
+          payload: [],
+          sliceKey: 'g1',
+        },
+        {
+          actionId: 'updateT1State',
+          dispatchSource: 't1Effect',
+          payload: [],
+          sliceKey: 'z0:x0:t1',
+        },
+        {
+          actionId: 'updateT1State',
+          dispatchSource: 't2Effect',
+          payload: [],
+          sliceKey: 'z0:x0:t1',
+        },
+        {
+          actionId: 'updateT3State',
+          dispatchSource: 't3Effect',
+          payload: [],
+          sliceKey: 'z0:x0:t3',
+        },
+      ]);
     });
   });
 });

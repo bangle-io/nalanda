@@ -1,4 +1,4 @@
-import { uuid } from './helpers';
+import { incrementalId } from './helpers';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 
@@ -12,17 +12,10 @@ import {
 } from './transaction';
 import { BareStore } from './public-types';
 
-type DispatchTx<TX extends Transaction<any, any>> = (
+export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
   tx: TX,
 ) => void;
-
-const contextId = uuid(6);
-
-let counter = 0;
-function incrementalId() {
-  return `${contextId}-${counter++}`;
-}
 
 export class Store implements BareStore<any> {
   static create<SB extends BareSlice>({
@@ -181,6 +174,12 @@ export class ReducedStore<SB extends BareSlice> {
         this._debugDispatchSrc,
       );
     }
+
+    if (this._slice) {
+      // change the key of the transaction to match the correct mapping
+      tx = tx.changeKey(this._slice.keyMapping(tx.sliceKey));
+    }
+
     if (debugDispatch) {
       tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
     }

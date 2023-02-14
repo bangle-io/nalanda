@@ -5,6 +5,8 @@ import type {
   Effect,
 } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
+import { DispatchTx } from '../vanilla/store';
+import { Transaction, TX_META_DISPATCH_SOURCE } from '../vanilla/transaction';
 
 /**
  * To be only used for testing scenarios. In production, slices should always have the same code
@@ -59,4 +61,28 @@ export function waitUntil<B extends BareStore<any>>(
       }
     }, pollFrequency);
   });
+}
+
+export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
+  let txs: Transaction<any, any>[] = [];
+  const dispatch: DispatchTx<Transaction<any, any>> = (store, tx) => {
+    let newState = store.state.applyTransaction(tx);
+    fn?.(tx);
+    txs.push(tx);
+    store.updateState(newState, tx);
+  };
+  return {
+    dispatch,
+    getTransactions() {
+      return txs;
+    },
+    getSimplifiedTransactions() {
+      return txs.map(({ sliceKey, metadata, payload, actionId }) => ({
+        sliceKey,
+        actionId,
+        payload,
+        dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
+      }));
+    },
+  };
 }

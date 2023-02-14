@@ -185,6 +185,17 @@ export class Slice<
     return apply(sliceState, storeState, tx);
   }
 
+  pick<T>(
+    cb: (resolvedState: SS & ResolvedSelectors<SE>) => T,
+  ): [Slice<K, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
+    return [
+      this,
+      (storeState: StoreState<any>) => {
+        return cb(this.resolveState(storeState));
+      },
+    ];
+  }
+
   _fork(
     bare: Partial<Slice<K, SS, any, any, any>['_bare']>,
     internalOpts?: SliceInternalOpts,

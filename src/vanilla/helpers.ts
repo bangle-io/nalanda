@@ -1,6 +1,12 @@
 import { Action } from './public-types';
 import { BareSlice } from './slice';
 
+const contextId = uuid(4);
+let counter = 0;
+export function incrementalId() {
+  return `${contextId}-${counter++}`;
+}
+
 export function mapObjectValues<T, U>(
   obj: Record<string, T>,
   fn: (v: T, k: string) => U,
