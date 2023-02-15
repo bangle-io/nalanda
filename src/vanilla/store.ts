@@ -1,33 +1,24 @@
-import { uuid } from './common';
+import { incrementalId } from './helpers';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
-import type { DebugFunc } from './logging';
-import { txLog } from './logging';
-import type { Slice } from './slice';
-import type { StoreStateConfig } from './state';
-import { StoreState } from './state';
-import type { Transaction } from './transaction';
+
+import type { BareSlice } from './slice';
+import { InternalStoreState, StoreState } from './state';
+import { DebugFunc, Transaction, txLog } from './transaction';
 import {
   TX_META_DISPATCH_SOURCE,
   TX_META_STORE_NAME,
   TX_META_STORE_TX_ID,
 } from './transaction';
-import type { AnySliceBase } from './types';
+import { BareStore } from './public-types';
 
-type DispatchTx<TX extends Transaction<any, any>, SB extends AnySliceBase> = (
-  store: Store<SB>,
+export type DispatchTx<TX extends Transaction<any, any>> = (
+  store: Store,
   tx: TX,
 ) => void;
 
-const contextId = uuid(6);
-
-let counter = 0;
-function incrementalId() {
-  return `${contextId}-${counter++}`;
-}
-
-export class Store<SB extends AnySliceBase> {
-  static create<SB extends AnySliceBase>({
+export class Store implements BareStore<any> {
+  static create<SB extends BareSlice>({
     disableSideEffects = false,
     dispatchTx = (store, tx) => {
       let newState = store.state.applyTransaction(tx);
@@ -46,18 +37,23 @@ export class Store<SB extends AnySliceBase> {
     debug,
   }: {
     disableSideEffects?: boolean;
-    dispatchTx?: DispatchTx<Transaction<any, any>, SB>;
+    dispatchTx?: DispatchTx<Transaction<any, any>>;
     scheduler?: Scheduler;
-    state: StoreState<SB> | StoreStateConfig<SB>;
+    state: StoreState<SB> | SB[];
     storeName: string;
     debug?: DebugFunc;
-  }) {
-    if (!(state instanceof StoreState)) {
-      state = StoreState.create(state);
+  }): BareStore<SB> {
+    if (!(state instanceof InternalStoreState)) {
+      if (Array.isArray(state)) {
+        let slices = state.flatMap((s) => {
+          return [...(s._bare.children || []), s];
+        });
+        state = InternalStoreState.create(slices);
+      }
     }
 
     const store = new Store(
-      state,
+      state as InternalStoreState,
       storeName,
       dispatchTx,
       scheduler,
@@ -68,10 +64,7 @@ export class Store<SB extends AnySliceBase> {
     return store;
   }
 
-  dispatch = (
-    tx: Transaction<SB['key']['key'], any>,
-    debugDispatch?: string,
-  ) => {
+  dispatch = (tx: Transaction<string, any>, debugDispatch?: string) => {
     if (this._destroyed) {
       return;
     }
@@ -93,9 +86,9 @@ export class Store<SB extends AnySliceBase> {
   private _effectsManager: SideEffectsManager | undefined;
 
   constructor(
-    public state: StoreState<SB>,
+    public state: InternalStoreState,
     public storeName: string,
-    private _dispatchTx: DispatchTx<any, SB>,
+    private _dispatchTx: DispatchTx<any>,
     scheduler?: Scheduler,
     disableSideEffects?: boolean,
     private _debug?: DebugFunc,
@@ -139,14 +132,14 @@ export class Store<SB extends AnySliceBase> {
    * @param slices
    * @returns
    */
-  getReducedStore<SB extends Slice>(
-    slices: SB[],
+  getReducedStore<SB extends BareSlice>(
     debugDispatch?: string,
+    slice?: BareSlice,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, slices, debugDispatch);
+    return new ReducedStore(this, debugDispatch, slice);
   }
 
-  updateState(newState: StoreState<SB>, tx?: Transaction<any, any>) {
+  updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
     if (this._destroyed) {
       return;
     }
@@ -166,25 +159,27 @@ export class Store<SB extends AnySliceBase> {
   }
 
   // TODO: this will be removed once we have better way of adding dynamic slices
-  _tempRegisterOnSyncChange(sl: Slice, cb: () => void) {
+  _tempRegisterOnSyncChange(sl: BareSlice, cb: () => void) {
     return (
-      this._effectsManager?._tempRegisterOnSyncChange(sl.key.key, cb) ||
-      (() => {})
+      this._effectsManager?._tempRegisterOnSyncChange(sl.key, cb) || (() => {})
     );
   }
 }
 
-export class ReducedStore<SB extends Slice> {
-  dispatch = (
-    tx: Transaction<SB['key']['key'], any>,
-    debugDispatch?: string,
-  ) => {
+export class ReducedStore<SB extends BareSlice> {
+  dispatch = (tx: Transaction<SB['key'], any>, debugDispatch?: string) => {
     if (this._debugDispatchSrc) {
       tx.metadata.appendMetadata(
         TX_META_DISPATCH_SOURCE,
         this._debugDispatchSrc,
       );
     }
+
+    if (this._slice) {
+      // change the key of the transaction to match the correct mapping
+      tx = tx.changeKey(this._slice.keyMapping(tx.sliceKey));
+    }
+
     if (debugDispatch) {
       tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
     }
@@ -193,9 +188,9 @@ export class ReducedStore<SB extends Slice> {
   };
 
   constructor(
-    private _store: Store<any>,
-    private _slices: SB[],
+    private _store: Store | BareStore<any>,
     public _debugDispatchSrc?: string,
+    public _slice?: BareSlice,
   ) {}
 
   get destroyed() {
@@ -203,6 +198,12 @@ export class ReducedStore<SB extends Slice> {
   }
 
   get state(): StoreState<SB> {
+    if (this._slice) {
+      return (this._store.state as InternalStoreState)._withKeyMapping(
+        this._slice.keyMapping.bind(this._slice),
+      );
+    }
+    // }
     return this._store.state;
   }
 

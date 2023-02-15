@@ -1,20 +1,39 @@
-import { slice, key, Store, createUseSliceHook } from 'nalanda';
+import {
+  Store,
+  createUseSliceHook,
+  createSlice,
+  changeEffect,
+  mergeSlices,
+} from 'nalanda';
 
-export const mySlice = slice({
-  key: key('mySlice', [], { val: 'hi' }),
+const mySlice = createSlice([], {
+  key: 'mySlice',
+  initState: {
+    val: 'hello',
+  },
   actions: {
-    updateStr: (val: string) => () => ({ val }),
+    updateVal: (val: string) => () => ({ val }),
   },
-  effects: {
-    updateSync() {
-      console.count('updateSync');
-    },
+});
+
+const myEffect = changeEffect(
+  'myEffect',
+  {
+    val: mySlice.pick((v) => v.val),
   },
+  (data) => {
+    console.log(data.val);
+  },
+);
+
+export const mergedSlice = mergeSlices({
+  key: 'myMergedSlice',
+  children: [mySlice, myEffect],
 });
 
 const myStore = Store.create({
   storeName: 'myStore',
-  state: { slices: [mySlice] },
+  state: [mergedSlice],
 });
 
 export const useSlice = createUseSliceHook(myStore);

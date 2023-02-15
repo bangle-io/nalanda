@@ -2,24 +2,38 @@ import {
   calcDependencies,
   calcReverseDependencies,
   flattenReverseDependencies,
-} from '../common';
-import type { AnySliceBase } from '../types';
+} from '../helpers';
+import { rejectAny } from '../internal-types';
+import { AnySlice } from '../public-types';
+import { BareSlice, Slice } from '../slice';
+
+test('reject any', () => {
+  let _control: any = {};
+  let _control2 = {};
+  let _control3 = 4;
+  let _control4 = { foo: {} as any };
+
+  // @ts-expect-error - we are testing the rejectAny function
+  rejectAny(_control);
+  rejectAny(_control2);
+  rejectAny(_control3);
+  // @ts-expect-error - we are testing the rejectAny function
+  rejectAny(_control4.foo);
+
+  expect(true).toBe(true);
+});
 
 describe('calcReverseDependencies', () => {
-  const createAnySliceBase = (key: string, deps: string[]): AnySliceBase => {
-    return {
-      key: {
-        key,
-        initState: {},
-        dependencies: deps.map((dep) => {
-          return createAnySliceBase(dep, []);
-        }),
-      },
-      fingerPrint: '',
-      _getRawAction() {
-        return undefined;
-      },
-    };
+  const createAnySliceBase = (key: string, deps: string[]): BareSlice => {
+    return new Slice({
+      key,
+      initState: {},
+      dependencies: deps.map((dep) => {
+        return createAnySliceBase(dep, []) as AnySlice;
+      }),
+      actions: {},
+      selectors: {},
+    });
   };
 
   describe.each([
@@ -272,14 +286,4 @@ describe('calcReverseDependencies', () => {
       ).toEqual(flatReverseDep);
     });
   });
-
-  //   test('works 1', () => {
-  //     const sl1 = createAnySliceBase('sl1', ['sl2', 'sl3']);
-  //     const sl2 = createAnySliceBase('sl2', []);
-
-  //     expect(calcReverseDependencies([sl1, sl2])).toEqual({
-  //       sl2: new Set(['sl1']),
-  //       sl3: new Set(['sl1']),
-  //     });
-  //   });
 });

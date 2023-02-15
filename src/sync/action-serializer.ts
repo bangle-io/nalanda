@@ -1,7 +1,8 @@
 import type { z } from 'zod';
+import { AnyFn } from '../vanilla/internal-types';
+import { Action, AnySlice, SelectorFn } from '../vanilla/public-types';
 
-import type { Slice, SliceKey } from '../vanilla/slice';
-import type { AnyFn, RawAction, SelectorFn } from '../vanilla/types';
+import type { Slice } from '../vanilla/slice';
 import { zodFindUnsafeTypes } from './zod';
 
 export type ActionSerialData<P extends any[]> = {
@@ -10,14 +11,14 @@ export type ActionSerialData<P extends any[]> = {
 };
 export const serialActionCache = new WeakMap<AnyFn, ActionSerialData<any>>();
 
-export function serialAction<T extends z.ZodTypeAny, SS, DS extends Slice[]>(
+export function serialAction<T extends z.ZodTypeAny, SS, DS extends AnySlice>(
   schema: T,
-  cb: RawAction<[z.infer<T>], SS, DS>,
+  cb: Action<[z.infer<T>], SS, DS>,
   opts?: {
     parse?: (schema: T, data: unknown) => [z.infer<T>];
     serialize?: (schema: T, payload: [z.infer<T>]) => unknown;
   },
-): RawAction<[z.infer<T>], SS, DS> {
+): Action<[z.infer<T>], SS, DS> {
   let unsafeTypes = zodFindUnsafeTypes(schema);
 
   if (unsafeTypes.length > 0) {
@@ -47,18 +48,18 @@ export function serialAction<T extends z.ZodTypeAny, SS, DS extends Slice[]>(
 }
 
 export class ActionSerializer<
-  K extends string = string,
-  SS extends object = object,
-  DS extends Slice[] = any[],
-  A extends Record<string, RawAction<any[], SS, DS>> = any,
-  SE extends Record<string, SelectorFn<SS, DS, any>> = any,
+  K extends string,
+  SS extends object,
+  DS extends AnySlice,
+  A extends Record<string, Action<any[], SS, DS>>,
+  SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
-  static create<SL extends Slice>(slice: SL) {
-    return new ActionSerializer(slice.key, slice._rawActions);
+  static create<SL extends AnySlice>(slice: SL) {
+    return new ActionSerializer(slice);
   }
 
-  getRawAction = (actionId: string): RawAction<any, any, any> | undefined => {
-    const action = this.rawActions[actionId];
+  getRawAction = (actionId: string): Action<any, any, any> | undefined => {
+    const action = this.slice.config.actions[actionId];
 
     if (!action) {
       return undefined;
@@ -67,25 +68,27 @@ export class ActionSerializer<
     return action;
   };
 
-  constructor(public key: SliceKey<K, SS, SE, DS>, public rawActions: A) {}
+  constructor(public slice: Slice<K, SS, DS, A, SE>) {}
 
   getRawSerializedAction(actionId: string):
     | {
-        action: RawAction<any, any, any>;
+        action: Action<any, any, any>;
         serialData: ActionSerialData<any>;
       }
     | undefined {
     const action = this.getRawAction(actionId);
 
     if (!action) {
-      throw new Error(`Action ${actionId} not found in slice ${this.key.key}`);
+      throw new Error(
+        `Action ${actionId} not found in slice ${this.slice.key}`,
+      );
     }
 
     const serialData = serialActionCache.get(action);
 
     if (!serialData) {
       throw new Error(
-        `Action ${actionId} in slice ${this.key.key} is not serializable`,
+        `Action ${actionId} in slice ${this.slice.key} is not serializable`,
       );
     }
 
@@ -97,7 +100,7 @@ export class ActionSerializer<
 
   isSyncReady(): boolean {
     // all actions must be serial
-    return Object.values(this.rawActions).every((action) =>
+    return Object.values(this.slice.config.actions).every((action) =>
       serialActionCache.has(action),
     );
   }
@@ -124,14 +127,16 @@ export class ActionSerializer<
     const action = this.getRawAction(actionId);
 
     if (!action) {
-      throw new Error(`Action ${actionId} not found in slice ${this.key.key}`);
+      throw new Error(
+        `Action ${actionId} not found in slice ${this.slice.key}`,
+      );
     }
 
     const serialData = serialActionCache.get(action);
 
     if (!serialData) {
       throw new Error(
-        `Serialize Action ${actionId} in slice ${this.key.key} not found`,
+        `Serialize Action ${actionId} in slice ${this.slice.key} not found`,
       );
     }
 

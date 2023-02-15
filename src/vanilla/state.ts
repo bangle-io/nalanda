@@ -1,94 +1,82 @@
-import type { Transaction } from './transaction';
-import type { AnySliceBase, ResolveSliceIfRegistered } from './types';
+import { findDuplications } from './helpers';
+import { BareSlice } from './slice';
+import { Transaction } from './transaction';
+
+export type KeyMapping = (key: string) => string;
+
+export type ResolveSliceIfRegistered<
+  SL extends BareSlice,
+  SliceRegistry extends BareSlice,
+> = SL extends BareSlice<infer K, any>
+  ? K extends SliceRegistry['key']
+    ? SL
+    : never
+  : never;
+
+export interface StoreState<RegSlices extends BareSlice> {
+  getSliceState<SL extends BareSlice>(
+    slice: ResolveSliceIfRegistered<SL, RegSlices>,
+  ): SL['initState'];
+
+  applyTransaction(
+    tx: Transaction<RegSlices['key'], unknown[]>,
+  ): StoreState<RegSlices>;
+}
 
 interface StoreStateOptions {
   debug?: boolean;
+  keyMapping?: KeyMapping;
 }
 
-export interface StoreStateConfig<SB extends AnySliceBase> {
-  slices: SB[];
-  opts?: StoreStateOptions;
-}
-export class StoreState<SB extends AnySliceBase = any> {
-  static checkDependencyOrder(slices: AnySliceBase[]) {
-    let seenKeys = new Set<string>();
-    for (const slice of slices) {
-      const { key } = slice;
+export class InternalStoreState implements StoreState<any> {
+  protected slicesCurrentState: Record<string, unknown> = Object.create(null);
 
-      if (key.dependencies !== undefined) {
-        const depKeys = key.dependencies.map((d) => d.key.key);
+  static create<SL extends BareSlice>(slices: SL[]): StoreState<SL> {
+    InternalStoreState.checkUniqueKeys(slices);
+    InternalStoreState.checkUniqDependency(slices);
+    InternalStoreState.circularCheck(slices);
+    InternalStoreState.checkDependencyOrder(slices);
 
-        for (const depKey of depKeys) {
-          if (!seenKeys.has(depKey)) {
-            throw new Error(
-              `Slice "${key.key}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
-            );
-          }
-        }
-      }
-      seenKeys.add(key.key);
-    }
-  }
-
-  static checkUniqueKeys(slices: AnySliceBase[]) {
-    const keys = slices.map((s) => s.key.key);
-    const unique = new Set(keys);
-
-    if (keys.length !== unique.size) {
-      const dups = findDuplications(keys);
-      throw new Error('Duplicate slice keys ' + dups.join(', '));
-    }
-  }
-
-  static create<SB extends AnySliceBase>({
-    slices,
-    opts,
-  }: StoreStateConfig<SB>): StoreState<SB> {
-    StoreState.checkUniqueKeys(slices);
-    StoreState.checkDependencyOrder(slices);
-
-    const instance = new StoreState(slices, opts);
+    const instance = new InternalStoreState(slices);
 
     for (const slice of slices) {
-      instance.slicesCurrentState[slice.key.key] = slice.key.initState;
+      instance.slicesCurrentState[slice.key] = slice.initState;
     }
 
     return instance;
   }
 
-  protected slicesCurrentState: { [k: string]: any } = Object.create(null);
+  constructor(
+    public readonly _slices: BareSlice[],
+    public opts?: StoreStateOptions,
+  ) {}
 
-  constructor(public _slices: SB[], public opts?: StoreStateOptions) {}
-
-  applyTransaction<P extends any[]>(
-    tx: Transaction<SB['key']['key'], P>,
-  ): StoreState<SB> {
+  applyTransaction(tx: Transaction<string, unknown[]>): InternalStoreState {
     const newState = { ...this.slicesCurrentState };
+    const newStoreState = this._fork(newState);
 
     let found = false;
 
     for (const slice of this._slices) {
-      if (slice.key.key === tx.sliceKey) {
+      if (slice.key === tx.sliceKey) {
         found = true;
-        const rawAction = slice._getRawAction(tx.actionId);
 
-        if (!rawAction) {
-          throw new Error(
-            `Action "${tx.actionId}" not found in Slice "${slice.key.key}"`,
-          );
-        }
-
-        const sliceState = this._getSliceState(slice);
+        const sliceState = newStoreState._getDirectSliceState(slice.key);
 
         if (!sliceState.found) {
           throw new Error(
-            `Slice "${slice.key.key}" or one of its dependencies not found in store`,
+            `Slice "${slice.key}" or one of its dependencies not found in store`,
           );
         }
 
-        newState[slice.key.key] = rawAction(...tx.payload)(
+        const scopedStoreState = newStoreState._withKeyMapping(
+          slice.keyMapping.bind(slice),
+        );
+
+        newState[slice.key] = slice.applyTx(
           sliceState.value,
-          this,
+          scopedStoreState,
+          tx,
         );
       }
     }
@@ -97,57 +85,151 @@ export class StoreState<SB extends AnySliceBase = any> {
       return this;
     }
 
-    // TODO: append-action
-    return this._fork(newState);
+    return newStoreState;
   }
 
-  getSliceState<SL extends AnySliceBase>(
-    slice: ResolveSliceIfRegistered<SL, SB>,
-  ): SL['key']['initState'] {
-    let result = this.slicesCurrentState[slice.key.key]!;
+  getSliceState(sl: BareSlice): unknown {
+    let result = this._getDirectSliceState(sl.key);
+    if (!result.found) {
+      throw new Error(`Slice "${sl.key}" not found in store`);
+    }
+    return result.value;
+  }
 
-    if (result === undefined) {
-      throw new Error(`Slice "${slice.key.key}" not found in store`);
+  private _getDirectSliceState(key: string) {
+    if (this.opts?.keyMapping) {
+      const mappedKey = this.opts.keyMapping(key);
+      if (mappedKey === undefined) {
+        throw new Error(
+          `Key "${key}" not found in keyMapping. Did you forget to add it as a dependency it?`,
+        );
+      }
+      // console.debug(`Augmented key "${key}" to "${mappedKey}`);
+      key = mappedKey;
     }
 
-    return result;
-  }
-
-  private _fork(slicesState: StoreState['slicesCurrentState']): StoreState {
-    const newInstance = new StoreState(this._slices, this.opts);
-    newInstance.slicesCurrentState = slicesState;
-
-    return newInstance;
-  }
-
-  // An internal method to get the state of a slice without generic type hassles
-  private _getSliceState<SL extends AnySliceBase>(
-    slice: SL,
-  ):
-    | { found: true; value: SL['key']['initState'] }
-    | { found: false; value: undefined } {
-    if (Object.hasOwnProperty.call(this.slicesCurrentState, slice.key.key)) {
+    if (Object.prototype.hasOwnProperty.call(this.slicesCurrentState, key)) {
       return {
         found: true,
-        value: this.slicesCurrentState[slice.key.key],
+        value: this.slicesCurrentState[key]!,
       };
     }
 
     return { found: false, value: undefined };
   }
-}
 
-function findDuplications<T>(arr: T[]): T[] {
-  const seen = new Set<T>();
-  const dupes = new Set<T>();
+  _withKeyMapping(keyMapping?: KeyMapping) {
+    if (keyMapping) {
+      return this._fork(this.slicesCurrentState, { keyMapping });
+    }
+    return this;
+  }
 
-  for (const item of arr) {
-    if (seen.has(item)) {
-      dupes.add(item);
-    } else {
-      seen.add(item);
+  private _fork(
+    slicesState: Record<string, unknown>,
+    opts?: Partial<StoreStateOptions>,
+  ): InternalStoreState {
+    const newOpts = !opts
+      ? this.opts
+      : {
+          ...this.opts,
+          ...opts,
+        };
+
+    const newInstance = new InternalStoreState(this._slices, newOpts);
+    newInstance.slicesCurrentState = slicesState;
+    return newInstance;
+  }
+
+  // TODO add test
+  static checkUniqDependency(slices: BareSlice[]) {
+    for (const slice of slices) {
+      const dependencies = slice._bare.mappedDependencies;
+      if (
+        new Set(dependencies.map((d) => d.key)).size !== dependencies.length
+      ) {
+        throw new Error(
+          `Slice "${slice.key}" has duplicate dependencies: ${dependencies
+            .map((d) => d.key)
+            .join(', ')}`,
+        );
+      }
+    }
+    for (const slice of slices) {
+      const dependencies = slice.config.dependencies;
+      if (
+        new Set(dependencies.map((d) => d.key)).size !== dependencies.length
+      ) {
+        throw new Error(
+          `Slice "${slice.key}" has duplicate dependencies: ${dependencies
+            .map((d) => d.key)
+            .join(', ')}`,
+        );
+      }
     }
   }
 
-  return [...dupes];
+  static checkDependencyOrder(slices: BareSlice[]) {
+    let seenKeys = new Set<string>();
+    for (const slice of slices) {
+      const dependencies = slice._bare.mappedDependencies;
+      if (dependencies !== undefined) {
+        const depKeys = dependencies.map((d) => d.key);
+        for (const depKey of depKeys) {
+          if (!seenKeys.has(depKey)) {
+            throw new Error(
+              `Slice "${slice.key}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
+            );
+          }
+        }
+      }
+      seenKeys.add(slice.key);
+    }
+  }
+
+  static checkUniqueKeys(slices: BareSlice[]) {
+    const keys = slices.map((s) => s.key);
+    const unique = new Set(keys);
+
+    if (keys.length !== unique.size) {
+      const dups = findDuplications(keys);
+      throw new Error('Duplicate slice keys ' + dups.join(', '));
+    }
+  }
+
+  static circularCheck(slices: BareSlice[]) {
+    const stack = new Set<string>();
+    const visited = new Set<string>();
+
+    const checkCycle = (slice: BareSlice): boolean => {
+      const key = slice.key;
+      if (stack.has(key)) return true;
+      if (visited.has(key)) return false;
+
+      visited.add(key);
+      stack.add(key);
+
+      for (const dep of slice._bare.mappedDependencies) {
+        if (checkCycle(dep)) {
+          return true;
+        }
+      }
+      stack.delete(key);
+      return false;
+    };
+
+    for (const slice of slices) {
+      const cycle = checkCycle(slice);
+      if (cycle) {
+        const path = [...stack];
+        path.push(slice.key);
+
+        throw new Error(
+          `Circular dependency detected in slice "${
+            slice.key
+          }" with path ${path.join(' ->')}`,
+        );
+      }
+    }
+  }
 }

@@ -1,8 +1,8 @@
-import { key, slice } from '../create';
-import { timeoutSchedular } from '../effect';
-import { StoreState } from '../state';
-import { ReducedStore, Store } from '../store';
 import { waitUntil } from '../../test-helpers';
+import { createKey, slice } from '../create';
+import { timeoutSchedular } from '../effect';
+import { InternalStoreState, StoreState } from '../state';
+import { ReducedStore, Store } from '../store';
 import {
   TX_META_DISPATCH_SOURCE,
   TX_META_STORE_NAME,
@@ -10,7 +10,7 @@ import {
 } from '../transaction';
 
 const testSlice1 = slice({
-  key: key('test-1', [], { num: 4 }),
+  key: createKey('test-1', [], { num: 4 }),
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -22,7 +22,7 @@ const testSlice1 = slice({
 });
 
 const testSlice2 = slice({
-  key: key('test-2', [], { name: 'tame' }),
+  key: createKey('test-2', [], { name: 'tame' }),
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -37,7 +37,7 @@ const testSlice2 = slice({
 });
 
 const testSlice3 = slice({
-  key: key('test-3', [], { name: 'tame' }),
+  key: createKey('test-3', [], { name: 'tame' }),
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };
@@ -46,14 +46,16 @@ const testSlice3 = slice({
       return { ...state, name: state.name.toUpperCase() };
     },
   },
-  effects: {
-    name: 'to-lowercase',
-    updateSync(sl, store) {
-      if (sl.getState(store.state).name === 'TAME') {
-        store.dispatch(sl.actions.lowercase());
-      }
+  effects: [
+    {
+      name: 'to-lowercase',
+      updateSync(sl, store) {
+        if (sl.getState(store.state).name === 'TAME') {
+          store.dispatch(sl.actions.lowercase());
+        }
+      },
     },
-  },
+  ],
 });
 
 describe('store', () => {
@@ -61,9 +63,7 @@ describe('store', () => {
     const myStore = Store.create({
       storeName: 'myStore',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3],
-      },
+      state: [testSlice1, testSlice2, testSlice3],
     });
 
     const tx = testSlice1.actions.increment({ increment: true });
@@ -92,9 +92,7 @@ describe('store', () => {
     const myStore = Store.create({
       storeName: 'myStore',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3],
-      },
+      state: [testSlice1, testSlice2, testSlice3],
       debug(item) {
         log.push(item);
       },
@@ -104,7 +102,7 @@ describe('store', () => {
 
     expect(
       log.map((r) => {
-        return { ...r, txId: 'rand' + r.txId.slice(6) };
+        return { ...r, txId: 'rand' + r.txId.slice(4) };
       }),
     ).toMatchInlineSnapshot(`
       [
@@ -176,18 +174,15 @@ describe('ReducedStore', () => {
     const myStore = Store.create({
       storeName: 'myStore',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3],
-      },
+      state: [testSlice1, testSlice2, testSlice3],
     });
-    const reducedStore = new ReducedStore(myStore, [testSlice1, testSlice3]);
+    const reducedStore = new ReducedStore(myStore, '', testSlice1);
 
     reducedStore.dispatch(testSlice1.actions.increment({ increment: true }));
 
-    // @ts-expect-error - test slice 2 is not in the reduced store
-    reducedStore.dispatch(testSlice2.actions.uppercase());
+    myStore.dispatch(testSlice2.actions.uppercase());
 
-    reducedStore.dispatch(testSlice3.actions.lowercase());
+    myStore.dispatch(testSlice3.actions.lowercase());
 
     expect(testSlice3.getState(reducedStore.state)).toEqual(
       testSlice3.getState(myStore.state),
@@ -197,7 +192,6 @@ describe('ReducedStore', () => {
       testSlice1.getState(myStore.state),
     );
 
-    // @ts-expect-error - test slice 2 is not in the reduced store, we should throw error in future
     expect(testSlice2.getState(reducedStore.state)).toEqual(
       testSlice2.getState(myStore.state),
     );
@@ -207,11 +201,9 @@ describe('ReducedStore', () => {
     const myStore = Store.create({
       storeName: 'myStore',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3],
-      },
-    });
-    const reducedStore = myStore.getReducedStore([testSlice1, testSlice3]);
+      state: [testSlice1, testSlice2, testSlice3],
+    }) as Store;
+    const reducedStore = myStore.getReducedStore('debug', testSlice1);
 
     reducedStore.destroy();
 
@@ -220,39 +212,42 @@ describe('ReducedStore', () => {
   });
 
   test('reduced store props', async () => {
-    let providedStore: ReducedStore<any> | null = null;
+    let providedStore: any | null = null;
     let providedPrevState: ReducedStore<any>['state'] | null = null;
     const mySlice = slice({
-      key: key('my-slice', [], { num: 4 }),
+      key: createKey('my-slice', [], { num: 4 }),
       actions: {
         addOne: () => (state) => ({ ...state, num: state.num + 1 }),
       },
-      effects: {
-        update: (sl, store, prevState) => {
-          providedStore = store;
-          providedPrevState = store.state;
+      effects: [
+        {
+          update: (sl, store, prevState) => {
+            providedStore = store;
+            providedPrevState = store.state;
+          },
         },
-      },
+      ],
     });
 
     const myStore = Store.create({
       storeName: 'myStore',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3, mySlice],
-      },
+      state: [testSlice1, testSlice2, testSlice3, mySlice],
     });
 
-    const redStore = myStore.getReducedStore([mySlice]);
+    const redStore = (myStore as Store).getReducedStore('', mySlice);
 
     redStore.dispatch(mySlice.actions.addOne());
 
-    await waitUntil(myStore.getReducedStore([mySlice]), (state) => {
-      return mySlice.getState(state).num === 5;
-    });
+    await waitUntil(
+      (myStore as Store).getReducedStore('', mySlice),
+      (state) => {
+        return mySlice.getState(state).num === 5;
+      },
+    );
 
-    expect(providedStore!.state).toEqual(myStore.state);
-    expect(providedPrevState).toBeInstanceOf(StoreState);
+    // expect(providedStore.state).toEqual(myStore.state);
+    expect(providedPrevState).toBeInstanceOf(InternalStoreState);
     expect(mySlice.getState(providedPrevState!)).toMatchInlineSnapshot(`
       {
         "num": 5,

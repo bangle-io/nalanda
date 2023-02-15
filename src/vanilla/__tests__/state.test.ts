@@ -1,11 +1,11 @@
-import { expectType } from '../common';
-import { key, slice } from '../create';
-import { testOverrideSlice } from '../slice';
-import { StoreState } from '../state';
+import { testOverrideSlice } from '../../test-helpers';
+import { createKey, slice } from '../create';
+import { expectType } from '../internal-types';
+import { InternalStoreState, StoreState as StoreState } from '../state';
 import { Transaction } from '../transaction';
 
 const testSlice1 = slice({
-  key: key('test-1', [], { num: 4 }),
+  key: createKey('test-1', [], { num: 4 }),
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -17,7 +17,7 @@ const testSlice1 = slice({
 });
 
 const testSlice2 = slice({
-  key: key('test-2', [], { name: 'tame' }),
+  key: createKey('test-2', [], { name: 'tame' }),
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -32,7 +32,7 @@ const testSlice2 = slice({
 });
 
 const depTestSlice1 = slice({
-  key: key('dep-test-1', [testSlice1], { myDep: 4, myDepStr: 'hi' }),
+  key: createKey('dep-test-1', [testSlice1], { myDep: 4, myDepStr: 'hi' }),
   actions: {
     increment: () => (state, storeState) => ({
       ...state,
@@ -44,7 +44,7 @@ const depTestSlice1 = slice({
 describe('applyTransaction', () => {
   test('applyTransaction works', () => {
     const mySlice = slice({
-      key: key('test', [], { num: 1 }),
+      key: createKey('test', [], { num: 1 }),
       actions: {
         myAction: (num: number) => (state) => {
           return { ...state, num: num + state.num };
@@ -54,9 +54,7 @@ describe('applyTransaction', () => {
       },
     });
 
-    const state = StoreState.create({
-      slices: [mySlice],
-    });
+    const state = InternalStoreState.create([mySlice]);
 
     // @ts-expect-error - should error when a field is not defined
     let testVal0 = mySlice.actions.myAction(5).randomValue;
@@ -84,16 +82,16 @@ describe('applyTransaction', () => {
 
   test('applyTransaction works with dependencies', () => {
     const sliceDep1 = slice({
-      key: key('test-dep1', [], { num: 50 }),
+      key: createKey('test-dep1', [], { num: 50 }),
       actions: {},
     });
     const sliceDep2 = slice({
-      key: key('test-dep2', [], { num: 3 }),
+      key: createKey('test-dep2', [], { num: 3 }),
       actions: {},
     });
 
     const mySlice = slice({
-      key: key('test', [sliceDep1, sliceDep2], { num: 1 }),
+      key: createKey('test', [sliceDep1, sliceDep2], { num: 1 }),
       actions: {
         myAction: (num: number) => (state, storeState) => {
           // @ts-expect-error - should not allow access of any unknown field in the state
@@ -114,11 +112,9 @@ describe('applyTransaction', () => {
       },
     });
 
-    const state = StoreState.create({
-      slices: [sliceDep1, sliceDep2, mySlice],
-    });
+    const state = InternalStoreState.create([sliceDep1, sliceDep2, mySlice]);
 
-    const newState = state.applyTransaction(mySlice.actions.myAction(5))!;
+    const newState = state.applyTransaction(mySlice.actions.myAction(5));
 
     const result = newState.getSliceState(mySlice);
 
@@ -136,7 +132,7 @@ describe('applyTransaction', () => {
 describe('validations', () => {
   test('throws error if slice key not unique', () => {
     const mySlice = slice({
-      key: key('test', [], { num: 1 }),
+      key: createKey('test', [], { num: 1 }),
       actions: {
         myAction: (num: number) => (state) => {
           return { ...state, num: num + state.num };
@@ -145,7 +141,7 @@ describe('validations', () => {
     });
 
     const mySlice2 = slice({
-      key: key('test', [], { num: 1 }),
+      key: createKey('test', [], { num: 1 }),
       actions: {
         myAction: (num: number) => (state) => {
           return { ...state, num: num + state.num };
@@ -154,19 +150,17 @@ describe('validations', () => {
     });
 
     expect(() => {
-      StoreState.create({
-        slices: [mySlice, mySlice2],
-      });
+      InternalStoreState.create([mySlice, mySlice2]);
     }).toThrowErrorMatchingInlineSnapshot(`"Duplicate slice keys test"`);
   });
 
   test('throws error if slice dependency is not registered', () => {
     const sliceDep = slice({
-      key: key('test-dep', [], { num: 1 }),
+      key: createKey('test-dep', [], { num: 1 }),
       actions: {},
     });
     const mySlice = slice({
-      key: key('test', [sliceDep], { num: 1 }),
+      key: createKey('test', [sliceDep], { num: 1 }),
       actions: {
         myAction: (num: number) => (state) => {
           return { ...state, num: num + state.num };
@@ -175,9 +169,7 @@ describe('validations', () => {
     });
 
     expect(() => {
-      StoreState.create({
-        slices: [mySlice],
-      });
+      InternalStoreState.create([mySlice]);
     }).toThrowErrorMatchingInlineSnapshot(
       `"Slice "test" has a dependency on Slice "test-dep" which is either not registered or is registered after this slice."`,
     );
@@ -185,11 +177,11 @@ describe('validations', () => {
 
   test('throws error if slice dependency is not registered before', () => {
     const sliceDep = slice({
-      key: key('test-dep', [], { num: 1 }),
+      key: createKey('test-dep', [], { num: 1 }),
       actions: {},
     });
     const mySlice = slice({
-      key: key('test', [sliceDep], { num: 1 }),
+      key: createKey('test', [sliceDep], { num: 1 }),
       actions: {
         myAction: (num: number) => (state) => {
           return { ...state, num: num + state.num };
@@ -198,9 +190,7 @@ describe('validations', () => {
     });
 
     expect(() => {
-      StoreState.create({
-        slices: [mySlice, sliceDep],
-      });
+      InternalStoreState.create([mySlice, sliceDep]);
     }).toThrowErrorMatchingInlineSnapshot(
       `"Slice "test" has a dependency on Slice "test-dep" which is either not registered or is registered after this slice."`,
     );
@@ -210,66 +200,72 @@ describe('validations', () => {
 describe('test override helper', () => {
   test('overriding init state works', () => {
     const slice1 = slice({
-      key: key('test1', [], { num: 1 }),
+      key: createKey('test1', [], { num: 1 }),
       actions: {},
     });
 
     const slice2 = slice({
-      key: key('test2', [], { num: 2 }),
+      key: createKey('test2', [], { num: 2 }),
       actions: {},
     });
 
-    let newState1 = StoreState.create({
-      slices: [slice1, testOverrideSlice(slice2, { initState: { num: 99 } })],
-    });
+    let newState1 = InternalStoreState.create([
+      slice1,
+      testOverrideSlice(slice2, { initState: { num: 99 } }),
+    ]);
 
     expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
     expect(newState1.getSliceState(slice2)).toEqual({ num: 99 });
 
-    let newState2 = StoreState.create({
-      slices: [testOverrideSlice(slice1, { initState: { num: -1 } }), slice2],
-    });
+    let newState2 = InternalStoreState.create([
+      testOverrideSlice(slice1, { initState: { num: -1 } }),
+      slice2,
+    ]);
     expect(newState2.getSliceState(slice1)).toEqual({ num: -1 });
     expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
   });
 
   test('overriding effects works', () => {
     const slice1 = slice({
-      key: key('test1', [], { num: 1 }),
+      key: createKey('test1', [], { num: 1 }),
       actions: {},
-      effects: {
-        update: (sl) => {
-          return;
+      effects: [
+        {
+          update: (sl) => {
+            return;
+          },
         },
-      },
+      ],
     });
 
-    expect(testOverrideSlice(slice1, { effects: [] }).effects).toHaveLength(0);
+    expect(
+      testOverrideSlice(slice1, { effects: [] }).config.effects,
+    ).toHaveLength(0);
     // should not affect initial slice
-    expect(slice1.effects).toHaveLength(1);
+    expect(slice1.config.effects).toHaveLength(1);
   });
 
   test('overriding dependencies', () => {
     const slice1 = slice({
-      key: key('test1', [], { num: 1 }),
+      key: createKey('test1', [], { num: 1 }),
       actions: {},
     });
 
-    expect([
-      ...testOverrideSlice(slice1, { dependencies: [testSlice1] })
-        ._flatDependencies,
-    ]).toEqual([testSlice1.key.key]);
+    expect(
+      testOverrideSlice(slice1, { dependencies: [testSlice1] }).config
+        .dependencies.length,
+    ).toBe(1);
 
-    expect(slice1._flatDependencies.size).toBe(0);
+    expect(slice1.config.dependencies.length).toBe(0);
   });
 });
 
 describe('State creation', () => {
   test('empty slices', () => {
-    const appState = StoreState.create({ slices: [] });
+    const appState = InternalStoreState.create([]);
 
     expect(appState).toMatchInlineSnapshot(`
-      StoreState {
+      InternalStoreState {
         "_slices": [],
         "opts": undefined,
         "slicesCurrentState": {},
@@ -279,23 +275,57 @@ describe('State creation', () => {
 
   test('with a slice', () => {
     const mySlice = slice({
-      key: key('mySlice', [], { val: null }),
+      key: createKey('mySlice', [], { val: null }),
       actions: {},
     });
 
-    const appState = StoreState.create({ slices: [mySlice] });
+    const appState = InternalStoreState.create([mySlice]);
 
     expect(appState.getSliceState(mySlice)).toEqual({ val: null });
-    expect(appState).toMatchSnapshot();
+    expect(appState).toEqual({
+      _slices: [
+        {
+          _bare: {
+            mappedDependencies: [],
+            children: [],
+          },
+          config: {
+            actions: {},
+            dependencies: [],
+            effects: [],
+            initState: {
+              val: null,
+            },
+            key: 'mySlice',
+            selectors: {},
+          },
+          initState: {
+            val: null,
+          },
+          key: 'mySlice',
+          resolveSelectors: expect.any(Function),
+          resolveState: expect.any(Function),
+          sliceUid: expect.any(String),
+          txApplicators: {},
+          txCreators: {},
+        },
+      ],
+      opts: undefined,
+      slicesCurrentState: {
+        mySlice: {
+          val: null,
+        },
+      },
+    });
   });
 
   test('throws error if action not found', () => {
     const mySlice = slice({
-      key: key('mySlice', [], { val: null }),
+      key: createKey('mySlice', [], { val: null }),
       actions: {},
     });
 
-    const appState = StoreState.create({ slices: [mySlice] });
+    const appState = InternalStoreState.create([mySlice]);
 
     expect(() =>
       appState.applyTransaction(new Transaction('mySlice', [5], 'updateNum')),
@@ -304,20 +334,20 @@ describe('State creation', () => {
 
   test('applying action preserves states of those who donot have apply', () => {
     const mySlice = slice({
-      key: key('mySlice', [], { num: 0 }),
+      key: createKey('mySlice', [], { num: 0 }),
       actions: {},
     });
 
     const mySlice2 = slice({
-      key: key('mySlice2', [], { num: 0 }),
+      key: createKey('mySlice2', [mySlice], { num: 0 }),
       actions: {
-        updateNum: (num: number) => (state) => {
+        updateNum: (num: number) => (state, storeState) => {
           return { ...state, num };
         },
       },
     });
 
-    const appState = StoreState.create({ slices: [mySlice, mySlice2] });
+    const appState = InternalStoreState.create([mySlice, mySlice2]);
     expect(mySlice.getState(appState).num).toBe(0);
 
     let newAppState = appState.applyTransaction(mySlice2.actions.updateNum(4));
@@ -326,7 +356,7 @@ describe('State creation', () => {
   });
 
   test('applying action with selectors', () => {
-    const key1 = key(
+    const key1 = createKey(
       'mySlice',
       [],
       {
@@ -359,7 +389,7 @@ describe('State creation', () => {
     });
 
     const mySlice2 = slice({
-      key: key(
+      key: createKey(
         'mySlice2',
         [mySlice1],
         {
@@ -378,7 +408,7 @@ describe('State creation', () => {
     });
 
     const mySlice3 = slice({
-      key: key(
+      key: createKey(
         'mySlice3',
         [mySlice1, mySlice2],
         { char: '3' },
@@ -395,9 +425,7 @@ describe('State creation', () => {
       actions: {},
     });
 
-    const appState = StoreState.create({
-      slices: [mySlice1, mySlice2, mySlice3],
-    });
+    const appState = InternalStoreState.create([mySlice1, mySlice2, mySlice3]);
 
     const result1 = {
       s3: {

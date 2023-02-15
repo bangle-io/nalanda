@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
 import { ActionSerializer, serialAction } from '../action-serializer';
-import { expectType } from '../../vanilla/common';
-import { key, slice } from '../../vanilla/create';
+import { createKey, slice } from '../../vanilla/create';
 import { zodFindUnsafeTypes } from '../zod';
+import { expectType } from '../../vanilla/internal-types';
 
 test('checks work', () => {
   let case1 = slice({
-    key: key('ji', [], {
+    key: createKey('ji', [], {
       magic: 3,
     }),
     actions: {
@@ -21,7 +21,7 @@ test('checks work', () => {
   expect(actionS1.isSyncReady()).toBe(false);
 
   let case2 = slice({
-    key: key('ji', [], {
+    key: createKey('ji', [], {
       magic: 3,
     }),
     actions: {
@@ -34,7 +34,7 @@ test('checks work', () => {
   expect(actionS2.isSyncReady()).toBe(true);
 
   let case3 = slice({
-    key: key('ji', [], {
+    key: createKey('ji', [], {
       magic: 3,
     }),
     actions: {},
@@ -45,7 +45,7 @@ test('checks work', () => {
   expect(actionS3.isSyncReady()).toBe(true);
 
   let case4 = slice({
-    key: key('ji', [], {
+    key: createKey('ji', [], {
       magic: 3,
     }),
     actions: {},
@@ -56,7 +56,7 @@ test('checks work', () => {
   expect(actionS4.isSyncReady()).toBe(true);
 
   let case5 = slice({
-    key: key('ji', [], {
+    key: createKey('ji', [], {
       magic: 3,
     }),
     actions: {
@@ -72,7 +72,7 @@ test('checks work', () => {
 
 test('typing is correct', () => {
   slice({
-    key: key('ji', [], {
+    key: createKey('ji', [], {
       magic: 3,
     }),
     actions: {
@@ -104,7 +104,7 @@ test('typing is correct', () => {
 
 test('serialization works', () => {
   let mySlice = slice({
-    key: key('ji', [], {
+    key: createKey('ji', [], {
       magic: 3,
     }),
     actions: {
@@ -114,7 +114,9 @@ test('serialization works', () => {
           key: z.string(),
           map: z.map(z.string(), z.number()),
         }),
-        (payload) => (state) => state,
+        (payload) => {
+          return (state) => state;
+        },
         {
           serialize: (schema, [payload]) => {
             return JSON.stringify({
@@ -229,7 +231,7 @@ describe('zodFindUnsafeTypes', () => {
   test('works with action', () => {
     expect(() =>
       slice({
-        key: key('ji', [], {
+        key: createKey('ji', [], {
           magic: 3,
         }),
         actions: {

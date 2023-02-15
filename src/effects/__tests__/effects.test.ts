@@ -1,9 +1,9 @@
-import { expectType } from '../../vanilla/common';
 import { changeEffect, onceEffect, syncOnceEffect } from '../index';
-import { key, slice } from '../../vanilla/create';
+import { createKey, slice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { Store } from '../../vanilla/store';
 import waitForExpect from 'wait-for-expect';
+import { expectType, rejectAny } from '../../vanilla/internal-types';
 waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
 
@@ -12,7 +12,7 @@ function sleep(t = 20): Promise<void> {
 }
 
 const testSlice1 = slice({
-  key: key(
+  key: createKey(
     'test-1',
     [],
     { num: 4 },
@@ -31,7 +31,7 @@ const testSlice1 = slice({
 });
 
 const testSlice2 = slice({
-  key: key('test-2', [], { name: 'tame', age: 4 }),
+  key: createKey('test-2', [], { name: 'tame', age: 4 }),
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -49,7 +49,7 @@ const testSlice2 = slice({
 });
 
 const testSlice3 = slice({
-  key: key('test-3', [], { name: 'TAME' }),
+  key: createKey('test-3', [], { name: 'TAME' }),
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };
@@ -64,8 +64,8 @@ describe('onceEffect', () => {
   test('works', async () => {
     let called = jest.fn();
     const once = onceEffect(
-      'run-once',
       [testSlice1, testSlice3],
+      'run-once',
       (state, dispatch) => {
         called({
           testSlice1: testSlice1.getState(state),
@@ -89,9 +89,7 @@ describe('onceEffect', () => {
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3, once],
-      },
+      state: [testSlice1, testSlice2, testSlice3, once],
     });
 
     expect(testSlice3.getState(store.state).name).toEqual('TAME');
@@ -118,8 +116,8 @@ describe('syncOnceEffect', () => {
   test('works', async () => {
     let called = jest.fn();
     const once = syncOnceEffect(
-      'run-sync-once',
       [testSlice1, testSlice3],
+      'run-sync-once',
       (state, dispatch) => {
         called({
           testSlice1: testSlice1.getState(state),
@@ -143,9 +141,7 @@ describe('syncOnceEffect', () => {
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3, once],
-      },
+      state: [testSlice1, testSlice2, testSlice3, once],
     });
     expect(testSlice3.getState(store.state).name).toEqual('TAME');
     store.dispatch(testSlice1.actions.increment({ increment: true }));
@@ -178,15 +174,19 @@ describe('changeEffect', () => {
       },
       (result, dispatch) => {
         fn(result.numnum);
-        // @ts-expect-error - should not be able to invalid keys
-        result.xyz?.();
+        rejectAny(result);
 
         expectType<number>(result.numnum);
         expectType<string>(result.foofoo);
 
-        let wrongAction = testSlice3.actions.lowercase();
-        // @ts-expect-error - should not allow dispatching action from non dep slice
-        dispatch(wrongAction);
+        // just to test types
+        () => {
+          let wrongAction = testSlice3.actions.lowercase();
+          // @ts-expect-error - should not allow dispatching action from non dep slice
+          dispatch(wrongAction);
+
+          dispatch(testSlice2.actions.padEnd(2, ' '));
+        };
 
         if (result.numnum % 2 === 0) {
           dispatch(testSlice1.actions.increment({ increment: true }));
@@ -197,9 +197,7 @@ describe('changeEffect', () => {
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3, myEffect],
-      },
+      state: [testSlice1, testSlice2, testSlice3, myEffect],
     });
 
     await waitForExpect(() => {
@@ -211,6 +209,7 @@ describe('changeEffect', () => {
   });
   test('works', async () => {
     let call = jest.fn();
+
     const myEffect = changeEffect(
       'myEffect',
       {
@@ -239,9 +238,7 @@ describe('changeEffect', () => {
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3, myEffect],
-      },
+      state: [testSlice1, testSlice2, testSlice3, myEffect],
     });
 
     await sleep(30);
@@ -272,9 +269,7 @@ describe('changeEffect', () => {
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, testSlice2, testSlice3, myEffect],
-      },
+      state: [testSlice1, testSlice2, testSlice3, myEffect],
     });
 
     await waitForExpect(() => {
@@ -309,97 +304,114 @@ describe('changeEffect', () => {
       ]);
     });
   });
+});
 
-  describe('only updates when deps change', () => {
-    let fn = jest.fn();
-    beforeEach(() => {
-      fn = jest.fn();
-    });
-    const myEffect = changeEffect(
-      'myEffect',
-      {
-        age: testSlice2.pick((state) => state.age),
-      },
-      (result, dispatch) => {
-        fn(result.age);
-        // @ts-expect-error - should not be able to invalid keys
-        result.xyz?.();
+describe('only updates when deps change', () => {
+  let effectCallSpy = jest.fn();
+  beforeEach(() => {
+    effectCallSpy = jest.fn();
+  });
+  const watchTestSlice2Age = changeEffect(
+    'myEffect',
+    {
+      age: testSlice2.pick((state) => state.age),
+    },
+    (result, dispatch) => {
+      effectCallSpy(result.age);
+      rejectAny(result);
 
-        expectType<number>(result.age);
-      },
-    );
+      expectType<number>(result.age);
+    },
+  );
 
-    test('called once on mount', async () => {
-      const store = Store.create({
-        storeName: 'test-store',
-        scheduler: timeoutSchedular(0),
-        state: {
-          slices: [testSlice1, testSlice2, testSlice3, myEffect],
-        },
-      });
-
-      await sleep(5);
-      expect(fn).toBeCalledTimes(1);
-      expect(fn).nthCalledWith(1, 4);
+  test('called once on mount', async () => {
+    const store = Store.create({
+      storeName: 'test-store',
+      scheduler: timeoutSchedular(0),
+      state: [testSlice1, testSlice2, testSlice3, watchTestSlice2Age],
     });
 
-    test('called once even if immediately dispatched', async () => {
-      const store = Store.create({
-        storeName: 'test-store',
-        scheduler: timeoutSchedular(0),
-        state: {
-          slices: [testSlice1, testSlice2, testSlice3, myEffect],
-        },
-      });
+    await sleep(5);
+    expect(effectCallSpy).toBeCalledTimes(1);
+    expect(effectCallSpy).nthCalledWith(1, 4);
+  });
 
-      store.dispatch(testSlice2.actions.age(1));
-
-      await sleep(5);
-      expect(fn).toBeCalledTimes(1);
-      expect(fn).nthCalledWith(1, 5); // 5 because of the dispatch
+  test('called once even if immediately dispatched', async () => {
+    const store = Store.create({
+      storeName: 'test-store',
+      scheduler: timeoutSchedular(0),
+      state: [testSlice1, testSlice2, testSlice3, watchTestSlice2Age],
     });
 
-    test('is not called for irrelevant changes in the slice', async () => {
-      const store = Store.create({
-        storeName: 'test-store',
-        scheduler: timeoutSchedular(0),
-        state: {
-          slices: [testSlice1, testSlice2, testSlice3, myEffect],
-        },
-      });
+    store.dispatch(testSlice2.actions.age(1));
 
-      await sleep(5);
-      expect(fn).toBeCalledTimes(1);
+    await sleep(5);
+    expect(effectCallSpy).toBeCalledTimes(1);
+    expect(effectCallSpy).nthCalledWith(1, 5); // 5 because of the dispatch
+  });
 
-      store.dispatch(testSlice2.actions.prefix('dad'));
+  test('is not called for irrelevant changes in the slice', async () => {
+    const store = Store.create({
+      storeName: 'test-store',
+      scheduler: timeoutSchedular(0),
+      state: [testSlice1, testSlice2, testSlice3, watchTestSlice2Age],
+    });
 
-      await sleep(5);
-      expect(fn).toBeCalledTimes(1);
-      expect(testSlice2.getState(store.state)).toMatchInlineSnapshot(`
+    await sleep(5);
+    expect(effectCallSpy).toBeCalledTimes(1);
+
+    store.dispatch(testSlice2.actions.prefix('dad'));
+
+    await sleep(5);
+    expect(effectCallSpy).toBeCalledTimes(1);
+    expect(testSlice2.getState(store.state)).toMatchInlineSnapshot(`
         {
           "age": 4,
           "name": "dadtame",
         }
       `);
+  });
+
+  test('is called once if data does not change', async () => {
+    const store = Store.create({
+      storeName: 'test-store',
+      scheduler: timeoutSchedular(0),
+      state: [testSlice1, testSlice2, testSlice3, watchTestSlice2Age],
     });
 
-    test('is called once if data does not change', async () => {
-      const store = Store.create({
-        storeName: 'test-store',
-        scheduler: timeoutSchedular(0),
-        state: {
-          slices: [testSlice1, testSlice2, testSlice3, myEffect],
-        },
-      });
-
-      await waitForExpect(() => {
-        expect(fn).toBeCalledTimes(1);
-      });
-
-      store.dispatch(testSlice2.actions.age(0));
-
-      await sleep(15);
-      expect(fn).toBeCalledTimes(1);
+    await waitForExpect(() => {
+      expect(effectCallSpy).toBeCalledTimes(1);
     });
+
+    store.dispatch(testSlice2.actions.age(0));
+
+    await sleep(15);
+    expect(effectCallSpy).toBeCalledTimes(1);
+  });
+
+  test('is called only once for multiple sync dispatches', async () => {
+    const store = Store.create({
+      storeName: 'test-store',
+      scheduler: timeoutSchedular(0),
+      state: [testSlice1, testSlice2, testSlice3, watchTestSlice2Age],
+    });
+
+    await waitForExpect(() => {
+      expect(effectCallSpy).toBeCalledTimes(1);
+    });
+
+    for (const age of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      store.dispatch(testSlice2.actions.age(age));
+    }
+
+    await waitForExpect(() => {
+      // should only be called two times,
+      // once on mount and once after all the dispatches
+      expect(effectCallSpy).toBeCalledTimes(2);
+    });
+
+    expect(effectCallSpy).nthCalledWith(1, 4);
+    // n*(n+1)/2 is the sum of all numbers from 1 to n
+    expect(effectCallSpy).nthCalledWith(2, 4 + (10 * (10 + 1)) / 2);
   });
 });

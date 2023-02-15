@@ -1,132 +1,127 @@
-/* eslint-disable @typescript-eslint/ban-types */
-// 3 Generics that are optional
+import { Action, AnySlice, Effect, SelectorFn } from './public-types';
+import { Slice } from './slice';
 
-import type { SliceConfig } from './slice';
-import { Slice, SliceKey } from './slice';
-import type { EffectsBase, RawAction, SelectorFn } from './types';
-
-export function createKey<SS extends object>(initState: SS) {
-  function _createKey<K extends string, DS extends Slice[]>(
-    id: K,
-    deps: DS,
-  ): SliceKey<K, SS, {}, DS>;
-  function _createKey<
-    K extends string,
-    DS extends Slice[],
-    SE extends Record<string, SelectorFn<SS, DS, any>>,
-  >(id: K, deps: DS, selector: SE): SliceKey<K, SS, {}, DS>;
-  function _createKey(id: any, deps: any, selector?: any): any {
-    return new SliceKey(id, deps, initState, selector || {});
-  }
-
-  return _createKey;
-}
-
-export function key<K extends string, SS extends object, DS extends Slice[]>(
-  id: K,
-  deps: DS,
-  initState: SS,
-): SliceKey<K, SS, {}, DS>;
-export function key<
+class SliceKey<
   K extends string,
   SS extends object,
-  DS extends Slice[],
   SE extends Record<string, SelectorFn<SS, DS, any>>,
->(id: K, deps: DS, initState: SS, selector: SE): SliceKey<K, SS, SE, DS>;
-export function key(id: any, deps: any, initState: any, selector?: any): any {
+  DS extends AnySlice,
+> {
+  constructor(
+    public key: K,
+    public dependencies: DS[],
+    public initState: SS,
+    public selectors: SE,
+  ) {}
+}
+
+export function createKey<
+  K extends string,
+  SS extends object,
+  DS extends AnySlice,
+>(id: K, deps: DS[], initState: SS): SliceKey<K, SS, {}, DS>;
+export function createKey<
+  K extends string,
+  SS extends object,
+  DS extends AnySlice,
+  SE extends Record<string, SelectorFn<SS, DS, any>>,
+>(id: K, deps: DS[], initState: SS, selector: SE): SliceKey<K, SS, SE, DS>;
+export function createKey(
+  id: any,
+  deps: any[],
+  initState: any,
+  selector?: any,
+): any {
   return new SliceKey(id, deps, initState, selector || {});
 }
+
+type InferInitState<SK extends SliceKey<any, any, any, any>> =
+  SK extends SliceKey<any, infer SS, any, any> ? SS : never;
+type InferDependencies<SK extends SliceKey<any, any, any, any>> =
+  SK extends SliceKey<any, any, any, infer DS> ? DS : never;
+type InferSelectors<SK extends SliceKey<any, any, any, any>> =
+  SK extends SliceKey<any, any, infer SE, any> ? SE : never;
 
 export function slice<
   SK extends SliceKey<any, any, any, any>,
   A extends Record<
     string,
-    RawAction<any[], SK['initState'], SK['dependencies']>
+    Action<any[], InferInitState<SK>, InferDependencies<SK>>
   >,
 >({
   key,
   actions,
   effects,
-  config = {},
 }: {
   key: SK;
   actions: A;
-  effects?: EffectsBase<
-    Slice<SK['key'], SK['initState'], SK['dependencies'], A, SK['selectors']>
-  >;
-  config?: SliceConfig;
-}): Slice<SK['key'], SK['initState'], SK['dependencies'], A, SK['selectors']> {
-  return new Slice(key, actions, effects ? [effects] : [], config);
+  effects?: Effect<
+    Slice<
+      SK['key'],
+      InferInitState<SK>,
+      InferDependencies<SK>,
+      A,
+      InferSelectors<SK>
+    >,
+    | Slice<
+        SK['key'],
+        InferInitState<SK>,
+        InferDependencies<SK>,
+        A,
+        InferSelectors<SK>
+      >
+    | InferDependencies<SK>
+  >[];
+}) {
+  return new Slice({
+    actions,
+    dependencies: key.dependencies,
+    effects: effects || [],
+    initState: key.initState,
+    key: key.key,
+    selectors: key.selectors,
+  });
 }
 
 export function createSlice<
   K extends string,
-  DS extends Slice[],
   SS extends object,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
-  A extends Record<string, RawAction<any[], SS, DS>>,
+  DS extends AnySlice,
+  A extends Record<string, Action<any[], SS, DS>>,
 >(
-  dependencies: DS,
-  config: {
-    key: K;
-    init: SS;
-    computed: SE;
-    actions: A;
-  },
+  dependencies: DS[],
+  arg: { key: K; initState: SS; actions: A },
+): Slice<K, SS, DS, A, {}>;
+export function createSlice<
+  K extends string,
+  SS extends object,
+  DS extends AnySlice,
+  A extends Record<string, Action<any[], SS, DS>>,
+  SE extends Record<string, SelectorFn<SS, DS, any>>,
+>(
+  dependencies: DS[],
+  arg: { key: K; initState: SS; actions: A; selectors: SE },
 ): Slice<K, SS, DS, A, SE>;
 export function createSlice<
   K extends string,
-  DS extends Slice[],
   SS extends object,
-  A extends Record<string, RawAction<any[], SS, DS>>,
+  DS extends AnySlice,
+  A extends Record<string, Action<any[], SS, DS>>,
 >(
-  dependencies: DS,
-  config: {
+  dependencies: DS[],
+  arg: {
     key: K;
-    init: SS;
+    initState: SS;
     actions: A;
+    selectors?: Record<string, SelectorFn<SS, DS, any>>;
   },
-): Slice<K, SS, DS, A, {}>;
-
-export function createSlice<
-  K extends string,
-  DS extends Slice[],
-  SS extends object,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
->(
-  dependencies: DS,
-  config: {
-    key: K;
-    init: SS;
-    computed: SE;
-  },
-): Slice<K, SS, DS, {}, SE>;
-
-export function createSlice<
-  K extends string,
-  DS extends Slice[],
-  SS extends object,
->(
-  dependencies: DS,
-  config: {
-    key: K;
-    init: SS;
-  },
-): Slice<K, SS, DS, {}, {}>;
-
-export function createSlice<DS extends Slice[]>(
-  dependencies: DS,
-  config: {
-    key: string;
-    init: object;
-    computed?: any;
-    actions?: any;
-  },
-): Slice {
-  return new Slice(
-    key(config.key, dependencies, config.init, config.computed),
-    config.actions,
-    [],
-    {},
-  );
+): Slice<K, SS, DS, A, {}> {
+  return new Slice({
+    actions: arg.actions,
+    dependencies,
+    effects: [],
+    initState: arg.initState,
+    key: arg.key,
+    selectors: arg.selectors || {},
+  });
 }

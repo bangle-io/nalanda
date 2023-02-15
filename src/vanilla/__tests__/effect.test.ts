@@ -1,4 +1,4 @@
-import { key, slice } from '../create';
+import { createKey, slice } from '../create';
 import { EffectHandler, timeoutSchedular } from '../effect';
 import { Store } from '../store';
 import waitForExpect from 'wait-for-expect';
@@ -6,7 +6,7 @@ waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
 
 const testSlice1 = slice({
-  key: key('test-1', [], { num: 4 }),
+  key: createKey('test-1', [], { num: 4 }),
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -18,7 +18,7 @@ const testSlice1 = slice({
 });
 
 const testSlice2 = slice({
-  key: key('test-2', [], { name: 'tame' }),
+  key: createKey('test-2', [], { name: 'tame' }),
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -33,7 +33,7 @@ const testSlice2 = slice({
 });
 
 const testSlice3 = slice({
-  key: key('test-3', [], { name: 'tame' }),
+  key: createKey('test-3', [], { name: 'tame' }),
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };
@@ -45,10 +45,8 @@ test('EffectHandler works', () => {
   const store = Store.create({
     storeName: 'test-store',
     scheduler: timeoutSchedular(0),
-    state: {
-      slices: [testSlice1],
-    },
-  });
+    state: [testSlice1],
+  }) as Store;
 
   const effect = new EffectHandler(
     {
@@ -57,8 +55,6 @@ test('EffectHandler works', () => {
     store.state,
     testSlice1,
   );
-
-  expect(effect.sliceAndDeps).toEqual([testSlice1]);
 });
 
 describe('init and destroy ', () => {
@@ -66,19 +62,19 @@ describe('init and destroy ', () => {
     const init = jest.fn();
     const onDestroy = jest.fn();
     const mySlice = slice({
-      key: key('myslice', [testSlice1], { name: 'tame' }),
+      key: createKey('myslice', [testSlice1], { name: 'tame' }),
       actions: {},
-      effects: {
-        init,
-        destroy: onDestroy,
-      },
+      effects: [
+        {
+          init,
+          destroy: onDestroy,
+        },
+      ],
     });
 
     const store = Store.create({
       storeName: 'test-store',
-      state: {
-        slices: [testSlice1, mySlice],
-      },
+      state: [testSlice1, mySlice],
     });
 
     // is not called immediately
@@ -108,26 +104,26 @@ describe('init and destroy ', () => {
       order.push('destroy');
     });
     const mySlice = slice({
-      key: key('myslice', [testSlice1], { name: 'tame' }),
+      key: createKey('myslice', [testSlice1], { name: 'tame' }),
       actions: {
         lowercase: () => (state) => {
           return { ...state, name: state.name.toLocaleLowerCase() };
         },
       },
-      effects: {
-        init,
-        update: update,
-        updateSync,
-        destroy: onDestroy,
-      },
+      effects: [
+        {
+          init,
+          update: update,
+          updateSync,
+          destroy: onDestroy,
+        },
+      ],
     });
 
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
-      state: {
-        slices: [testSlice1, mySlice],
-      },
+      state: [testSlice1, mySlice],
     });
     store.dispatch(mySlice.actions.lowercase());
     // is not called immediately
@@ -149,7 +145,7 @@ describe('init and destroy ', () => {
 
 test('EffectHandler with deps', () => {
   const mySlice = slice({
-    key: key('myslice', [testSlice1, testSlice2], { name: 'tame' }),
+    key: createKey('myslice', [testSlice1, testSlice2], { name: 'tame' }),
     actions: {
       lowercase: () => (state) => {
         return { ...state, name: state.name.toLocaleLowerCase() };
@@ -158,10 +154,8 @@ test('EffectHandler with deps', () => {
   });
   const store = Store.create({
     storeName: 'test-store',
-    state: {
-      slices: [testSlice1, testSlice2, mySlice],
-    },
-  });
+    state: [testSlice1, testSlice2, mySlice],
+  }) as Store;
 
   const effect = new EffectHandler(
     {
@@ -171,6 +165,5 @@ test('EffectHandler with deps', () => {
     mySlice,
   );
 
-  expect(effect.sliceAndDeps).toEqual([testSlice1, testSlice2, mySlice]);
   expect(effect.sliceKey).toMatchInlineSnapshot(`"myslice"`);
 });

@@ -1,7 +1,8 @@
 import React from 'react';
-import { mySlice, useSlice } from './store';
+import { mergedSlice, useSlice } from './store';
 
 export default function App() {
-  const [val, dispatch] = useSlice(mySlice);
-  return <div>Hello World{val.val}</div>;
+  const [val, dispatch] = useSlice(mergedSlice);
+
+  return <div>Hello World{''}</div>;
 }

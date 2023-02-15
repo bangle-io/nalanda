@@ -1,9 +1,9 @@
-import { calcReverseDependencies, flattenReverseDependencies } from './common';
-import type { DebugFunc } from './logging';
-import type { Slice } from './slice';
-import type { StoreState } from './state';
+import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
+import { AnySlice, Effect } from './public-types';
+import type { BareSlice } from './slice';
+import type { InternalStoreState } from './state';
 import type { Store } from './store';
-import type { AnySliceBase, EffectsBase } from './types';
+import { DebugFunc } from './transaction';
 
 export interface Scheduler {
   schedule: (cb: () => void) => void;
@@ -54,15 +54,15 @@ export class SideEffectsManager {
     }
   }
 
-  destroy(state: StoreState) {
+  destroy(state: InternalStoreState) {
     for (const effectHandler of this._effectHandlerEntries()) {
       effectHandler.destroy?.(state);
     }
   }
 
   constructor(
-    slices: AnySliceBase[],
-    initState: StoreState,
+    slices: BareSlice[],
+    initState: InternalStoreState,
     private _schedular: Scheduler = idleCallbackScheduler(15),
     _debug?: DebugFunc,
   ) {
@@ -74,8 +74,8 @@ export class SideEffectsManager {
 
     // fill in record of effects
     slices.forEach((slice) => {
-      if (slice.effects) {
-        this._effects.record[slice.key.key] = slice.effects.map(
+      if (slice.config.effects) {
+        this._effects.record[slice.key] = slice.config.effects.map(
           (effect) => new EffectHandler(effect, initState, slice, _debug),
         );
       }
@@ -103,14 +103,14 @@ export class SideEffectsManager {
   // TODO: this will be removed once we have better way of adding dynamic slices
   private _tempOnSyncChange = new Map<string, Set<() => void>>();
 
-  initEffects(store: Store<any>) {
+  initEffects(store: Store) {
     for (const effectHandler of this._effectHandlerEntries()) {
       effectHandler.runInit(store);
     }
   }
 
   queueSideEffectExecution(
-    store: Store<any>,
+    store: Store,
     {
       sliceKey,
       actionId,
@@ -171,7 +171,7 @@ export class SideEffectsManager {
     }
   }
 
-  private _runLoop(store: Store<any>) {
+  private _runLoop(store: Store) {
     if (store.destroyed) {
       return;
     }
@@ -187,7 +187,7 @@ export class SideEffectsManager {
     }
   }
 
-  private _runSyncUpdateEffects(store: Store<any>) {
+  private _runSyncUpdateEffects(store: Store) {
     const { queue } = this._effects;
 
     // Note that sometimes effects can lag behind a couple of state transitions
@@ -206,7 +206,7 @@ export class SideEffectsManager {
     }
   }
 
-  private _runUpdateEffect(store: Store<any>, onDone: () => void) {
+  private _runUpdateEffect(store: Store, onDone: () => void) {
     this._schedular.schedule(() => {
       const { queue } = this._effects;
       const iter = queue.deferredUpdate.values().next();
@@ -230,21 +230,18 @@ export class SideEffectsManager {
 }
 
 export class EffectHandler {
-  sliceAndDeps: AnySliceBase[];
-
-  private _syncPrevState: StoreState;
-  private _deferredPrevState: StoreState;
+  private _syncPrevState: InternalStoreState;
+  private _deferredPrevState: InternalStoreState;
 
   public debugSyncLastRanBy: { sliceKey: string; actionId: string }[] = [];
   public debugDeferredLastRanBy: { sliceKey: string; actionId: string }[] = [];
 
   constructor(
-    public effect: EffectsBase,
-    public readonly initStoreState: StoreState,
-    protected _slice: AnySliceBase,
+    public effect: Effect<any>,
+    public readonly initStoreState: InternalStoreState,
+    protected _slice: BareSlice,
     private _debug?: DebugFunc,
   ) {
-    this.sliceAndDeps = [...this._slice.key.dependencies, _slice];
     this._deferredPrevState = this.initStoreState;
     this._syncPrevState = this.initStoreState;
   }
@@ -284,21 +281,21 @@ export class EffectHandler {
   }
 
   get sliceKey() {
-    return this._slice.key.key;
+    return this._slice.key;
   }
 
-  runInit(store: Store<any>) {
+  runInit(store: Store) {
     this.effect.init?.(
-      this._slice as Slice,
-      store.getReducedStore(this.sliceAndDeps as Slice[], this.effect.name),
+      this._slice as AnySlice,
+      store.getReducedStore(this.effect.name, this._slice),
     );
   }
 
-  destroy(state: StoreState) {
+  destroy(state: InternalStoreState) {
     this.effect.destroy?.(this._slice, state);
   }
 
-  runSyncUpdate(store: Store<any>) {
+  runSyncUpdate(store: Store) {
     // Note: if it is the first time an effect is running this
     // the previouslySeenState would be the initial state
     const previouslySeenState = this._syncPrevState;
@@ -310,13 +307,15 @@ export class EffectHandler {
 
     // TODO error handling
     this.effect.updateSync?.(
-      this._slice as Slice,
-      store.getReducedStore(this.sliceAndDeps as Slice[], this.effect.name),
-      previouslySeenState,
+      this._slice as AnySlice,
+      store.getReducedStore(this.effect.name, this._slice),
+      previouslySeenState._withKeyMapping(
+        this._slice.keyMapping.bind(this._slice),
+      ),
     );
   }
 
-  runDeferredUpdate(store: Store<any>) {
+  runDeferredUpdate(store: Store) {
     const previouslySeenState = this._deferredPrevState;
     this._deferredPrevState = store.state;
 
@@ -324,9 +323,11 @@ export class EffectHandler {
 
     // TODO error handling
     this.effect.update?.(
-      this._slice as Slice,
-      store.getReducedStore(this.sliceAndDeps as Slice[], this.effect.name),
-      previouslySeenState,
+      this._slice as AnySlice,
+      store.getReducedStore(this.effect.name, this._slice),
+      previouslySeenState._withKeyMapping(
+        this._slice.keyMapping.bind(this._slice),
+      ),
     );
   }
 }

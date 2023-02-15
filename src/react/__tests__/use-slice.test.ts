@@ -1,13 +1,14 @@
-import { key, slice, Store } from '../../vanilla';
-import { expectType } from '../../vanilla/common';
+import { createKey, slice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
+import { expectType } from '../../vanilla/internal-types';
+import { Store } from '../../vanilla/store';
 import { createUseSliceHook } from '../use-slice';
 
 export type IsNeverAny<Type> = true extends false & Type ? never : Type;
 export const isNeverAny = <Type>(_: IsNeverAny<Type>) => {};
 
 const testSlice1 = slice({
-  key: key('test-1', [], { num: 4 }),
+  key: createKey('test-1', [], { num: 4 }),
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -19,7 +20,7 @@ const testSlice1 = slice({
 });
 
 const testSlice2 = slice({
-  key: key(
+  key: createKey(
     'test-2',
     [],
     { name: 'tame' },
@@ -41,7 +42,7 @@ const testSlice2 = slice({
 });
 
 const testSlice3 = slice({
-  key: key('test-3', [], { name: 'tame' }),
+  key: createKey('test-3', [], { name: 'tame' }),
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };
@@ -53,9 +54,7 @@ test.skip('useSlice with store, types are correct', () => {
   const store = Store.create({
     storeName: 'test-store',
     scheduler: timeoutSchedular(0),
-    state: {
-      slices: [testSlice1, testSlice2],
-    },
+    state: [testSlice1, testSlice2],
   });
 
   const useSlice = createUseSliceHook(store);
