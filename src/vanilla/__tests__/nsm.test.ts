@@ -1,4 +1,4 @@
-import { waitUntil } from '../../test-heleprs';
+import { waitUntil } from '../../test-helpers';
 import { createKey, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 import { expectType } from '../internal-types';

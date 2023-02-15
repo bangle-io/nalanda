@@ -1,4 +1,4 @@
-import { waitUntil } from '../test-heleprs';
+import { waitUntil } from '../test-helpers';
 import { timeoutSchedular } from '../vanilla/effect';
 import { Slice } from '../vanilla/slice';
 import { Store } from '../vanilla/store';

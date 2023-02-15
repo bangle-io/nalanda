@@ -1,5 +1,5 @@
 import { mergeSlices } from '..';
-import { createDispatchSpy } from '../../test-heleprs';
+import { createDispatchSpy } from '../../test-helpers';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { Slice } from '../../vanilla/slice';

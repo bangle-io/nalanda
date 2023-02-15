@@ -1,6 +1,6 @@
 // import { actionToActionSnapshot, Slice, SliceKey } from '../slice';
 
-import { testOverrideSlice } from '../../test-heleprs';
+import { testOverrideSlice } from '../../test-helpers';
 import { createKey, slice } from '../create';
 import { createAction } from '../helpers';
 import { expectType, rejectAny } from '../internal-types';
