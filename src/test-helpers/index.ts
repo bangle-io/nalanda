@@ -6,7 +6,11 @@ import type {
 } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
 import { DispatchTx } from '../vanilla/store';
-import { Transaction, TX_META_DISPATCH_SOURCE } from '../vanilla/transaction';
+import {
+  LogItem,
+  Transaction,
+  TX_META_DISPATCH_SOURCE,
+} from '../vanilla/transaction';
 
 /**
  * To be only used for testing scenarios. In production, slices should always have the same code
@@ -71,7 +75,18 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
     txs.push(tx);
     store.updateState(newState, tx);
   };
+  let logItems: LogItem[] = [];
   return {
+    debug: (log: LogItem) => {
+      if (log.type === 'TX') {
+        logItems.push({ ...log, txId: '<txId>' });
+        return;
+      }
+      logItems.push(log);
+    },
+    getDebugLogItems() {
+      return logItems;
+    },
     dispatch,
     getTransactions() {
       return txs;

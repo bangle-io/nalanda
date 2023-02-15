@@ -1,4 +1,4 @@
-import { waitUntil } from '../test-helpers';
+import { createDispatchSpy, waitUntil } from '../test-helpers';
 import { timeoutSchedular } from '../vanilla/effect';
 import { Slice } from '../vanilla/slice';
 import { Store } from '../vanilla/store';
@@ -38,10 +38,13 @@ describe('Single slice', () => {
   });
 
   test('works', async () => {
+    const dispatchSpy = createDispatchSpy();
     const testStore = Store.create({
       storeName: 'test-store',
       state: [testSlice],
       scheduler: timeoutSchedular(0),
+      dispatchTx: dispatchSpy.dispatch,
+      debug: dispatchSpy.debug,
     });
 
     expect(testSlice.getState(testStore.state)).toEqual({
@@ -61,5 +64,87 @@ describe('Single slice', () => {
     expect(testSlice.getState(testStore.state)).toEqual({
       val: 'bananaEffect',
     });
+
+    expect(dispatchSpy.getSimplifiedTransactions()).toMatchInlineSnapshot(`
+      [
+        {
+          "actionId": "testAction",
+          "dispatchSource": undefined,
+          "payload": [
+            "banana",
+          ],
+          "sliceKey": "test",
+        },
+        {
+          "actionId": "testAction",
+          "dispatchSource": "testEffect",
+          "payload": [
+            "bananaEffect",
+          ],
+          "sliceKey": "test",
+        },
+      ]
+    `);
+
+    expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
+      [
+        {
+          "actionId": "testAction",
+          "dispatcher": undefined,
+          "payload": [
+            "banana",
+          ],
+          "slice": "test",
+          "store": "test-store",
+          "txId": "<txId>",
+          "type": "TX",
+        },
+        {
+          "name": "testEffect",
+          "source": [
+            {
+              "actionId": "testAction",
+              "sliceKey": "test",
+            },
+          ],
+          "type": "SYNC_UPDATE_EFFECT",
+        },
+        {
+          "actionId": "testAction",
+          "dispatcher": "testEffect",
+          "payload": [
+            "bananaEffect",
+          ],
+          "slice": "test",
+          "store": "test-store",
+          "txId": "<txId>",
+          "type": "TX",
+        },
+        {
+          "name": "testEffect",
+          "source": [
+            {
+              "actionId": "testAction",
+              "sliceKey": "test",
+            },
+          ],
+          "type": "SYNC_UPDATE_EFFECT",
+        },
+        {
+          "name": "testEffect",
+          "source": [
+            {
+              "actionId": "testAction",
+              "sliceKey": "test",
+            },
+            {
+              "actionId": "testAction",
+              "sliceKey": "test",
+            },
+          ],
+          "type": "UPDATE_EFFECT",
+        },
+      ]
+    `);
   });
 });

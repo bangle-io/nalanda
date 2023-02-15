@@ -1,5 +1,5 @@
 import { AnySlice } from '../vanilla/public-types';
-import { BareSlice, Slice } from '../vanilla/slice';
+import { Slice } from '../vanilla/slice';
 
 export function mergeSlices<K extends string, SL extends AnySlice>({
   key,

@@ -302,6 +302,7 @@ describe('merging', () => {
         dispatchTx: dispatchSpy.dispatch,
         storeName: 'test-store',
         state: [g1, z0],
+        debug: dispatchSpy.debug,
       });
 
       store.dispatch(g1.actions.updateG1State());
@@ -380,6 +381,181 @@ describe('merging', () => {
           sliceKey: 'z0:x0:t3',
         },
       ]);
+
+      expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
+        [
+          {
+            "actionId": "updateG1State",
+            "dispatcher": undefined,
+            "payload": [],
+            "slice": "g1",
+            "store": "test-store",
+            "txId": "<txId>",
+            "type": "TX",
+          },
+          {
+            "name": "t1Effect",
+            "source": [
+              {
+                "actionId": "updateG1State",
+                "sliceKey": "g1",
+              },
+            ],
+            "type": "SYNC_UPDATE_EFFECT",
+          },
+          {
+            "actionId": "updateT1State",
+            "dispatcher": "t1Effect",
+            "payload": [],
+            "slice": "z0:x0:t1",
+            "store": "test-store",
+            "txId": "<txId>",
+            "type": "TX",
+          },
+          {
+            "name": "t2Effect",
+            "source": [
+              {
+                "actionId": "updateG1State",
+                "sliceKey": "g1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+            ],
+            "type": "SYNC_UPDATE_EFFECT",
+          },
+          {
+            "actionId": "updateT1State",
+            "dispatcher": "t2Effect",
+            "payload": [],
+            "slice": "z0:x0:t1",
+            "store": "test-store",
+            "txId": "<txId>",
+            "type": "TX",
+          },
+          {
+            "name": "t3Effect",
+            "source": [
+              {
+                "actionId": "updateG1State",
+                "sliceKey": "g1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+            ],
+            "type": "SYNC_UPDATE_EFFECT",
+          },
+          {
+            "actionId": "updateT3State",
+            "dispatcher": "t3Effect",
+            "payload": [],
+            "slice": "z0:x0:t3",
+            "store": "test-store",
+            "txId": "<txId>",
+            "type": "TX",
+          },
+          {
+            "name": "t1Effect",
+            "source": [
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+            ],
+            "type": "SYNC_UPDATE_EFFECT",
+          },
+          {
+            "name": "t2Effect",
+            "source": [
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+            ],
+            "type": "SYNC_UPDATE_EFFECT",
+          },
+          {
+            "name": "t3Effect",
+            "source": [
+              {
+                "actionId": "updateT3State",
+                "sliceKey": "z0:x0:t3",
+              },
+            ],
+            "type": "SYNC_UPDATE_EFFECT",
+          },
+          {
+            "name": "t1Effect",
+            "source": [
+              {
+                "actionId": "updateG1State",
+                "sliceKey": "g1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+            ],
+            "type": "UPDATE_EFFECT",
+          },
+          {
+            "name": "t2Effect",
+            "source": [
+              {
+                "actionId": "updateG1State",
+                "sliceKey": "g1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+            ],
+            "type": "UPDATE_EFFECT",
+          },
+          {
+            "name": "t3Effect",
+            "source": [
+              {
+                "actionId": "updateG1State",
+                "sliceKey": "g1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+              {
+                "actionId": "updateT1State",
+                "sliceKey": "z0:x0:t1",
+              },
+              {
+                "actionId": "updateT3State",
+                "sliceKey": "z0:x0:t3",
+              },
+            ],
+            "type": "UPDATE_EFFECT",
+          },
+        ]
+      `);
     });
   });
 });
