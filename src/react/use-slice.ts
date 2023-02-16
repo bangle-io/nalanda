@@ -12,7 +12,7 @@ export function createUseSliceHook<SSL extends AnySlice>(
 ) {
   function useSlice<SL extends AnySlice>(
     sl: SL['key'] extends SSL['key'] ? SL : never,
-  ): [SL['config']['initState'], BareStore<SSL>['dispatch']];
+  ): [ReturnType<SL['resolveState']>, BareStore<SSL>['dispatch']];
   function useSlice<SL extends AnySlice, SLS>(
     sl: SL['key'] extends SSL['key'] ? SL : never,
     selector: (state: ReturnType<SL['resolveState']>) => SLS,

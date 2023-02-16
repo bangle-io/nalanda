@@ -10,7 +10,11 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "nalanda": "workspace:*"
+    "nalanda": "workspace:*",
+    "@react-spring/web": "^9.2.3",
+    "jotai": "^1.0.0",
+    "antd": "^4.16.2",
+    "@ant-design/icons": "^5.0.1"
   },
   "devDependencies": {
     "@types/react": "^18.0.27",
