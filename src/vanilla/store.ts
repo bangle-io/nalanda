@@ -11,6 +11,7 @@ import {
   TX_META_STORE_TX_ID,
 } from './transaction';
 import { BareStore } from './public-types';
+import { coreReadySlice } from './core-effects';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
@@ -48,6 +49,11 @@ export class Store implements BareStore<any> {
         let slices = state.flatMap((s) => {
           return [...(s._bare.children || []), s];
         });
+
+        if (!slices.find((s) => s.key === coreReadySlice.key)) {
+          slices.unshift(coreReadySlice);
+        }
+
         state = InternalStoreState.create(slices);
       }
     }

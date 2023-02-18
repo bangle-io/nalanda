@@ -1,7 +1,8 @@
 import { waitUntil } from '../../test-helpers';
+import { coreReadySlice } from '../core-effects';
 import { createKey, slice } from '../create';
 import { timeoutSchedular } from '../effect';
-import { InternalStoreState, StoreState } from '../state';
+import { InternalStoreState } from '../state';
 import { ReducedStore, Store } from '../store';
 import {
   TX_META_DISPATCH_SOURCE,
@@ -116,7 +117,7 @@ describe('store', () => {
           ],
           "slice": "test-1",
           "store": "myStore",
-          "txId": "rand-2",
+          "txId": "rand-3",
           "type": "TX",
         },
       ]
@@ -132,6 +133,15 @@ describe('store', () => {
         dispatcher: undefined,
         payload: [],
         slice: 'test-3',
+        store: 'myStore',
+        txId: expect.any(String),
+        type: 'TX',
+      },
+      {
+        actionId: 'ready',
+        dispatcher: undefined,
+        payload: [],
+        slice: coreReadySlice.key,
         store: 'myStore',
         txId: expect.any(String),
         type: 'TX',
@@ -154,6 +164,16 @@ describe('store', () => {
         store: 'myStore',
         txId: expect.any(String),
         type: 'TX',
+      },
+      {
+        name: '<unknownEffect>',
+        source: [
+          {
+            actionId: 'ready',
+            sliceKey: coreReadySlice.key,
+          },
+        ],
+        type: 'SYNC_UPDATE_EFFECT',
       },
       {
         name: 'to-lowercase',

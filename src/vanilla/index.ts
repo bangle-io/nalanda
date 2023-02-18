@@ -1,3 +1,5 @@
+export { coreReadySlice } from './core-effects';
+
 export { createSlice } from './create';
 export { Slice } from './slice';
 export type { StoreState } from './state';

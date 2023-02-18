@@ -314,6 +314,9 @@ describe('merging', () => {
 
       expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
         {
+          "$nalanda/CORE_SLICE_READY": {
+            "ready": false,
+          },
           "g1": {
             "g1State": 1,
           },
@@ -339,6 +342,9 @@ describe('merging', () => {
 
       expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
         {
+          "$nalanda/CORE_SLICE_READY": {
+            "ready": true,
+          },
           "g1": {
             "g1State": 1,
           },
@@ -368,6 +374,12 @@ describe('merging', () => {
           sliceKey: 'g1',
         },
         {
+          actionId: 'ready',
+          dispatchSource: undefined,
+          payload: [],
+          sliceKey: '$nalanda/CORE_SLICE_READY',
+        },
+        {
           actionId: 'updateT1State',
           dispatchSource: 't1Effect',
           payload: [],
@@ -394,6 +406,15 @@ describe('merging', () => {
             "dispatcher": undefined,
             "payload": [],
             "slice": "g1",
+            "store": "test-store",
+            "txId": "<txId>",
+            "type": "TX",
+          },
+          {
+            "actionId": "ready",
+            "dispatcher": undefined,
+            "payload": [],
+            "slice": "$nalanda/CORE_SLICE_READY",
             "store": "test-store",
             "txId": "<txId>",
             "type": "TX",
@@ -468,6 +489,16 @@ describe('merging', () => {
             "type": "TX",
           },
           {
+            "name": "<unknownEffect>",
+            "source": [
+              {
+                "actionId": "ready",
+                "sliceKey": "$nalanda/CORE_SLICE_READY",
+              },
+            ],
+            "type": "SYNC_UPDATE_EFFECT",
+          },
+          {
             "name": "t1Effect",
             "source": [
               {
@@ -555,6 +586,16 @@ describe('merging', () => {
               {
                 "actionId": "updateT3State",
                 "sliceKey": "z0:x0:t3",
+              },
+            ],
+            "type": "UPDATE_EFFECT",
+          },
+          {
+            "name": "<unknownEffect>",
+            "source": [
+              {
+                "actionId": "ready",
+                "sliceKey": "$nalanda/CORE_SLICE_READY",
               },
             ],
             "type": "UPDATE_EFFECT",

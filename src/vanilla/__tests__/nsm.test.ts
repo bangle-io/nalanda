@@ -1,4 +1,5 @@
 import { waitUntil } from '../../test-helpers';
+import { coreReadySlice } from '../core-effects';
 import { createKey, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 import { expectType } from '../internal-types';
@@ -187,6 +188,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[e1]',
       'afterUpdate[e1]',
+      `afterUpdate[${coreReadySlice.key}]`,
       's1',
       's2',
     ]);
@@ -196,6 +198,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[e1]',
       'afterUpdate[e1]',
+      `afterUpdate[${coreReadySlice.key}]`,
       's1',
       's2',
       'afterUpdate[e2]',
@@ -206,6 +209,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[e1]',
       'afterUpdate[e1]',
+      `afterUpdate[${coreReadySlice.key}]`,
       's1',
       's2',
       'afterUpdate[e2]',
@@ -645,6 +649,7 @@ describe('effects', () => {
     expect(callOrder.slice(0, 20)).toMatchInlineSnapshot(`
       [
         "afterUpdate[e1]",
+        "afterUpdate[$nalanda/CORE_SLICE_READY]",
         "s1= 2,0",
         "afterUpdate[e1]",
         "s2= 4,0",
@@ -663,7 +668,6 @@ describe('effects', () => {
         "s1= 14,12",
         "afterUpdate[e1]",
         "s2= 16,12",
-        "s1= 16,14",
       ]
     `);
   });

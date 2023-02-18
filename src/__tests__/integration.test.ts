@@ -76,6 +76,12 @@ describe('Single slice', () => {
           "sliceKey": "test",
         },
         {
+          "actionId": "ready",
+          "dispatchSource": undefined,
+          "payload": [],
+          "sliceKey": "$nalanda/CORE_SLICE_READY",
+        },
+        {
           "actionId": "testAction",
           "dispatchSource": "testEffect",
           "payload": [
@@ -95,6 +101,15 @@ describe('Single slice', () => {
             "banana",
           ],
           "slice": "test",
+          "store": "test-store",
+          "txId": "<txId>",
+          "type": "TX",
+        },
+        {
+          "actionId": "ready",
+          "dispatcher": undefined,
+          "payload": [],
+          "slice": "$nalanda/CORE_SLICE_READY",
           "store": "test-store",
           "txId": "<txId>",
           "type": "TX",
@@ -121,6 +136,16 @@ describe('Single slice', () => {
           "type": "TX",
         },
         {
+          "name": "<unknownEffect>",
+          "source": [
+            {
+              "actionId": "ready",
+              "sliceKey": "$nalanda/CORE_SLICE_READY",
+            },
+          ],
+          "type": "SYNC_UPDATE_EFFECT",
+        },
+        {
           "name": "testEffect",
           "source": [
             {
@@ -140,6 +165,16 @@ describe('Single slice', () => {
             {
               "actionId": "testAction",
               "sliceKey": "test",
+            },
+          ],
+          "type": "UPDATE_EFFECT",
+        },
+        {
+          "name": "<unknownEffect>",
+          "source": [
+            {
+              "actionId": "ready",
+              "sliceKey": "$nalanda/CORE_SLICE_READY",
             },
           ],
           "type": "UPDATE_EFFECT",

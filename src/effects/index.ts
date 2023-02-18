@@ -1,3 +1,4 @@
+import { coreReadySlice } from '../vanilla';
 import { incrementalId } from '../vanilla/helpers';
 import { ExtractReturnTypes } from '../vanilla/internal-types';
 import { AnySlice, BareStore, Effect, typed } from '../vanilla/public-types';
@@ -41,24 +42,23 @@ export function onceEffect<K extends string, DS extends AnySlice>(
   const effect = new Slice({
     key: name,
     selectors: {},
-    dependencies: deps,
-    initState: typed<{ ready?: boolean }>({}),
-    actions: {
-      ready: () => (state) => ({ ...state, ready: true }),
-    },
+    dependencies: [
+      ...deps,
+      // need this dependency to ensure update is run
+      coreReadySlice,
+    ],
+    initState: {},
+    actions: {},
     effects: [
       {
         name: name,
-        init(slice, store) {
-          store.dispatch(slice.actions.ready());
-        },
         update(
           sl,
           store: BareStore<any>,
           prevStoreState: BareStore<any>['state'],
           ref: { done?: boolean },
         ) {
-          if (!ref.done && sl.getState(store.state).ready) {
+          if (!ref.done && coreReadySlice.getState(store.state).ready) {
             cb(store.state, store.dispatch);
             ref.done = true;
           }
@@ -168,6 +168,7 @@ export const changeEffect = <
       const res = cb(
         Object.fromEntries(newObjectEntries),
         store.dispatch,
+        // ref should already be defined in the init
         ref.userRef!,
       );
 
@@ -177,22 +178,11 @@ export const changeEffect = <
     }
   };
 
-  const effect: Effect<
-    Slice<
-      K,
-      unknown,
-      any,
-      {
-        ready: () => (s: any) => any;
-      },
-      any
-    >
-  > = {
+  const effect: Effect<Slice<K, unknown, any, {}, any>> = {
     init(slice, store, ref: EffectRef) {
       ref.firstRun = true;
       ref.prevCleanup = undefined;
       ref.userRef = {};
-      store.dispatch(slice.actions.ready());
     },
     destroy(slice, state, ref: EffectRef) {
       ref?.prevCleanup?.();
@@ -205,19 +195,18 @@ export const changeEffect = <
     effect.update = run;
   }
 
+  let deps = Array.from(
+    new Set(Object.values(effectSelectors).map((r) => r[0])),
+  ) as any;
+
+  // is needed to trigger the update on first run
+  deps.push(coreReadySlice);
+
   return new Slice({
     key: name,
-    dependencies: Array.from(
-      new Set(Object.values(effectSelectors).map((r) => r[0])),
-    ) as any,
-    initState: {
-      ready: false,
-    },
-    actions: {
-      ready: () => () => {
-        return { ready: true };
-      },
-    },
+    dependencies: deps,
+    initState: {},
+    actions: {},
     selectors: {},
     effects: [effect],
   });
