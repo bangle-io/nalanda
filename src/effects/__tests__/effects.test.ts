@@ -172,7 +172,11 @@ describe('changeEffect', () => {
         numnum: testSlice1.pick((state) => state.num),
         foofoo: testSlice2.pick((state) => state.name),
       },
-      (result, dispatch) => {
+      (result, dispatch, ref) => {
+        if (!ref) {
+          throw new Error('ref should be defined');
+        }
+
         fn(result.numnum);
         rejectAny(result);
 
@@ -217,7 +221,10 @@ describe('changeEffect', () => {
         sl2Name: testSlice2.pick((state) => state.name),
         sl1Square: testSlice1.pick((state) => state.numSq),
       },
-      (result, dispatch) => {
+      (result, dispatch, ref) => {
+        if (!ref) {
+          throw new Error('ref should be defined');
+        }
         call(result);
         // @ts-expect-error - should not be able to invalid keys
         result.xyz?.();

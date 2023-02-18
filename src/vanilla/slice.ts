@@ -161,6 +161,10 @@ export class Slice<
     };
   }
 
+  get a() {
+    return this.actions;
+  }
+
   get actions(): ActionsToTxCreator<K, A> {
     return this.txCreators as any;
   }

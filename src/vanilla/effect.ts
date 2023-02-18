@@ -235,6 +235,7 @@ export class EffectHandler {
 
   public debugSyncLastRanBy: { sliceKey: string; actionId: string }[] = [];
   public debugDeferredLastRanBy: { sliceKey: string; actionId: string }[] = [];
+  private _ref = {};
 
   constructor(
     public effect: Effect<any>,
@@ -288,11 +289,13 @@ export class EffectHandler {
     this.effect.init?.(
       this._slice as AnySlice,
       store.getReducedStore(this.effect.name, this._slice),
+      this._ref,
     );
   }
 
   destroy(state: InternalStoreState) {
-    this.effect.destroy?.(this._slice, state);
+    this.effect.destroy?.(this._slice, state, this._ref);
+    this._ref = {};
   }
 
   runSyncUpdate(store: Store) {
@@ -312,6 +315,7 @@ export class EffectHandler {
       previouslySeenState._withKeyMapping(
         this._slice.keyMapping.bind(this._slice),
       ),
+      this._ref,
     );
   }
 
@@ -328,6 +332,7 @@ export class EffectHandler {
       previouslySeenState._withKeyMapping(
         this._slice.keyMapping.bind(this._slice),
       ),
+      this._ref,
     );
   }
 }
