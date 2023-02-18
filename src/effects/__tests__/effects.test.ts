@@ -61,6 +61,23 @@ const testSlice3 = slice({
 });
 
 describe('onceEffect', () => {
+  test('is called', async () => {
+    let called = jest.fn();
+
+    const once = onceEffect([], 'run-once', (state, dispatch) => {
+      called();
+    });
+
+    Store.create({
+      storeName: 'test-store',
+      scheduler: timeoutSchedular(0),
+      state: [once],
+    });
+
+    await waitForExpect(() => {
+      expect(called).toBeCalledTimes(1);
+    });
+  });
   test('works', async () => {
     let called = jest.fn();
     const once = onceEffect(
