@@ -19,7 +19,7 @@ export function createUseSliceHook<SSL extends AnySlice>(
   ): [SLS, BareStore<SSL>['dispatch']];
   function useSlice<SL extends AnySlice, SLS>(
     sl: SL['key'] extends SSL['key'] ? SL : never,
-    selector?: (p: SL['config']['initState']) => SLS,
+    selector?: (p: SL['spec']['initState']) => SLS,
   ): [SLS, BareStore<SSL>['dispatch']] {
     const [subscribe] = useState(() => {
       return (cb: () => void) => {

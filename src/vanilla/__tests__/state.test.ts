@@ -239,10 +239,10 @@ describe('test override helper', () => {
     });
 
     expect(
-      testOverrideSlice(slice1, { effects: [] }).config.effects,
+      testOverrideSlice(slice1, { effects: [] }).spec.effects,
     ).toHaveLength(0);
     // should not affect initial slice
-    expect(slice1.config.effects).toHaveLength(1);
+    expect(slice1.spec.effects).toHaveLength(1);
   });
 
   test('overriding dependencies', () => {
@@ -252,11 +252,11 @@ describe('test override helper', () => {
     });
 
     expect(
-      testOverrideSlice(slice1, { dependencies: [testSlice1] }).config
+      testOverrideSlice(slice1, { dependencies: [testSlice1] }).spec
         .dependencies.length,
     ).toBe(1);
 
-    expect(slice1.config.dependencies.length).toBe(0);
+    expect(slice1.spec.dependencies.length).toBe(0);
   });
 });
 
@@ -289,7 +289,7 @@ describe('State creation', () => {
             mappedDependencies: [],
             children: [],
           },
-          config: {
+          spec: {
             actions: {},
             dependencies: [],
             effects: [],
@@ -305,7 +305,7 @@ describe('State creation', () => {
           key: 'mySlice',
           resolveSelectors: expect.any(Function),
           resolveState: expect.any(Function),
-          sliceUid: expect.any(String),
+          uid: expect.any(String),
           txApplicators: {},
           txCreators: {},
         },

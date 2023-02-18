@@ -156,7 +156,7 @@ export class InternalStoreState implements StoreState<any> {
       }
     }
     for (const slice of slices) {
-      const dependencies = slice.config.dependencies;
+      const dependencies = slice.spec.dependencies;
       if (
         new Set(dependencies.map((d) => d.key)).size !== dependencies.length
       ) {

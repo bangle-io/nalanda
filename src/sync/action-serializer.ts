@@ -59,7 +59,7 @@ export class ActionSerializer<
   }
 
   getRawAction = (actionId: string): Action<any, any, any> | undefined => {
-    const action = this.slice.config.actions[actionId];
+    const action = this.slice.spec.actions[actionId];
 
     if (!action) {
       return undefined;
@@ -100,7 +100,7 @@ export class ActionSerializer<
 
   isSyncReady(): boolean {
     // all actions must be serial
-    return Object.values(this.slice.config.actions).every((action) =>
+    return Object.values(this.slice.spec.actions).every((action) =>
       serialActionCache.has(action),
     );
   }

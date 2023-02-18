@@ -88,8 +88,8 @@ export class SideEffectsManager {
 
     // fill in record of effects
     slices.forEach((slice) => {
-      if (slice.config.effects) {
-        this._effects.record[slice.key] = slice.config.effects.map(
+      if (slice.spec.effects) {
+        this._effects.record[slice.key] = slice.spec.effects.map(
           (effect) => new EffectHandler(effect, initState, slice, _debug),
         );
       }

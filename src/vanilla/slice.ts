@@ -36,7 +36,7 @@ function actionsToTxCreators(
 
 export interface BareSlice<K extends string = any, SS = any> {
   readonly key: K;
-  readonly sliceUid: string;
+  readonly uid: string;
 
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
@@ -48,7 +48,7 @@ export interface BareSlice<K extends string = any, SS = any> {
     siblingSliceUids?: Set<string>;
   }>;
 
-  readonly config: {
+  readonly spec: {
     key: K;
     dependencies: BareSlice[];
     // Adding effects breaks everything
@@ -65,11 +65,11 @@ export interface BareSlice<K extends string = any, SS = any> {
 }
 
 interface SliceInternalOpts {
-  sliceUid?: string;
+  uid?: string;
   modifiedKey?: string;
 }
 
-export interface SliceConfig<
+export interface SliceSpec<
   K extends string,
   SS,
   DS extends AnySlice,
@@ -101,28 +101,27 @@ export class Slice<
   // This carried forward in forks
   public _bare: BareSlice<K, SS>['_bare'];
 
-  public readonly sliceUid: string;
+  public readonly uid: string;
 
   constructor(
-    // config  & sliceUid always stays the same for all the forks
-    public readonly config: SliceConfig<K, SS, DS, A, SE>,
+    // config  & uid always stays the same for all the forks
+    public readonly spec: SliceSpec<K, SS, DS, A, SE>,
     _internalOpts?: SliceInternalOpts,
   ) {
     // key can be modified by the fork
-    const key = (_internalOpts?.modifiedKey ?? config.key) as K;
-    this.sliceUid =
-      _internalOpts?.sliceUid ?? `${fileUid}-${sliceUidCounter++}`;
+    const key = (_internalOpts?.modifiedKey ?? spec.key) as K;
+    this.uid = _internalOpts?.uid ?? `${fileUid}-${sliceUidCounter++}`;
 
     this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
 
     this.key = key;
-    this.initState = config.initState;
+    this.initState = spec.initState;
 
-    this.txCreators = actionsToTxCreators(key, config.actions);
+    this.txCreators = actionsToTxCreators(key, spec.actions);
 
     this.txApplicators = mapObjectValues(
-      config.actions,
+      spec.actions,
       (action, actionId): TxApplicator<string, any> => {
         return (sliceState, storeState, tx) => {
           return action(...tx.payload)(sliceState, storeState);
@@ -131,7 +130,7 @@ export class Slice<
     );
 
     this._bare = {
-      mappedDependencies: config.dependencies,
+      mappedDependencies: spec.dependencies,
       children: [],
     };
   }
@@ -145,7 +144,7 @@ export class Slice<
   resolveSelectors<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, K, SState>,
   ): ResolvedSelectors<SE> {
-    const result = mapObjectValues(this.config.selectors, (selector) => {
+    const result = mapObjectValues(this.spec.selectors, (selector) => {
       return selector(this.getState(storeState), storeState);
     });
 
@@ -170,7 +169,7 @@ export class Slice<
   }
 
   get selectors(): SE {
-    return this.config.selectors;
+    return this.spec.selectors;
   }
 
   applyTx(
@@ -206,33 +205,29 @@ export class Slice<
   ): Slice<K, SS, DS, A, SE> {
     const newInternalOpts = {
       ...internalOpts,
-      // sliceUid is always the same for all the forks
-      sliceUid: this.sliceUid,
+      // uid is always the same for all the forks
+      uid: this.uid,
     };
 
     // TODO: fix this
-    if (this.key !== this.config.key || internalOpts?.modifiedKey) {
+    if (this.key !== this.spec.key || internalOpts?.modifiedKey) {
       newInternalOpts.modifiedKey = internalOpts?.modifiedKey || this.key;
     }
 
-    const slice = new Slice(this.config, newInternalOpts);
+    const slice = new Slice(this.spec, newInternalOpts);
     slice._bare = { ...slice._bare, ...this._bare, ...bare };
 
     return slice;
   }
 
   keyMapping(key: string): string {
-    if (this._bare.siblingSliceUids) {
-      let match = this._bare.mappedDependencies.find(
-        (dep) =>
-          dep.config.key === key &&
-          this._bare.siblingSliceUids?.has(dep.sliceUid),
-      );
-      if (match) {
-        return match.key;
-      }
-      // TODO throw error if not in dependencies
+    let match = this._bare.mappedDependencies.find(
+      (dep) => dep.spec.key === key,
+    );
+    if (match) {
+      return match.key;
     }
+    // TODO throw error if not in dependencies
 
     return key;
   }

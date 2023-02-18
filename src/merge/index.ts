@@ -11,25 +11,25 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
   let newChildren = children.flatMap((child) => {
     const flattenedSlices = children.flatMap((child) => {
       const childChildren = child._bare.children as AnySlice[];
-      const siblingUids = new Set(childChildren.map((c) => c.sliceUid));
+      const siblingUids = new Set(childChildren.map((c) => c.uid));
       return childChildren.map((c) => {
         return nestSlice(c, key, siblingUids);
       });
     });
 
     flattenedSlices.push(
-      nestSlice(child, key, new Set(children.map((c) => c.sliceUid))),
+      nestSlice(child, key, new Set(children.map((c) => c.uid))),
     );
 
     return flattenedSlices;
   });
 
-  const newChildrenMapping = new Map(newChildren.map((c) => [c.sliceUid, c]));
+  const newChildrenMapping = new Map(newChildren.map((c) => [c.uid, c]));
 
   newChildren = newChildren.map((c) => {
     return c._fork({
       mappedDependencies: c._bare.mappedDependencies.map((dep) => {
-        const mappedDep = newChildrenMapping.get(dep.sliceUid);
+        const mappedDep = newChildrenMapping.get(dep.uid);
         return mappedDep || dep;
       }),
     });
