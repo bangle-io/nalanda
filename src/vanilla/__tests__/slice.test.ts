@@ -1,16 +1,9 @@
 // import { actionToActionSnapshot, Slice, SliceKey } from '../slice';
 
 import { testOverrideSlice } from '../../test-helpers';
-import { createKey, slice } from '../create';
-import { createAction } from '../helpers';
+import { createKey, createSlice, slice } from '../create';
 import { expectType, rejectAny } from '../internal-types';
-import {
-  Action,
-  AnySlice,
-  Effect,
-  SelectorFn,
-  TxCreator,
-} from '../public-types';
+import { AnySlice, Effect, TxCreator } from '../public-types';
 import { Slice } from '../slice';
 import { InternalStoreState, StoreState } from '../state';
 import { Transaction } from '../transaction';
@@ -263,22 +256,19 @@ describe('actions', () => {
 
 describe('selectors', () => {
   test('works', () => {
-    const mySlice = slice({
-      key: createKey(
-        'my-test-slice',
-        [],
-        { num: 3 },
-        {
-          numSquared: (state) => state.num * state.num,
-        },
-      ),
-
+    const mySlice = createSlice([], {
+      key: 'my-test-slice',
+      initState: { num: 3 },
+      selectors: {
+        numSquared: (state) => state.num * state.num,
+      },
       actions: {
         myAction: (num: number) => (state) => {
           return { ...state, num: num + state.num };
         },
-        action2: (num: number, foo: string, brother: () => void) => (state) =>
-          state,
+        action2: (num: number, foo: string, brother: () => void) => (state) => {
+          return state;
+        },
       },
     });
 

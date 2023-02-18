@@ -88,34 +88,16 @@ export function createSlice<
   SS extends object,
   DS extends AnySlice,
   A extends Record<string, Action<any[], SS, DS>>,
->(
-  dependencies: DS[],
-  arg: { key: K; initState: SS; actions: A },
-): Slice<K, SS, DS, A, {}>;
-export function createSlice<
-  K extends string,
-  SS extends object,
-  DS extends AnySlice,
-  A extends Record<string, Action<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
->(
-  dependencies: DS[],
-  arg: { key: K; initState: SS; actions: A; selectors: SE },
-): Slice<K, SS, DS, A, SE>;
-export function createSlice<
-  K extends string,
-  SS extends object,
-  DS extends AnySlice,
-  A extends Record<string, Action<any[], SS, DS>>,
 >(
   dependencies: DS[],
   arg: {
     key: K;
     initState: SS;
     actions: A;
-    selectors?: Record<string, SelectorFn<SS, DS, any>>;
+    selectors: SE;
   },
-): Slice<K, SS, DS, A, {}> {
+): Slice<K, SS, DS, A, SE> {
   return new Slice({
     actions: arg.actions,
     dependencies,

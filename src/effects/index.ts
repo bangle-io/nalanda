@@ -1,7 +1,7 @@
 import { incrementalId } from '../vanilla/helpers';
 import { ExtractReturnTypes } from '../vanilla/internal-types';
 import { AnySlice, BareStore, Effect, typed } from '../vanilla/public-types';
-import { BareSlice, Slice } from '../vanilla/slice';
+import { Slice } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
 import type { ReducedStore } from '../vanilla/store';
 

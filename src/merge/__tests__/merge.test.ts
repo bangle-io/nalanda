@@ -15,12 +15,16 @@ describe('merging', () => {
       key: 'g1',
       initState: {},
       actions: {},
+      selectors: {},
     });
 
     const t1 = createSlice([g1], {
       key: 't1',
-      initState: {},
+      initState: {
+        f: 4,
+      },
       actions: {},
+      selectors: {},
     });
 
     const x0 = mergeSlices({
@@ -85,6 +89,7 @@ describe('merging', () => {
           g1State: state.g1State + 1,
         }),
       },
+      selectors: {},
     });
 
     const t1 = new Slice({
