@@ -1,5 +1,4 @@
 import type { FormEvent } from 'react';
-import { CloseOutlined } from '@ant-design/icons';
 import { a, useTransition } from '@react-spring/web';
 import { Radio } from 'antd';
 import { todoSlice, useSlice } from './store';
@@ -26,11 +25,13 @@ const TodoItem = ({ todoItem }: { todoItem: Todo }) => {
       >
         {todoItem.title}
       </span>
-      <CloseOutlined
+      <button
         onClick={() => {
           dispatch(todoSlice.actions.removeTodo(todoItem));
         }}
-      />
+      >
+        ❌
+      </button>
     </>
   );
 };
@@ -54,6 +55,7 @@ const Filter = () => {
 const Filtered = () => {
   const [{ filteredTodos }] = useSlice(todoSlice);
 
+  console.log({ filteredTodos });
   const transitions = useTransition(filteredTodos, {
     keys: (todo) => todo.toString(),
     from: { opacity: 0, height: 0 },
