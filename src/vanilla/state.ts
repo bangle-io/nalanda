@@ -144,18 +144,6 @@ export class InternalStoreState implements StoreState<any> {
   // TODO add test
   static checkUniqDependency(slices: BareSlice[]) {
     for (const slice of slices) {
-      const dependencies = slice._bare.mappedDependencies;
-      if (
-        new Set(dependencies.map((d) => d.key)).size !== dependencies.length
-      ) {
-        throw new Error(
-          `Slice "${slice.key}" has duplicate dependencies: ${dependencies
-            .map((d) => d.key)
-            .join(', ')}`,
-        );
-      }
-    }
-    for (const slice of slices) {
       const dependencies = slice.spec.dependencies;
       if (
         new Set(dependencies.map((d) => d.key)).size !== dependencies.length
@@ -172,7 +160,7 @@ export class InternalStoreState implements StoreState<any> {
   static checkDependencyOrder(slices: BareSlice[]) {
     let seenKeys = new Set<string>();
     for (const slice of slices) {
-      const dependencies = slice._bare.mappedDependencies;
+      const dependencies = slice.spec.dependencies;
       if (dependencies !== undefined) {
         const depKeys = dependencies.map((d) => d.key);
         for (const depKey of depKeys) {
@@ -209,7 +197,7 @@ export class InternalStoreState implements StoreState<any> {
       visited.add(key);
       stack.add(key);
 
-      for (const dep of slice._bare.mappedDependencies) {
+      for (const dep of slice.spec.dependencies) {
         if (checkCycle(dep)) {
           return true;
         }

@@ -36,23 +36,16 @@ function actionsToTxCreators(
 
 export interface BareSlice<K extends string = any, SS = any> {
   readonly key: K;
-  readonly uid: string;
-
+  readonly lineageId: string;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
-  // Internal things are here
-  // This carried forward in forks
-  readonly _bare: Readonly<{
-    children: BareSlice[];
-    mappedDependencies: BareSlice[];
-    siblingSliceUids?: Set<string>;
-  }>;
 
   readonly spec: {
     key: K;
     dependencies: BareSlice[];
     // Adding effects breaks everything
     effects?: any[];
+    children?: BareSlice[];
   };
 
   applyTx(
@@ -64,9 +57,11 @@ export interface BareSlice<K extends string = any, SS = any> {
   keyMapping(key: string): string;
 }
 
-interface SliceInternalOpts {
-  uid?: string;
+interface SliceConfig {
+  lineageId: string;
   modifiedKey?: string;
+
+  originalSpec: SliceSpec<any, any, any, any, any>;
 }
 
 export interface SliceSpec<
@@ -82,6 +77,7 @@ export interface SliceSpec<
   actions: A;
   selectors: SE;
   effects?: Effect<Slice<K, SS, DS, A, SE>, DS | Slice<K, SS, DS, A, SE>>[];
+  children?: AnySlice[];
 }
 
 export class Slice<
@@ -92,31 +88,42 @@ export class Slice<
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > implements BareSlice<K, SS>
 {
-  private txCreators: Record<string, TxCreator>;
-
-  private txApplicators: Record<string, TxApplicator<string, any>>;
-  public readonly key: K;
   public readonly initState: SS;
+  public readonly key: K;
+  public readonly originalKey: string;
+  public readonly lineageId: string;
 
-  // This carried forward in forks
-  public _bare: BareSlice<K, SS>['_bare'];
+  get a() {
+    return this.actions;
+  }
 
-  public readonly uid: string;
+  get actions(): ActionsToTxCreator<K, A> {
+    return this.txCreators as any;
+  }
+
+  get selectors(): SE {
+    return this.spec.selectors;
+  }
+
+  private txCreators: Record<string, TxCreator>;
+  private txApplicators: Record<string, TxApplicator<string, any>>;
 
   constructor(
-    // config  & uid always stays the same for all the forks
     public readonly spec: SliceSpec<K, SS, DS, A, SE>,
-    _internalOpts?: SliceInternalOpts,
+    public readonly config: SliceConfig = {
+      originalSpec: spec,
+      lineageId: `${spec.key}-${fileUid}-${sliceUidCounter++}`,
+    },
   ) {
-    // key can be modified by the fork
-    const key = (_internalOpts?.modifiedKey ?? spec.key) as K;
-    this.uid = _internalOpts?.uid ?? `${fileUid}-${sliceUidCounter++}`;
+    const key = spec.key;
 
     this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
 
-    this.key = key;
     this.initState = spec.initState;
+    this.key = key;
+    this.originalKey = this.config.originalSpec.key;
+    this.lineageId = this.config.lineageId;
 
     this.txCreators = actionsToTxCreators(key, spec.actions);
 
@@ -128,11 +135,6 @@ export class Slice<
         };
       },
     );
-
-    this._bare = {
-      mappedDependencies: spec.dependencies,
-      children: [],
-    };
   }
 
   getState<SState extends StoreState<any>>(
@@ -158,18 +160,6 @@ export class Slice<
       ...this.getState(storeState),
       ...this.resolveSelectors(storeState),
     };
-  }
-
-  get a() {
-    return this.actions;
-  }
-
-  get actions(): ActionsToTxCreator<K, A> {
-    return this.txCreators as any;
-  }
-
-  get selectors(): SE {
-    return this.spec.selectors;
   }
 
   applyTx(
@@ -200,30 +190,24 @@ export class Slice<
   }
 
   _fork(
-    bare: Partial<Slice<K, SS, any, any, any>['_bare']>,
-    internalOpts?: SliceInternalOpts,
+    spec: Partial<SliceSpec<any, any, any, any, any>>,
   ): Slice<K, SS, DS, A, SE> {
-    const newInternalOpts = {
-      ...internalOpts,
-      // uid is always the same for all the forks
-      uid: this.uid,
-    };
-
-    // TODO: fix this
-    if (this.key !== this.spec.key || internalOpts?.modifiedKey) {
-      newInternalOpts.modifiedKey = internalOpts?.modifiedKey || this.key;
-    }
-
-    const slice = new Slice(this.spec, newInternalOpts);
-    slice._bare = { ...slice._bare, ...this._bare, ...bare };
+    const slice = new Slice(
+      {
+        ...this.spec,
+        ...spec,
+      },
+      this.config,
+    );
 
     return slice;
   }
 
   keyMapping(key: string): string {
-    let match = this._bare.mappedDependencies.find(
-      (dep) => dep.spec.key === key,
-    );
+    if (key === this.originalKey) {
+      return this.key;
+    }
+    let match = this.spec.dependencies.find((dep) => dep.originalKey === key);
     if (match) {
       return match.key;
     }

@@ -10,26 +10,23 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
 }): Slice<K, object, any, any, any> {
   let newChildren = children.flatMap((child) => {
     const flattenedSlices = children.flatMap((child) => {
-      const childChildren = child._bare.children as AnySlice[];
-      const siblingUids = new Set(childChildren.map((c) => c.uid));
+      const childChildren = child.spec.children || [];
       return childChildren.map((c) => {
-        return nestSlice(c, key, siblingUids);
+        return nestSlice(c, key);
       });
     });
 
-    flattenedSlices.push(
-      nestSlice(child, key, new Set(children.map((c) => c.uid))),
-    );
+    flattenedSlices.push(nestSlice(child, key));
 
     return flattenedSlices;
   });
 
-  const newChildrenMapping = new Map(newChildren.map((c) => [c.uid, c]));
+  const newChildrenMapping = new Map(newChildren.map((c) => [c.lineageId, c]));
 
   newChildren = newChildren.map((c) => {
     return c._fork({
-      mappedDependencies: c._bare.mappedDependencies.map((dep) => {
-        const mappedDep = newChildrenMapping.get(dep.uid);
+      dependencies: c.spec.dependencies.map((dep) => {
+        const mappedDep = newChildrenMapping.get(dep.lineageId);
         return mappedDep || dep;
       }),
     });
@@ -48,19 +45,10 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
   });
 }
 
-function nestSlice(
-  slice: AnySlice,
-  prefix: string,
-  siblingSliceUids: Set<string>,
-) {
+function nestSlice(slice: AnySlice, prefix: string) {
   const newKey = prefix + ':' + slice.key;
 
-  return slice._fork(
-    {
-      siblingSliceUids,
-    },
-    {
-      modifiedKey: newKey,
-    },
-  );
+  return slice._fork({
+    key: newKey,
+  });
 }

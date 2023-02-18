@@ -285,9 +285,9 @@ describe('State creation', () => {
     expect(appState).toEqual({
       _slices: [
         {
-          _bare: {
-            mappedDependencies: [],
-            children: [],
+          config: {
+            originalSpec: expect.any(Object),
+            lineageId: expect.any(String),
           },
           spec: {
             actions: {},
@@ -303,9 +303,10 @@ describe('State creation', () => {
             val: null,
           },
           key: 'mySlice',
+          originalKey: 'mySlice',
           resolveSelectors: expect.any(Function),
           resolveState: expect.any(Function),
-          uid: expect.any(String),
+          lineageId: expect.any(String),
           txApplicators: {},
           txCreators: {},
         },

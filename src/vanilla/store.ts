@@ -47,7 +47,7 @@ export class Store implements BareStore<any> {
     if (!(state instanceof InternalStoreState)) {
       if (Array.isArray(state)) {
         let slices = state.flatMap((s) => {
-          return [...(s._bare.children || []), s];
+          return [...(s.spec.children || []), s];
         });
 
         if (!slices.find((s) => s.key === coreReadySlice.key)) {

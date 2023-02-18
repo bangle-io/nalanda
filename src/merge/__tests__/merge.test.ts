@@ -2,11 +2,24 @@ import { mergeSlices } from '..';
 import { createDispatchSpy } from '../../test-helpers';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
+import { AnySlice } from '../../vanilla/public-types';
 import { Slice } from '../../vanilla/slice';
 import { Store } from '../../vanilla/store';
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
+}
+
+function findChilSlice(
+  parent: AnySlice,
+  childSlice: AnySlice,
+): AnySlice | undefined {
+  if (parent.spec.children) {
+    return parent.spec.children.find(
+      (c) => c.lineageId === childSlice.lineageId,
+    );
+  }
+  return;
 }
 
 describe('merging', () => {
@@ -33,9 +46,9 @@ describe('merging', () => {
     });
 
     expect(
-      x0._bare.children?.map((r) => ({
+      x0.spec.children?.map((r) => ({
         key: r.key,
-        sDebs: r._bare.mappedDependencies.map((r) => r.key),
+        sDebs: r.spec.dependencies.map((r) => r.key),
       })),
     ).toMatchInlineSnapshot(`
       [
@@ -52,14 +65,12 @@ describe('merging', () => {
       children: [x0],
     });
 
-    expect(z0._bare.mappedDependencies.map((r) => r.key)).toMatchInlineSnapshot(
-      `[]`,
-    );
+    expect(z0.spec.dependencies.map((r) => r.key)).toMatchInlineSnapshot(`[]`);
 
     expect(
-      z0._bare.children?.map((r) => ({
+      z0.spec.children?.map((r) => ({
         key: r.key,
-        sDebs: r._bare.mappedDependencies.map((d) => d.key),
+        sDebs: r.spec.dependencies.map((d) => d.key),
       })),
     ).toMatchInlineSnapshot(`
       [
@@ -201,39 +212,85 @@ describe('merging', () => {
       children: [x0],
     });
 
+    test('static slices are never modified', () => {
+      expect(x0.spec.dependencies.map((d) => d.key)).toEqual([]);
+      expect(z0.config.originalSpec.dependencies.map((d) => d.key)).toEqual([]);
+
+      expect(x0.spec.dependencies.map((d) => d.key)).toEqual([]);
+      expect(x0.config.originalSpec.dependencies.map((d) => d.key)).toEqual([]);
+      expect(t3.spec.dependencies.map((d) => d.key)).toEqual(['g1', 't1']);
+    });
+
+    test("In Z0 t1 child slice's spec are mapped correctly", () => {
+      const mappedT1 = findChilSlice(z0, t1);
+      expect(mappedT1?.key).toBe('z0:x0:t1');
+      expect(mappedT1?.spec.dependencies.map((d) => d.key)).toEqual(['g1']);
+    });
+
+    test('In Z0 t2 child slice spec are mapped correctly', () => {
+      // T2
+      const mappedT2 = findChilSlice(z0, t2);
+      expect(mappedT2?.key).toBe('z0:x0:t2');
+      expect(mappedT2?.spec.dependencies.map((d) => d.key)).toEqual([
+        'z0:x0:t1',
+      ]);
+      expect(
+        mappedT2?.config.originalSpec.dependencies.map((d) => d.key),
+      ).toEqual(['t1']);
+      expect(mappedT2?.keyMapping('t1')).toBe('z0:x0:t1');
+    });
+
+    test('In Z0 t3 child slice spec are mapped correctly', () => {
+      // T3
+      const mappedT3 = findChilSlice(z0, t3);
+      expect(mappedT3?.key).toBe('z0:x0:t3');
+
+      expect(mappedT3?.spec.dependencies.map((d) => d.key)).toEqual([
+        'g1',
+        'z0:x0:t1',
+      ]);
+      // original stays intanct
+      expect(
+        mappedT3?.config.originalSpec.dependencies.map((d) => d.key),
+      ).toEqual(['g1', 't1']);
+
+      expect(mappedT3?.keyMapping('t1')).toBe('z0:x0:t1');
+      expect(mappedT3?.keyMapping('t3')).toBe('z0:x0:t3');
+    });
+
     test('state looks okay', () => {
       expect(
-        x0._bare.children?.map((r) => ({
+        x0.spec.children?.map((r) => ({
           key: r.key,
-          sDebs: r._bare.mappedDependencies.map((d) => d.key),
+          dependencies: r.spec.dependencies.map((d) => d.key),
         })),
       ).toMatchInlineSnapshot(`
         [
           {
+            "dependencies": [
+              "g1",
+            ],
             "key": "x0:t1",
-            "sDebs": [
-              "g1",
-            ],
           },
           {
+            "dependencies": [
+              "x0:t1",
+            ],
             "key": "x0:t2",
-            "sDebs": [
-              "x0:t1",
-            ],
           },
           {
-            "key": "x0:t3",
-            "sDebs": [
+            "dependencies": [
               "g1",
               "x0:t1",
             ],
+            "key": "x0:t3",
           },
         ]
       `);
 
       let result: any[] = [];
 
-      [...(z0._bare.children || []), z0]?.map((r) => {
+      [...(z0.spec.children || []), z0]?.map((r) => {
         let miniResult: string[] = [];
         for (const sl of [g1, t1, t2, t3, x0, z0]) {
           miniResult.push([sl.key, r.keyMapping?.(sl.key)].join('>'));
@@ -245,19 +302,19 @@ describe('merging', () => {
         [
           [
             "z0:x0:t1",
-            "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
+            "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
           ],
           [
             "z0:x0:t2",
-            "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
+            "g1>g1, t1>z0:x0:t1, t2>z0:x0:t2, t3>t3, x0>x0, z0>z0",
           ],
           [
             "z0:x0:t3",
-            "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
+            "g1>g1, t1>z0:x0:t1, t2>t2, t3>z0:x0:t3, x0>x0, z0>z0",
           ],
           [
             "z0:x0",
-            "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
+            "g1>g1, t1>t1, t2>t2, t3>t3, x0>z0:x0, z0>z0",
           ],
           [
             "z0",
@@ -267,9 +324,9 @@ describe('merging', () => {
       `);
 
       expect(
-        z0._bare.children?.map((r) => ({
+        z0.spec.children?.map((r) => ({
           key: r.key,
-          sDebs: r._bare.mappedDependencies.map((d) => d.key),
+          sDebs: r.spec.dependencies.map((d) => d.key),
         })),
       ).toMatchInlineSnapshot(`
         [

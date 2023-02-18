@@ -157,7 +157,7 @@ describe('dependencies', () => {
       const sl4 = createSlice('sl4');
 
       const modifyDeps = (slice: AnySlice, deps: AnySlice[]) => {
-        (slice._bare as any).mappedDependencies = deps;
+        slice.spec.dependencies = deps;
       };
 
       modifyDeps(sl0, [sl1, sl2]);
