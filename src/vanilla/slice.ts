@@ -236,19 +236,6 @@ export class Slice<
 
     return key;
   }
-
-  _nestSlice(prefix: string, siblingSliceUids: Set<string>) {
-    const newKey = prefix + ':' + this.key;
-
-    return this._fork(
-      {
-        siblingSliceUids,
-      },
-      {
-        modifiedKey: newKey,
-      },
-    );
-  }
 }
 
 export type ActionsToTxCreator<
