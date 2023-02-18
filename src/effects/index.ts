@@ -56,12 +56,11 @@ export function onceEffect<K extends string, DS extends AnySlice>(
           sl,
           store: BareStore<any>,
           prevStoreState: BareStore<any>['state'],
+          ref: { done?: boolean },
         ) {
-          if (
-            sl.getState(store.state).ready &&
-            !sl.getState(prevStoreState).ready
-          ) {
+          if (!ref.done && sl.getState(store.state).ready) {
             cb(store.state, store.dispatch);
+            ref.done = true;
           }
         },
       },
@@ -116,7 +115,7 @@ export type ExtractSliceFromEffectSelectors<
   ? S
   : never;
 
-const baseChangeEffect = <
+export const changeEffect = <
   K extends string,
   ES extends Record<string, [AnySlice, (storeState: StoreState<any>) => any]>,
 >(
@@ -127,31 +126,26 @@ const baseChangeEffect = <
       [K in keyof ES]: ES[K][1];
     }>,
     dispatch: ReducedStore<ExtractSliceFromEffectSelectors<ES>>['dispatch'],
+    ref: Record<string, any>,
   ) => void | (() => void),
-  isSync = false,
+  opts?: { sync?: boolean },
 ) => {
   const comparisonEntries = Object.entries(effectSelectors).map(
     (r): [string, (storeState: StoreState<any>) => any] => [r[0], r[1][1]],
   );
 
-  type SliceState = {
-    ref?: {
-      firstRun: boolean;
-      prevCleanup: void | (() => void);
-    };
+  type EffectRef = {
+    firstRun?: boolean;
+    prevCleanup?: void | (() => void);
+    userRef?: Record<string, any>;
   };
 
   const run = (
-    sl: Slice<K, SliceState, any, any, any>,
+    sl: Slice<K, unknown, any, any, any>,
     store: BareStore<any>,
     prevStoreState: BareStore<any>['state'],
+    ref: EffectRef,
   ) => {
-    const sliceStateRef = sl.getState(store.state).ref;
-    // sliceStateRef should always be defined, since `init` is called before `update`
-    if (!sliceStateRef) {
-      throw new Error('sliceStateRef cannot be undefined');
-    }
-
     let hasNew = false;
 
     const newObjectEntries = comparisonEntries.map(([k, v]) => {
@@ -165,16 +159,20 @@ const baseChangeEffect = <
       return [k, newVal];
     });
 
-    if (hasNew || sliceStateRef.firstRun) {
-      if (sliceStateRef.firstRun) {
-        sliceStateRef.firstRun = false;
+    if (hasNew || ref.firstRun) {
+      if (ref.firstRun) {
+        ref.firstRun = false;
       }
-      sliceStateRef.prevCleanup?.();
+      ref.prevCleanup?.();
 
-      const res = cb(Object.fromEntries(newObjectEntries), store.dispatch);
+      const res = cb(
+        Object.fromEntries(newObjectEntries),
+        store.dispatch,
+        ref.userRef!,
+      );
 
       if (typeof res === 'function') {
-        sliceStateRef.prevCleanup = res;
+        ref.prevCleanup = res;
       }
     }
   };
@@ -182,34 +180,26 @@ const baseChangeEffect = <
   const effect: Effect<
     Slice<
       K,
-      SliceState,
+      unknown,
       any,
       {
-        ready: (state: SliceState) => (s: any) => any;
+        ready: () => (s: any) => any;
       },
       any
     >
   > = {
-    init(slice, store) {
-      // we need to save a unique reference per initialization in the state
-      // since we are going to mutate it in place. If we don't do this, it
-      // will cause issues if multiple store use the same instance of slice.
-      // this has another benefit of calling update on the first run.
-      store.dispatch(
-        slice.actions.ready({
-          ref: {
-            firstRun: true,
-            prevCleanup: undefined,
-          },
-        }),
-      );
+    init(slice, store, ref: EffectRef) {
+      ref.firstRun = true;
+      ref.prevCleanup = undefined;
+      ref.userRef = {};
+      store.dispatch(slice.actions.ready());
     },
-    destroy(slice, state) {
-      slice.getState(state).ref?.prevCleanup?.();
+    destroy(slice, state, ref: EffectRef) {
+      ref?.prevCleanup?.();
     },
   };
 
-  if (isSync) {
+  if (opts?.sync) {
     effect.updateSync = run;
   } else {
     effect.update = run;
@@ -220,45 +210,15 @@ const baseChangeEffect = <
     dependencies: Array.from(
       new Set(Object.values(effectSelectors).map((r) => r[0])),
     ) as any,
-    initState: typed<SliceState>({}),
+    initState: {
+      ready: false,
+    },
     actions: {
-      ready: (initState: SliceState) => () => {
-        return initState;
+      ready: () => () => {
+        return { ready: true };
       },
     },
     selectors: {},
     effects: [effect],
   });
-};
-
-export const changeEffect = <
-  K extends string,
-  ES extends Record<string, [AnySlice, (storeState: StoreState<any>) => any]>,
->(
-  name: K,
-  effectSelectors: ES,
-  cb: (
-    selectedVal: ExtractReturnTypes<{
-      [K in keyof ES]: ES[K][1];
-    }>,
-    dispatch: ReducedStore<ExtractSliceFromEffectSelectors<ES>>['dispatch'],
-  ) => void | (() => void),
-) => {
-  return baseChangeEffect(name, effectSelectors, cb, false);
-};
-
-export const changeEffectSync = <
-  K extends string,
-  ES extends Record<string, [AnySlice, (storeState: StoreState<any>) => any]>,
->(
-  name: K,
-  effectSelectors: ES,
-  cb: (
-    selectedVal: ExtractReturnTypes<{
-      [K in keyof ES]: ES[K][1];
-    }>,
-    dispatch: ReducedStore<ExtractSliceFromEffectSelectors<ES>>['dispatch'],
-  ) => void | (() => void),
-) => {
-  return baseChangeEffect(name, effectSelectors, cb, true);
 };

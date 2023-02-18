@@ -30,14 +30,23 @@ export interface Effect<
   Sibblings extends AnySlice = SL,
 > {
   name?: string;
-  destroy?: (slice: SL, state: StoreState<Sibblings>) => void;
-  init?: (slice: SL, store: BareStore<Sibblings>) => void;
+  destroy?: (
+    slice: SL,
+    state: StoreState<Sibblings>,
+    ref: Record<string, any>,
+  ) => void;
+  init?: (
+    slice: SL,
+    store: BareStore<Sibblings>,
+    ref: Record<string, any>,
+  ) => void;
   updateSync?:
     | undefined
     | ((
         slice: SL,
         store: BareStore<Sibblings>,
         prevStoreState: StoreState<Sibblings>,
+        ref: Record<string, any>,
       ) => void);
   update?:
     | undefined
@@ -45,6 +54,7 @@ export interface Effect<
         slice: SL,
         store: BareStore<Sibblings>,
         prevStoreState: StoreState<Sibblings>,
+        ref: Record<string, any>,
       ) => void);
 }
 
