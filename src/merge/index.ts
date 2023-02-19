@@ -1,19 +1,19 @@
 import { AnySlice } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
 
-const MERGE_KEY = '$nalanda/MERGE_METADATA_KEY';
+// const MERGE_KEY = '$nalanda/MERGE_METADATA_KEY';
 
-interface MergeData {
-  isMerge: true;
-}
+// interface MergeData {
+//   isMerge: true;
+// }
 
-function setMetadata(slice: AnySlice, metadata: MergeData) {
-  slice._metadata[MERGE_KEY] = metadata;
-}
+// function setMetadata(slice: AnySlice, metadata: MergeData) {
+//   slice._metadata[MERGE_KEY] = metadata;
+// }
 
-function getMetadata(slice: AnySlice): MergeData | undefined {
-  return slice._metadata[MERGE_KEY];
-}
+// function getMetadata(slice: AnySlice): MergeData | undefined {
+//   return slice._metadata[MERGE_KEY];
+// }
 
 export function mergeSlices<K extends string, SL extends AnySlice>({
   key: parentKey,
@@ -22,26 +22,19 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
   key: K;
   children: SL[];
 }): Slice<K, object, any, any, any> {
-  let newChildren: AnySlice[] = children.flatMap((child) => {
-    const mergeData = getMetadata(child);
-
-    // check if the slice is a merge slice
-    if (!mergeData) {
-      return [nestSlice(child, parentKey)];
-    }
-
-    // for merge slices we need to flatten the children
-    // and lift them up to the parent.
-    const flattenedSlices = (child.spec.additionalSlices || []).map((c) => {
-      return nestSlice(c, parentKey)._fork({
-        // remove them from this slice, since the slice with key=`parentKey` will
-        // own them now.
-        additionalSlices: [],
-      });
+  let newChildren: AnySlice[] = children
+    .flatMap((child) => {
+      const additional = [...(child.spec._additionalSlices || [])];
+      return [
+        ...additional,
+        child._fork({
+          _additionalSlices: [],
+        }),
+      ];
+    })
+    .map((child) => {
+      return nestSlice(child, parentKey);
     });
-    flattenedSlices.push(nestSlice(child, parentKey));
-    return flattenedSlices;
-  });
 
   const newChildrenMapping = new Map(newChildren.map((c) => [c.lineageId, c]));
 
@@ -62,12 +55,12 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
     actions: {},
     selectors: {},
   });
-  setMetadata(mergedSlice, {
-    isMerge: true,
-  });
+  // setMetadata(mergedSlice, {
+  //   isMerge: true,
+  // });
 
   return mergedSlice._fork({
-    additionalSlices: newChildren,
+    _additionalSlices: newChildren,
   });
 }
 

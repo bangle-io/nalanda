@@ -34,7 +34,7 @@ export class InternalStoreState implements StoreState<any> {
 
   static create<SL extends BareSlice>(_slices: SL[]): StoreState<SL> {
     const slices = _slices.flatMap((slice) => {
-      return [...(slice.spec.additionalSlices || []), slice];
+      return [...(slice.spec._additionalSlices || []), slice];
     });
 
     if (!slices.find((s) => s.key === coreReadySlice.key)) {

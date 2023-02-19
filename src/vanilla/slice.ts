@@ -45,7 +45,7 @@ export interface BareSlice<K extends string = any, SS = any> {
     dependencies: BareSlice[];
     // Adding effects breaks everything
     effects?: any[];
-    additionalSlices?: BareSlice[];
+    _additionalSlices?: BareSlice[];
   };
 
   applyTx(
@@ -75,7 +75,7 @@ export interface SliceSpec<
   actions: A;
   selectors: SE;
   effects?: Effect<Slice<K, SS, DS, A, SE>, DS | Slice<K, SS, DS, A, SE>>[];
-  additionalSlices?: AnySlice[];
+  _additionalSlices?: AnySlice[];
 }
 
 export class Slice<
