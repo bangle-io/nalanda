@@ -1,3 +1,4 @@
+import { coreReadySlice } from './core-effects';
 import { findDuplications } from './helpers';
 import { BareSlice } from './slice';
 import { Transaction } from './transaction';
@@ -31,11 +32,14 @@ interface StoreStateOptions {
 export class InternalStoreState implements StoreState<any> {
   protected slicesCurrentState: Record<string, unknown> = Object.create(null);
 
-  static create<SL extends BareSlice>(slices: SL[]): StoreState<SL> {
-    InternalStoreState.checkUniqueKeys(slices);
-    InternalStoreState.checkUniqDependency(slices);
-    InternalStoreState.circularCheck(slices);
-    InternalStoreState.checkDependencyOrder(slices);
+  static create<SL extends BareSlice>(_slices: SL[]): StoreState<SL> {
+    const slices = _slices.flatMap((slice) => {
+      return [...(slice.spec.additionalSlices || []), slice];
+    });
+
+    if (!slices.find((s) => s.key === coreReadySlice.key)) {
+      slices.unshift(coreReadySlice);
+    }
 
     const instance = new InternalStoreState(slices);
 
@@ -49,7 +53,12 @@ export class InternalStoreState implements StoreState<any> {
   constructor(
     public readonly _slices: BareSlice[],
     public opts?: StoreStateOptions,
-  ) {}
+  ) {
+    InternalStoreState.checkUniqueKeys(_slices);
+    InternalStoreState.checkUniqDependency(_slices);
+    InternalStoreState.circularCheck(_slices);
+    InternalStoreState.checkDependencyOrder(_slices);
+  }
 
   applyTransaction(tx: Transaction<string, unknown[]>): InternalStoreState {
     const newState = { ...this.slicesCurrentState };

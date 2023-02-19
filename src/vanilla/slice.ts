@@ -45,7 +45,7 @@ export interface BareSlice<K extends string = any, SS = any> {
     dependencies: BareSlice[];
     // Adding effects breaks everything
     effects?: any[];
-    children?: BareSlice[];
+    additionalSlices?: BareSlice[];
   };
 
   applyTx(
@@ -59,8 +59,6 @@ export interface BareSlice<K extends string = any, SS = any> {
 
 interface SliceConfig {
   lineageId: string;
-  modifiedKey?: string;
-
   originalSpec: SliceSpec<any, any, any, any, any>;
 }
 
@@ -77,7 +75,7 @@ export interface SliceSpec<
   actions: A;
   selectors: SE;
   effects?: Effect<Slice<K, SS, DS, A, SE>, DS | Slice<K, SS, DS, A, SE>>[];
-  children?: AnySlice[];
+  additionalSlices?: AnySlice[];
 }
 
 export class Slice<
@@ -94,6 +92,8 @@ export class Slice<
   public readonly lineageId: string;
 
   public readonly keyMap: KeyMap;
+
+  public _metadata: Record<string, any> = {};
 
   get a() {
     return this.actions;
@@ -202,13 +202,18 @@ export class Slice<
   _fork(
     spec: Partial<SliceSpec<any, any, any, any, any>>,
   ): Slice<K, SS, DS, A, SE> {
-    return new Slice(
+    let metadata = this._metadata;
+    let newSlice = new Slice(
       {
         ...this.spec,
         ...spec,
       },
       this.config,
     );
+
+    newSlice._metadata = metadata;
+
+    return newSlice;
   }
 
   keyMapping(key: string): string {
