@@ -1,9 +1,7 @@
 import { coreReadySlice } from './core-effects';
 import { findDuplications } from './helpers';
-import { BareSlice } from './slice';
+import { BareSlice, KeyMap } from './slice';
 import { Transaction } from './transaction';
-
-export type KeyMapping = (key: string) => string;
 
 export type ResolveSliceIfRegistered<
   SL extends BareSlice,
@@ -26,7 +24,7 @@ export interface StoreState<RegSlices extends BareSlice> {
 
 interface StoreStateOptions {
   debug?: boolean;
-  keyMapping?: KeyMapping;
+  keyMap?: KeyMap;
 }
 
 export class InternalStoreState implements StoreState<any> {
@@ -78,9 +76,7 @@ export class InternalStoreState implements StoreState<any> {
           );
         }
 
-        const scopedStoreState = newStoreState._withKeyMapping(
-          slice.keyMapping.bind(slice),
-        );
+        const scopedStoreState = newStoreState._withKeyMap(slice.keyMap);
 
         newState[slice.key] = slice.applyTx(
           sliceState.value,
@@ -106,8 +102,8 @@ export class InternalStoreState implements StoreState<any> {
   }
 
   private _getDirectSliceState(key: string) {
-    if (this.opts?.keyMapping) {
-      const mappedKey = this.opts.keyMapping(key);
+    if (this.opts?.keyMap) {
+      const mappedKey = this.opts.keyMap.resolve(key);
       if (mappedKey === undefined) {
         throw new Error(
           `Key "${key}" not found in keyMapping. Did you forget to add it as a dependency it?`,
@@ -127,9 +123,9 @@ export class InternalStoreState implements StoreState<any> {
     return { found: false, value: undefined };
   }
 
-  _withKeyMapping(keyMapping?: KeyMapping) {
-    if (keyMapping) {
-      return this._fork(this.slicesCurrentState, { keyMapping });
+  _withKeyMap(keyMap?: KeyMap) {
+    if (keyMap) {
+      return this._fork(this.slicesCurrentState, { keyMap });
     }
     return this;
   }

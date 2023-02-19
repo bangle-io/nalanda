@@ -54,7 +54,7 @@ export interface BareSlice<K extends string = any, SS = any> {
     tx: Transaction<K, unknown[]>,
   ): SS;
 
-  keyMapping(key: string): string;
+  readonly keyMap: KeyMap;
 }
 
 interface SliceConfig {
@@ -75,6 +75,7 @@ export interface SliceSpec<
   actions: A;
   selectors: SE;
   effects?: Effect<Slice<K, SS, DS, A, SE>, DS | Slice<K, SS, DS, A, SE>>[];
+  // used internally by mergeSlices
   _additionalSlices?: AnySlice[];
 }
 
@@ -217,7 +218,7 @@ export class Slice<
   }
 
   keyMapping(key: string): string {
-    return this.keyMap.resolve(key) || key;
+    return this.keyMap.resolve(key);
   }
 }
 
@@ -251,7 +252,7 @@ export class KeyMap {
   }
 
   // resolves original key to current key
-  resolve(key: string): string | undefined {
-    return this.map[key];
+  resolve(key: string): string {
+    return this.map[key] || key;
   }
 }

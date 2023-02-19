@@ -2,7 +2,7 @@ import { incrementalId } from './helpers';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 
-import type { BareSlice } from './slice';
+import type { BareSlice, KeyMap } from './slice';
 import { InternalStoreState, StoreState } from './state';
 import { DebugFunc, Transaction, txLog } from './transaction';
 import {
@@ -10,8 +10,7 @@ import {
   TX_META_STORE_NAME,
   TX_META_STORE_TX_ID,
 } from './transaction';
-import { AnySlice, BareStore } from './public-types';
-import { coreReadySlice } from './core-effects';
+import { BareStore } from './public-types';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
@@ -134,9 +133,9 @@ export class Store implements BareStore<any> {
    */
   getReducedStore<SB extends BareSlice>(
     debugDispatch?: string,
-    slice?: BareSlice,
+    keyMap?: KeyMap,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, debugDispatch, slice);
+    return new ReducedStore(this, debugDispatch, keyMap);
   }
 
   updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
@@ -175,9 +174,9 @@ export class ReducedStore<SB extends BareSlice> {
       );
     }
 
-    if (this._slice) {
+    if (this._keyMap) {
       // change the key of the transaction to match the correct mapping
-      tx = tx.changeKey(this._slice.keyMapping(tx.sliceKey));
+      tx = tx.changeKey(this._keyMap.resolve(tx.sliceKey));
     }
 
     if (debugDispatch) {
@@ -190,7 +189,7 @@ export class ReducedStore<SB extends BareSlice> {
   constructor(
     private _store: Store | BareStore<any>,
     public _debugDispatchSrc?: string,
-    public _slice?: BareSlice,
+    public _keyMap?: KeyMap,
   ) {}
 
   get destroyed() {
@@ -198,9 +197,9 @@ export class ReducedStore<SB extends BareSlice> {
   }
 
   get state(): StoreState<SB> {
-    if (this._slice) {
-      return (this._store.state as InternalStoreState)._withKeyMapping(
-        this._slice.keyMapping.bind(this._slice),
+    if (this._keyMap) {
+      return (this._store.state as InternalStoreState)._withKeyMap(
+        this._keyMap,
       );
     }
     // }

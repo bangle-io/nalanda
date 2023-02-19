@@ -302,7 +302,7 @@ export class EffectHandler {
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice),
+      store.getReducedStore(this.effect.name, this._slice.keyMap),
       this._ref,
     );
   }
@@ -325,10 +325,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.updateSync?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice),
-      previouslySeenState._withKeyMapping(
-        this._slice.keyMapping.bind(this._slice),
-      ),
+      store.getReducedStore(this.effect.name, this._slice.keyMap),
+      previouslySeenState._withKeyMap(this._slice.keyMap),
       this._ref,
     );
   }
@@ -342,10 +340,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.update?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice),
-      previouslySeenState._withKeyMapping(
-        this._slice.keyMapping.bind(this._slice),
-      ),
+      store.getReducedStore(this.effect.name, this._slice.keyMap),
+      previouslySeenState._withKeyMap(this._slice.keyMap),
       this._ref,
     );
   }
