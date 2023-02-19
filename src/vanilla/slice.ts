@@ -11,7 +11,7 @@ import { StoreState } from './state';
 import { Transaction } from './transaction';
 
 let sliceUidCounter = 0;
-let fileUid = uuid(5);
+let fileUid = uuid(4);
 
 type IfSliceRegistered<
   SState extends StoreState<any>,
@@ -93,6 +93,8 @@ export class Slice<
   public readonly originalKey: string;
   public readonly lineageId: string;
 
+  public readonly keyMap: KeyMap;
+
   get a() {
     return this.actions;
   }
@@ -124,6 +126,14 @@ export class Slice<
     this.key = key;
     this.originalKey = this.config.originalSpec.key;
     this.lineageId = this.config.lineageId;
+
+    this.keyMap = new KeyMap(
+      {
+        key,
+        originalKey: this.originalKey,
+      },
+      spec.dependencies,
+    );
 
     this.txCreators = actionsToTxCreators(key, spec.actions);
 
@@ -192,28 +202,17 @@ export class Slice<
   _fork(
     spec: Partial<SliceSpec<any, any, any, any, any>>,
   ): Slice<K, SS, DS, A, SE> {
-    const slice = new Slice(
+    return new Slice(
       {
         ...this.spec,
         ...spec,
       },
       this.config,
     );
-
-    return slice;
   }
 
   keyMapping(key: string): string {
-    if (key === this.originalKey) {
-      return this.key;
-    }
-    let match = this.spec.dependencies.find((dep) => dep.originalKey === key);
-    if (match) {
-      return match.key;
-    }
-    // TODO throw error if not in dependencies
-
-    return key;
+    return this.keyMap.resolve(key) || key;
   }
 }
 
@@ -229,3 +228,25 @@ export type ActionsToTxCreator<
 type ResolvedSelectors<SE extends Record<string, SelectorFn<any, any, any>>> = {
   [K in keyof SE]: SE[K] extends AnyFn ? ReturnType<SE[K]> : never;
 };
+
+export class KeyMap {
+  public readonly sliceKey: string;
+  private map: Record<string, string>;
+
+  constructor(
+    slice: { key: string; originalKey: string },
+    dependencies: AnySlice[],
+  ) {
+    this.sliceKey = slice.key;
+
+    this.map = Object.fromEntries(
+      dependencies.map((dep) => [dep.originalKey, dep.key]),
+    );
+    this.map[slice.originalKey] = slice.key;
+  }
+
+  // resolves original key to current key
+  resolve(key: string): string | undefined {
+    return this.map[key];
+  }
+}

@@ -1,5 +1,8 @@
+import waitForExpect from 'wait-for-expect';
 import { mergeSlices } from '..';
-import { createDispatchSpy } from '../../test-helpers';
+import { createDispatchSpy, waitUntil } from '../../test-helpers';
+import { coreReadySlice } from '../../vanilla';
+import { CORE_SLICE_READY } from '../../vanilla/core-effects';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { AnySlice } from '../../vanilla/public-types';
@@ -395,7 +398,17 @@ describe('merging', () => {
         }
       `);
 
-      await sleep(10);
+      await waitForExpect(() => {
+        expect(
+          dispatchSpy
+            .getDebugLogItems()
+            .find(
+              (d) =>
+                d.type === 'UPDATE_EFFECT' &&
+                d.source.find((s) => s.sliceKey === CORE_SLICE_READY),
+            ),
+        ).toBeDefined();
+      });
 
       expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
         {

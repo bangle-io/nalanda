@@ -303,6 +303,7 @@ describe('State creation', () => {
             val: null,
           },
           key: 'mySlice',
+          keyMap: expect.any(Object),
           originalKey: 'mySlice',
           resolveSelectors: expect.any(Function),
           resolveState: expect.any(Function),
