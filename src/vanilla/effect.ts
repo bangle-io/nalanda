@@ -9,20 +9,6 @@ export interface Scheduler {
   schedule: (cb: () => void) => void;
 }
 
-global.requestIdleCallback =
-  global.requestIdleCallback ||
-  function (cb) {
-    const start = Date.now();
-    return setTimeout(function () {
-      cb({
-        didTimeout: false,
-        timeRemaining: function () {
-          return Math.max(0, 50 - (Date.now() - start));
-        },
-      });
-    }, 1);
-  };
-
 export const idleCallbackScheduler: (timeout: number) => Scheduler = (
   timeout,
 ) => ({
