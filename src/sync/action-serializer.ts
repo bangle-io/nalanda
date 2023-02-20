@@ -60,7 +60,7 @@ export function serialAction<
 }
 
 export class ActionSerializer<
-  K extends string,
+  N extends string,
   SS extends object,
   DS extends AnyActionSlice,
   A extends Record<string, Action<any[], SS, DS>>,
@@ -80,7 +80,7 @@ export class ActionSerializer<
     return action;
   };
 
-  constructor(public slice: Slice<K, SS, DS, A, SE>) {}
+  constructor(public slice: Slice<N, SS, DS, A, SE>) {}
 
   getRawSerializedAction(actionId: string):
     | {

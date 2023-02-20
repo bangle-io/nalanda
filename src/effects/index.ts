@@ -116,10 +116,10 @@ export type ExtractSliceFromEffectSelectors<
   : never;
 
 export const changeEffect = <
-  K extends string,
+  N extends string,
   ES extends Record<string, [AnySlice, (storeState: StoreState<any>) => any]>,
 >(
-  name: K,
+  name: N,
   effectSelectors: ES,
   cb: (
     selectedVal: ExtractReturnTypes<{
@@ -141,7 +141,7 @@ export const changeEffect = <
   };
 
   const run = (
-    sl: Slice<K, unknown, any, any, any>,
+    sl: Slice<N, unknown, any, any, any>,
     store: BareStore<any>,
     prevStoreState: BareStore<any>['state'],
     ref: EffectRef,
@@ -178,7 +178,7 @@ export const changeEffect = <
     }
   };
 
-  const effect: Effect<Slice<K, {}, AnySlice, {}, {}>> = {
+  const effect: Effect<Slice<N, {}, AnySlice, {}, {}>> = {
     init(slice, store, ref: EffectRef) {
       ref.firstRun = true;
       ref.prevCleanup = undefined;

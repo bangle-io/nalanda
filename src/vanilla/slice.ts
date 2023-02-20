@@ -21,10 +21,10 @@ let fileUid = uuid(4);
 
 type IfSliceRegistered<
   SState extends StoreState<any>,
-  K extends string,
+  N extends string,
   Result,
 > = SState extends StoreState<infer SL>
-  ? K extends SL['key']
+  ? N extends SL['key']
     ? Result
     : never
   : never;
@@ -69,35 +69,34 @@ interface SliceConfig {
 }
 
 export interface SliceSpec<
-  K extends string,
+  N extends string,
   SS,
   DS extends AnySlice,
   A extends Record<string, Action<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
-  key: K;
+  key: N;
   dependencies: DS[];
   initState: SS;
   actions: A;
   selectors: SE;
-  effects?: Effect<Slice<K, SS, DS, A, SE>, DS | Slice<K, SS, DS, A, SE>>[];
+  effects?: Effect<Slice<N, SS, DS, A, SE>, DS | Slice<N, SS, DS, A, SE>>[];
   // used internally by mergeSlices
   _additionalSlices?: AnySlice[];
 }
 
 export class Slice<
-  K extends string,
+  N extends string,
   SS,
   DS extends AnySlice,
   A extends Record<string, Action<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
-> implements BareSlice<K, SS>
+> implements BareSlice<N, SS>
 {
   public readonly initState: SS;
-  public readonly key: K;
+  public readonly key: N;
   public readonly originalKey: string;
   public readonly lineageId: string;
-
   public readonly keyMap: KeyMap;
 
   public _metadata: Record<string | symbol, any> = {};
@@ -106,7 +105,7 @@ export class Slice<
     return this.actions;
   }
 
-  get actions(): ActionsToTxCreator<K, A> {
+  get actions(): ActionsToTxCreator<N, A> {
     return this.txCreators as any;
   }
 
@@ -118,7 +117,7 @@ export class Slice<
   private txApplicators: Record<string, TxApplicator<string, any>>;
 
   constructor(
-    public readonly spec: SliceSpec<K, SS, DS, A, SE>,
+    public readonly spec: SliceSpec<N, SS, DS, A, SE>,
     public readonly config: SliceConfig = {
       originalSpec: spec,
       lineageId: `${spec.key}-${fileUid}-${sliceUidCounter++}`,
@@ -154,8 +153,8 @@ export class Slice<
   }
 
   getState<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, K, SState>,
-  ): IfSliceRegistered<SState, K, SS> {
+    storeState: IfSliceRegistered<SState, N, SState>,
+  ): IfSliceRegistered<SState, N, SS> {
     const { context, sliceLookupByKey } =
       storeState as unknown as InternalStoreState;
 
@@ -169,7 +168,7 @@ export class Slice<
   }
 
   resolveSelectors<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, K, SState>,
+    storeState: IfSliceRegistered<SState, N, SState>,
   ): ResolvedSelectors<SE> {
     const result = mapObjectValues(this.spec.selectors, (selector) => {
       return selector(this.getState(storeState), storeState);
@@ -179,7 +178,7 @@ export class Slice<
   }
 
   resolveState<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, K, SState>,
+    storeState: IfSliceRegistered<SState, N, SState>,
   ): Simplify<SS & ResolvedSelectors<SE>> {
     return {
       ...this.getState(storeState),
@@ -190,7 +189,7 @@ export class Slice<
   applyTx(
     sliceState: SS,
     storeState: StoreState<any>,
-    tx: Transaction<K, unknown[]>,
+    tx: Transaction<N, unknown[]>,
   ): SS {
     const apply = this.txApplicators[tx.actionId];
 
@@ -205,7 +204,7 @@ export class Slice<
 
   pick<T>(
     cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
-  ): [Slice<K, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
+  ): [Slice<N, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
     return [
       this,
       (storeState: StoreState<any>) => {
@@ -216,7 +215,7 @@ export class Slice<
 
   _fork(
     spec: Partial<SliceSpec<any, any, any, any, any>>,
-  ): Slice<K, SS, DS, A, SE> {
+  ): Slice<N, SS, DS, A, SE> {
     let metadata = this._metadata;
     let newSlice = new Slice(
       {
@@ -233,11 +232,11 @@ export class Slice<
 }
 
 export type ActionsToTxCreator<
-  K extends string,
+  N extends string,
   A extends Record<string, Action<any[], any, any>>,
 > = {
   [KK in keyof A]: A[KK] extends (...param: infer P) => any
-    ? TxCreator<K, P>
+    ? TxCreator<N, P>
     : never;
 };
 
