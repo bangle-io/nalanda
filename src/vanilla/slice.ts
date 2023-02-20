@@ -95,7 +95,7 @@ export class Slice<
 
   public readonly keyMap: KeyMap;
 
-  public _metadata: Record<string, any> = {};
+  public _metadata: Record<string | symbol, any> = {};
 
   get a() {
     return this.actions;

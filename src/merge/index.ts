@@ -1,5 +1,6 @@
 import { AnySlice } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
+import { InternalStoreState } from '../vanilla/state';
 
 // const MERGE_KEY = '$nalanda/MERGE_METADATA_KEY';
 
@@ -22,6 +23,20 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
   key: K;
   children: SL[];
 }): Slice<K, object, any, any, any> {
+  InternalStoreState.checkUniqueKeys(children);
+
+  let mappingRecord: Map<string, AnySlice> = new Map();
+
+  function nestSlice(slice: AnySlice, prefix: string) {
+    const newKey = prefix + ':' + slice.key;
+
+    let newSlice = slice._fork({
+      key: newKey,
+    });
+    mappingRecord.set(slice.key, newSlice);
+    return newSlice;
+  }
+
   let newChildren: AnySlice[] = children
     .flatMap((child) => {
       const additional = [...(child.spec._additionalSlices || [])];
@@ -36,13 +51,11 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
       return nestSlice(child, parentKey);
     });
 
-  const newChildrenMapping = new Map(newChildren.map((c) => [c.lineageId, c]));
-
   // update the dependencies so that they point to the new slices
   newChildren = newChildren.map((c) => {
     return c._fork({
       dependencies: c.spec.dependencies.map((dep) => {
-        const mappedDep = newChildrenMapping.get(dep.lineageId);
+        const mappedDep = mappingRecord.get(dep.key);
         return mappedDep || dep;
       }),
     });
@@ -61,13 +74,5 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
 
   return mergedSlice._fork({
     _additionalSlices: newChildren,
-  });
-}
-
-function nestSlice(slice: AnySlice, prefix: string) {
-  const newKey = prefix + ':' + slice.key;
-
-  return slice._fork({
-    key: newKey,
   });
 }
