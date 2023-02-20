@@ -61,3 +61,15 @@ export type SliceStateToSelector<S> = S extends object
       [K in keyof S]: SelectorFn<any, any, S[K]>;
     }
   : never;
+
+/**
+ * Hack for nominal typing
+ * https://basarat.gitbook.io/typescript/main-1/nominaltyping
+ */
+export declare const __brand: unique symbol;
+export type Brand<T, K> = T & { [__brand]: K };
+
+export type SliceKey = string;
+export type SliceContext = {
+  sliceKey: SliceKey;
+};

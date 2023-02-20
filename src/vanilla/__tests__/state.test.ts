@@ -269,11 +269,14 @@ describe('State creation', () => {
       {
         _slices: expect.any(Array),
         slicesCurrentState: expect.any(Object),
+        sliceLookupByKey: expect.any(Object),
       } as any,
       `
       {
         "_slices": Any<Array>,
+        "context": undefined,
         "opts": undefined,
+        "sliceLookupByKey": Any<Object>,
         "slicesCurrentState": Any<Object>,
       }
     `,
@@ -292,6 +295,7 @@ describe('State creation', () => {
     expect(appState).toEqual({
       _slices: expect.any(Array),
       opts: undefined,
+      sliceLookupByKey: expect.any(Object),
       slicesCurrentState: {
         mySlice: {
           val: null,

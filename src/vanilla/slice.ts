@@ -1,5 +1,5 @@
 import { mapObjectValues, uuid, weakCache } from './helpers';
-import { AnyFn, TxApplicator } from './internal-types';
+import { AnyFn, SliceContext, SliceKey, TxApplicator } from './internal-types';
 import {
   Effect,
   SelectorFn,
@@ -7,9 +7,14 @@ import {
   AnySlice,
   TxCreator,
 } from './public-types';
-import { StoreState } from './state';
+import { InternalStoreState, StoreState } from './state';
 import { Transaction } from './transaction';
 import type { Simplify } from 'type-fest';
+
+export interface ActionPayload<K extends string, P extends unknown[]> {
+  sliceKey: K;
+  payload: P;
+}
 
 let sliceUidCounter = 0;
 let fileUid = uuid(4);
@@ -151,7 +156,16 @@ export class Slice<
   getState<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, K, SState>,
   ): IfSliceRegistered<SState, K, SS> {
-    return storeState.getSliceState(this as any);
+    const { context, sliceLookupByKey } =
+      storeState as unknown as InternalStoreState;
+
+    const resolvedSlice = resolveSliceInContext(
+      this,
+      sliceLookupByKey,
+      context,
+    );
+
+    return storeState.getSliceState(resolvedSlice);
   }
 
   resolveSelectors<SState extends StoreState<any>>(
@@ -251,4 +265,36 @@ export class KeyMap {
   resolve(key: string): string {
     return this.map[key] || key;
   }
+}
+
+// if this was called from
+// sliceA.getState(storeState)
+// we need to first find the possible context this was executed in
+// by looking at storeContext
+// next we need find how to resolve the current sliceA in this context.
+// TODO add tests
+export function resolveSliceInContext(
+  currentSlice: BareSlice,
+  sliceLookupByKey: Record<SliceKey, BareSlice>,
+  context?: SliceContext,
+): BareSlice {
+  const sourceSliceKey = context?.sliceKey;
+
+  if (!sourceSliceKey || sourceSliceKey === currentSlice.key) {
+    return currentSlice;
+  }
+
+  const sourceSlice = sliceLookupByKey[sourceSliceKey];
+
+  if (!sourceSlice) {
+    throw new Error(`Slice "${sourceSliceKey}" not found in store state`);
+  }
+  const resolvedKey = sourceSlice.keyMap.resolve(currentSlice.key);
+  const mappedSlice = sliceLookupByKey[resolvedKey];
+
+  if (!mappedSlice) {
+    throw new Error(`Mapped slice "${resolvedKey}" not found in store state`);
+  }
+
+  return mappedSlice;
 }

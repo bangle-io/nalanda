@@ -1,6 +1,7 @@
 import { coreReadySlice } from './core-effects';
-import { findDuplications } from './helpers';
-import { BareSlice, KeyMap } from './slice';
+import { findDuplications, weakCache } from './helpers';
+import { SliceContext, SliceKey } from './internal-types';
+import { BareSlice } from './slice';
 import { Transaction } from './transaction';
 
 export type ResolveSliceIfRegistered<
@@ -20,15 +21,27 @@ export interface StoreState<RegSlices extends BareSlice> {
   applyTransaction(
     tx: Transaction<RegSlices['key'], unknown[]>,
   ): StoreState<RegSlices>;
+
+  context: SliceContext | undefined;
 }
 
 interface StoreStateOptions {
   debug?: boolean;
-  keyMap?: KeyMap;
+  context?: SliceContext;
 }
 
+export type SliceLookupByKey = Record<SliceKey, BareSlice>;
+
+const createSliceLookup = weakCache((slices: BareSlice[]) => {
+  return Object.fromEntries(slices.map((s) => [s.key, s]));
+});
+
 export class InternalStoreState implements StoreState<any> {
-  protected slicesCurrentState: Record<string, unknown> = Object.create(null);
+  public readonly context: SliceContext | undefined;
+
+  protected slicesCurrentState: Record<SliceKey, unknown> = Object.create(null);
+
+  public readonly sliceLookupByKey: SliceLookupByKey;
 
   static create<SL extends BareSlice>(_slices: SL[]): StoreState<SL> {
     const slices = _slices.flatMap((slice) => {
@@ -56,6 +69,9 @@ export class InternalStoreState implements StoreState<any> {
     InternalStoreState.checkUniqDependency(_slices);
     InternalStoreState.circularCheck(_slices);
     InternalStoreState.checkDependencyOrder(_slices);
+
+    this.context = opts?.context;
+    this.sliceLookupByKey = createSliceLookup(_slices);
   }
 
   applyTransaction(tx: Transaction<string, unknown[]>): InternalStoreState {
@@ -76,7 +92,9 @@ export class InternalStoreState implements StoreState<any> {
           );
         }
 
-        const scopedStoreState = newStoreState._withKeyMap(slice.keyMap);
+        const scopedStoreState = newStoreState._withContext({
+          sliceKey: slice.key,
+        });
 
         newState[slice.key] = slice.applyTx(
           sliceState.value,
@@ -93,6 +111,7 @@ export class InternalStoreState implements StoreState<any> {
     return newStoreState;
   }
 
+  // TODO make sure this works with mapping keys
   getSliceState(sl: BareSlice): unknown {
     let result = this._getDirectSliceState(sl.key);
     if (!result.found) {
@@ -102,17 +121,6 @@ export class InternalStoreState implements StoreState<any> {
   }
 
   private _getDirectSliceState(key: string) {
-    if (this.opts?.keyMap) {
-      const mappedKey = this.opts.keyMap.resolve(key);
-      if (mappedKey === undefined) {
-        throw new Error(
-          `Key "${key}" not found in keyMapping. Did you forget to add it as a dependency it?`,
-        );
-      }
-      // console.debug(`Augmented key "${key}" to "${mappedKey}`);
-      key = mappedKey;
-    }
-
     if (Object.prototype.hasOwnProperty.call(this.slicesCurrentState, key)) {
       return {
         found: true,
@@ -123,10 +131,11 @@ export class InternalStoreState implements StoreState<any> {
     return { found: false, value: undefined };
   }
 
-  _withKeyMap(keyMap?: KeyMap) {
-    if (keyMap) {
-      return this._fork(this.slicesCurrentState, { keyMap });
+  _withContext(context?: SliceContext) {
+    if (context) {
+      return this._fork(this.slicesCurrentState, { context });
     }
+
     return this;
   }
 

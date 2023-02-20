@@ -11,6 +11,7 @@ import {
   TX_META_STORE_TX_ID,
 } from './transaction';
 import { BareStore } from './public-types';
+import { SliceContext } from './internal-types';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
@@ -133,9 +134,9 @@ export class Store implements BareStore<any> {
    */
   getReducedStore<SB extends BareSlice>(
     debugDispatch?: string,
-    keyMap?: KeyMap,
+    sliceContext?: SliceContext,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, debugDispatch, keyMap);
+    return new ReducedStore(this, debugDispatch, sliceContext);
   }
 
   updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
@@ -174,9 +175,15 @@ export class ReducedStore<SB extends BareSlice> {
       );
     }
 
-    if (this._keyMap) {
-      // change the key of the transaction to match the correct mapping
-      tx = tx.changeKey(this._keyMap.resolve(tx.sliceKey));
+    const sliceContext = this._sliceContext;
+
+    if (sliceContext) {
+      const matchingSlice =
+        this.internalStoreState.sliceLookupByKey[sliceContext.sliceKey];
+
+      if (matchingSlice) {
+        tx = tx.changeKey(matchingSlice?.keyMap.resolve(tx.sliceKey));
+      }
     }
 
     if (debugDispatch) {
@@ -189,21 +196,19 @@ export class ReducedStore<SB extends BareSlice> {
   constructor(
     private _store: Store | BareStore<any>,
     public _debugDispatchSrc?: string,
-    public _keyMap?: KeyMap,
+    public readonly _sliceContext?: SliceContext,
   ) {}
 
   get destroyed() {
     return this._store.destroyed;
   }
 
+  private get internalStoreState(): InternalStoreState {
+    return this._store.state as InternalStoreState;
+  }
+
   get state(): StoreState<SB> {
-    if (this._keyMap) {
-      return (this._store.state as InternalStoreState)._withKeyMap(
-        this._keyMap,
-      );
-    }
-    // }
-    return this._store.state;
+    return this.internalStoreState._withContext(this._sliceContext);
   }
 
   destroy() {

@@ -97,6 +97,10 @@ describe('Single slice', () => {
       ]
     `);
 
+    await waitForExpect(() => {
+      expect(dispatchSpy.getDebugLogItems()).toHaveLength(8);
+    });
+
     expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
       [
         {
