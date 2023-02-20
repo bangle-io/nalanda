@@ -1,5 +1,5 @@
 import { mapObjectValues, uuid, weakCache } from './helpers';
-import { AnyFn, NoInfer, TxApplicator } from './internal-types';
+import { AnyFn, TxApplicator } from './internal-types';
 import {
   Effect,
   SelectorFn,
@@ -9,6 +9,7 @@ import {
 } from './public-types';
 import { StoreState } from './state';
 import { Transaction } from './transaction';
+import type { Simplify } from 'type-fest';
 
 let sliceUidCounter = 0;
 let fileUid = uuid(4);
@@ -137,7 +138,6 @@ export class Slice<
     );
 
     this.txCreators = actionsToTxCreators(key, spec.actions);
-
     this.txApplicators = mapObjectValues(
       spec.actions,
       (action, actionId): TxApplicator<string, any> => {
@@ -166,7 +166,7 @@ export class Slice<
 
   resolveState<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, K, SState>,
-  ): SS & ResolvedSelectors<SE> {
+  ): Simplify<SS & ResolvedSelectors<SE>> {
     return {
       ...this.getState(storeState),
       ...this.resolveSelectors(storeState),
@@ -190,7 +190,7 @@ export class Slice<
   }
 
   pick<T>(
-    cb: (resolvedState: SS & ResolvedSelectors<SE>) => T,
+    cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
   ): [Slice<K, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
     return [
       this,
@@ -215,10 +215,6 @@ export class Slice<
     newSlice._metadata = metadata;
 
     return newSlice;
-  }
-
-  keyMapping(key: string): string {
-    return this.keyMap.resolve(key);
   }
 }
 

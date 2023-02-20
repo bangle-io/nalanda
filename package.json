@@ -62,7 +62,8 @@
     "zod": "^3.20.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@types/use-sync-external-store": "^0.0.3"
+    "@types/use-sync-external-store": "^0.0.3",
+    "type-fest": "^3.6.0"
   },
   "prettier": {
     "singleQuote": true,

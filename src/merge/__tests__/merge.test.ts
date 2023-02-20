@@ -279,7 +279,7 @@ describe('merging', () => {
       expect(
         mappedT2?.config.originalSpec.dependencies.map((d) => d.key),
       ).toEqual(['t1']);
-      expect(mappedT2?.keyMapping('t1')).toBe('z0:x0:t1');
+      expect(mappedT2?.keyMap.resolve('t1')).toBe('z0:x0:t1');
     });
 
     test('In Z0 t3 child slice spec are mapped correctly', () => {
@@ -296,8 +296,8 @@ describe('merging', () => {
         mappedT3?.config.originalSpec.dependencies.map((d) => d.key),
       ).toEqual(['g1', 't1']);
 
-      expect(mappedT3?.keyMapping('t1')).toBe('z0:x0:t1');
-      expect(mappedT3?.keyMapping('t3')).toBe('z0:x0:t3');
+      expect(mappedT3?.keyMap.resolve('t1')).toBe('z0:x0:t1');
+      expect(mappedT3?.keyMap.resolve('t3')).toBe('z0:x0:t3');
     });
 
     test('state looks okay', () => {
@@ -335,7 +335,7 @@ describe('merging', () => {
       [...(z0.spec._additionalSlices || []), z0]?.map((r) => {
         let miniResult: string[] = [];
         for (const sl of [g1, t1, t2, t3, x0, z0]) {
-          miniResult.push([sl.key, r.keyMapping?.(sl.key)].join('>'));
+          miniResult.push([sl.key, r.keyMap.resolve?.(sl.key)].join('>'));
         }
         result.push([r.key, miniResult.join(', ')]);
       });

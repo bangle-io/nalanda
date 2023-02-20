@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { AnyFn } from '../vanilla/internal-types';
-import { Action, AnySlice, SelectorFn } from '../vanilla/public-types';
+import { Action, SelectorFn } from '../vanilla/public-types';
 
 import type { Slice } from '../vanilla/slice';
 import { zodFindUnsafeTypes } from './zod';
@@ -11,7 +11,19 @@ export type ActionSerialData<P extends any[]> = {
 };
 export const serialActionCache = new WeakMap<AnyFn, ActionSerialData<any>>();
 
-export function serialAction<T extends z.ZodTypeAny, SS, DS extends AnySlice>(
+export type AnyActionSlice = Slice<
+  string,
+  any,
+  AnyActionSlice,
+  Record<string, any>,
+  {}
+>;
+
+export function serialAction<
+  T extends z.ZodTypeAny,
+  SS,
+  DS extends AnyActionSlice,
+>(
   schema: T,
   cb: Action<[z.infer<T>], SS, DS>,
   opts?: {
@@ -50,11 +62,11 @@ export function serialAction<T extends z.ZodTypeAny, SS, DS extends AnySlice>(
 export class ActionSerializer<
   K extends string,
   SS extends object,
-  DS extends AnySlice,
+  DS extends AnyActionSlice,
   A extends Record<string, Action<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
-  static create<SL extends AnySlice>(slice: SL) {
+  static create<SL extends AnyActionSlice>(slice: SL) {
     return new ActionSerializer(slice);
   }
 

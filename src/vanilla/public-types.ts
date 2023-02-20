@@ -15,7 +15,8 @@ export type Action<P extends any[], SS, DS extends BareSlice> = (
   ...payload: P
 ) => (sliceState: SS, storeState: StoreState<DS>) => SS;
 
-export type AnySlice = Slice<string, any, AnySlice, any, any>;
+export type AnySlice = Slice<string, any, AnySlice, {}, {}>;
+export type EmptySlice = Slice<never, {}, EmptySlice, {}, {}>;
 
 export interface BareStore<SL extends BareSlice> {
   state: StoreState<SL>;
