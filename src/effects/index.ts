@@ -178,7 +178,7 @@ export const changeEffect = <
     }
   };
 
-  const effect: Effect<Slice<K, unknown, any, {}, any>> = {
+  const effect: Effect<Slice<K, {}, AnySlice, {}, {}>> = {
     init(slice, store, ref: EffectRef) {
       ref.firstRun = true;
       ref.prevCleanup = undefined;

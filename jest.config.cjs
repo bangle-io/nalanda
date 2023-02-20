@@ -3,4 +3,5 @@ module.exports = {
     '^.+\\.(t|j)sx?$': ['@swc/jest'],
   },
   clearMocks: true,
+  setupFiles: ['<rootDir>/jest.setup.js'],
 };

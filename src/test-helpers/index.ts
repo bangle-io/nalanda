@@ -18,11 +18,11 @@ import {
 export function testOverrideSlice<SL extends AnySlice>(
   slice: SL,
   {
-    dependencies = slice.config.dependencies,
-    initState = slice.config.initState,
-    effects = slice.config.effects,
-    actions = slice.config.actions,
-    selectors = slice.config.selectors,
+    dependencies = slice.spec.dependencies,
+    initState = slice.spec.initState,
+    effects = slice.spec.effects,
+    actions = slice.spec.actions,
+    selectors = slice.spec.selectors,
   }: {
     // since this is for testing, we can allow any slice
     dependencies?: AnySlice[];

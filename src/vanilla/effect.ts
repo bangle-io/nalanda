@@ -9,20 +9,6 @@ export interface Scheduler {
   schedule: (cb: () => void) => void;
 }
 
-global.requestIdleCallback =
-  global.requestIdleCallback ||
-  function (cb) {
-    const start = Date.now();
-    return setTimeout(function () {
-      cb({
-        didTimeout: false,
-        timeRemaining: function () {
-          return Math.max(0, 50 - (Date.now() - start));
-        },
-      });
-    }, 1);
-  };
-
 export const idleCallbackScheduler: (timeout: number) => Scheduler = (
   timeout,
 ) => ({
@@ -88,8 +74,8 @@ export class SideEffectsManager {
 
     // fill in record of effects
     slices.forEach((slice) => {
-      if (slice.config.effects) {
-        this._effects.record[slice.key] = slice.config.effects.map(
+      if (slice.spec.effects) {
+        this._effects.record[slice.key] = slice.spec.effects.map(
           (effect) => new EffectHandler(effect, initState, slice, _debug),
         );
       }
@@ -302,7 +288,7 @@ export class EffectHandler {
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice),
+      store.getReducedStore(this.effect.name, this._slice.keyMap),
       this._ref,
     );
   }
@@ -325,10 +311,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.updateSync?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice),
-      previouslySeenState._withKeyMapping(
-        this._slice.keyMapping.bind(this._slice),
-      ),
+      store.getReducedStore(this.effect.name, this._slice.keyMap),
+      previouslySeenState._withKeyMap(this._slice.keyMap),
       this._ref,
     );
   }
@@ -342,10 +326,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.update?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice),
-      previouslySeenState._withKeyMapping(
-        this._slice.keyMapping.bind(this._slice),
-      ),
+      store.getReducedStore(this.effect.name, this._slice.keyMap),
+      previouslySeenState._withKeyMap(this._slice.keyMap),
       this._ref,
     );
   }

@@ -157,7 +157,7 @@ describe('dependencies', () => {
       const sl4 = createSlice('sl4');
 
       const modifyDeps = (slice: AnySlice, deps: AnySlice[]) => {
-        (slice._bare as any).mappedDependencies = deps;
+        slice.spec.dependencies = deps;
       };
 
       modifyDeps(sl0, [sl1, sl2]);
@@ -637,7 +637,7 @@ describe('effects', () => {
       ],
     });
 
-    let effect = mySlice.config.effects?.[0];
+    let effect = mySlice.spec.effects?.[0];
 
     expectType<Effect<any>>(effect!);
 
@@ -676,7 +676,7 @@ describe('creating with slice', () => {
       },
     });
 
-    expectType<never[]>(slice1.config.dependencies);
+    expectType<never[]>(slice1.spec.dependencies);
   });
 
   test('6. DS, SE', () => {
@@ -716,7 +716,7 @@ describe('creating with slice', () => {
       ],
     });
 
-    expectType<typeof dependencies>(slice1.config.dependencies);
+    expectType<typeof dependencies>(slice1.spec.dependencies);
     expectType<{}>(slice1.actions);
 
     // @ts-expect-error - should error since actions is not defined

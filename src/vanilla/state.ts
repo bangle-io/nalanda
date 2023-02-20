@@ -1,8 +1,7 @@
+import { coreReadySlice } from './core-effects';
 import { findDuplications } from './helpers';
-import { BareSlice } from './slice';
+import { BareSlice, KeyMap } from './slice';
 import { Transaction } from './transaction';
-
-export type KeyMapping = (key: string) => string;
 
 export type ResolveSliceIfRegistered<
   SL extends BareSlice,
@@ -25,17 +24,20 @@ export interface StoreState<RegSlices extends BareSlice> {
 
 interface StoreStateOptions {
   debug?: boolean;
-  keyMapping?: KeyMapping;
+  keyMap?: KeyMap;
 }
 
 export class InternalStoreState implements StoreState<any> {
   protected slicesCurrentState: Record<string, unknown> = Object.create(null);
 
-  static create<SL extends BareSlice>(slices: SL[]): StoreState<SL> {
-    InternalStoreState.checkUniqueKeys(slices);
-    InternalStoreState.checkUniqDependency(slices);
-    InternalStoreState.circularCheck(slices);
-    InternalStoreState.checkDependencyOrder(slices);
+  static create<SL extends BareSlice>(_slices: SL[]): StoreState<SL> {
+    const slices = _slices.flatMap((slice) => {
+      return [...(slice.spec._additionalSlices || []), slice];
+    });
+
+    if (!slices.find((s) => s.key === coreReadySlice.key)) {
+      slices.unshift(coreReadySlice);
+    }
 
     const instance = new InternalStoreState(slices);
 
@@ -49,7 +51,12 @@ export class InternalStoreState implements StoreState<any> {
   constructor(
     public readonly _slices: BareSlice[],
     public opts?: StoreStateOptions,
-  ) {}
+  ) {
+    InternalStoreState.checkUniqueKeys(_slices);
+    InternalStoreState.checkUniqDependency(_slices);
+    InternalStoreState.circularCheck(_slices);
+    InternalStoreState.checkDependencyOrder(_slices);
+  }
 
   applyTransaction(tx: Transaction<string, unknown[]>): InternalStoreState {
     const newState = { ...this.slicesCurrentState };
@@ -69,9 +76,7 @@ export class InternalStoreState implements StoreState<any> {
           );
         }
 
-        const scopedStoreState = newStoreState._withKeyMapping(
-          slice.keyMapping.bind(slice),
-        );
+        const scopedStoreState = newStoreState._withKeyMap(slice.keyMap);
 
         newState[slice.key] = slice.applyTx(
           sliceState.value,
@@ -97,8 +102,8 @@ export class InternalStoreState implements StoreState<any> {
   }
 
   private _getDirectSliceState(key: string) {
-    if (this.opts?.keyMapping) {
-      const mappedKey = this.opts.keyMapping(key);
+    if (this.opts?.keyMap) {
+      const mappedKey = this.opts.keyMap.resolve(key);
       if (mappedKey === undefined) {
         throw new Error(
           `Key "${key}" not found in keyMapping. Did you forget to add it as a dependency it?`,
@@ -118,9 +123,9 @@ export class InternalStoreState implements StoreState<any> {
     return { found: false, value: undefined };
   }
 
-  _withKeyMapping(keyMapping?: KeyMapping) {
-    if (keyMapping) {
-      return this._fork(this.slicesCurrentState, { keyMapping });
+  _withKeyMap(keyMap?: KeyMap) {
+    if (keyMap) {
+      return this._fork(this.slicesCurrentState, { keyMap });
     }
     return this;
   }
@@ -144,19 +149,7 @@ export class InternalStoreState implements StoreState<any> {
   // TODO add test
   static checkUniqDependency(slices: BareSlice[]) {
     for (const slice of slices) {
-      const dependencies = slice._bare.mappedDependencies;
-      if (
-        new Set(dependencies.map((d) => d.key)).size !== dependencies.length
-      ) {
-        throw new Error(
-          `Slice "${slice.key}" has duplicate dependencies: ${dependencies
-            .map((d) => d.key)
-            .join(', ')}`,
-        );
-      }
-    }
-    for (const slice of slices) {
-      const dependencies = slice.config.dependencies;
+      const dependencies = slice.spec.dependencies;
       if (
         new Set(dependencies.map((d) => d.key)).size !== dependencies.length
       ) {
@@ -172,7 +165,7 @@ export class InternalStoreState implements StoreState<any> {
   static checkDependencyOrder(slices: BareSlice[]) {
     let seenKeys = new Set<string>();
     for (const slice of slices) {
-      const dependencies = slice._bare.mappedDependencies;
+      const dependencies = slice.spec.dependencies;
       if (dependencies !== undefined) {
         const depKeys = dependencies.map((d) => d.key);
         for (const depKey of depKeys) {
@@ -209,7 +202,7 @@ export class InternalStoreState implements StoreState<any> {
       visited.add(key);
       stack.add(key);
 
-      for (const dep of slice._bare.mappedDependencies) {
+      for (const dep of slice.spec.dependencies) {
         if (checkCycle(dep)) {
           return true;
         }

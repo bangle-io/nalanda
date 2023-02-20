@@ -1,4 +1,5 @@
 import { testOverrideSlice } from '../../test-helpers';
+import { coreReadySlice, CORE_SLICE_READY } from '../core-effects';
 import { createKey, slice } from '../create';
 import { expectType } from '../internal-types';
 import { InternalStoreState, StoreState as StoreState } from '../state';
@@ -239,10 +240,10 @@ describe('test override helper', () => {
     });
 
     expect(
-      testOverrideSlice(slice1, { effects: [] }).config.effects,
+      testOverrideSlice(slice1, { effects: [] }).spec.effects,
     ).toHaveLength(0);
     // should not affect initial slice
-    expect(slice1.config.effects).toHaveLength(1);
+    expect(slice1.spec.effects).toHaveLength(1);
   });
 
   test('overriding dependencies', () => {
@@ -252,11 +253,11 @@ describe('test override helper', () => {
     });
 
     expect(
-      testOverrideSlice(slice1, { dependencies: [testSlice1] }).config
+      testOverrideSlice(slice1, { dependencies: [testSlice1] }).spec
         .dependencies.length,
     ).toBe(1);
 
-    expect(slice1.config.dependencies.length).toBe(0);
+    expect(slice1.spec.dependencies.length).toBe(0);
   });
 });
 
@@ -264,13 +265,19 @@ describe('State creation', () => {
   test('empty slices', () => {
     const appState = InternalStoreState.create([]);
 
-    expect(appState).toMatchInlineSnapshot(`
-      InternalStoreState {
-        "_slices": [],
+    expect(appState).toMatchInlineSnapshot(
+      {
+        _slices: expect.any(Array),
+        slicesCurrentState: expect.any(Object),
+      } as any,
+      `
+      {
+        "_slices": Any<Array>,
         "opts": undefined,
-        "slicesCurrentState": {},
+        "slicesCurrentState": Any<Object>,
       }
-    `);
+    `,
+    );
   });
 
   test('with a slice', () => {
@@ -283,37 +290,14 @@ describe('State creation', () => {
 
     expect(appState.getSliceState(mySlice)).toEqual({ val: null });
     expect(appState).toEqual({
-      _slices: [
-        {
-          _bare: {
-            mappedDependencies: [],
-            children: [],
-          },
-          config: {
-            actions: {},
-            dependencies: [],
-            effects: [],
-            initState: {
-              val: null,
-            },
-            key: 'mySlice',
-            selectors: {},
-          },
-          initState: {
-            val: null,
-          },
-          key: 'mySlice',
-          resolveSelectors: expect.any(Function),
-          resolveState: expect.any(Function),
-          sliceUid: expect.any(String),
-          txApplicators: {},
-          txCreators: {},
-        },
-      ],
+      _slices: expect.any(Array),
       opts: undefined,
       slicesCurrentState: {
         mySlice: {
           val: null,
+        },
+        [CORE_SLICE_READY]: {
+          ready: false,
         },
       },
     });

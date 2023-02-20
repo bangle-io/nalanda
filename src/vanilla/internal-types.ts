@@ -1,6 +1,7 @@
-import { BareSlice } from './slice';
-import { StoreState } from './state';
-import { Transaction } from './transaction';
+import type { AnySlice, SelectorFn } from './public-types';
+import type { BareSlice, Slice } from './slice';
+import type { StoreState } from './state';
+import type { Transaction } from './transaction';
 
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
@@ -24,3 +25,39 @@ export type ExtractReturnTypes<
 // Magic type that when used at sites where generic types are inferred from, will prevent those sites from being involved in the inference.
 // https://github.com/microsoft/TypeScript/issues/14829
 export type NoInfer<T> = [T][T extends any ? 0 : never];
+
+export type InferSliceActions<SL extends AnySlice> = SL extends Slice<
+  any,
+  any,
+  any,
+  infer A,
+  any
+>
+  ? A
+  : never;
+
+export type InferSliceSelectors<SL extends AnySlice> = SL extends Slice<
+  any,
+  any,
+  any,
+  any,
+  infer SE
+>
+  ? SE
+  : never;
+
+export type InferSliceState<SL extends AnySlice> = SL extends Slice<
+  any,
+  infer SS,
+  any,
+  any,
+  any
+>
+  ? SS
+  : never;
+
+export type SliceStateToSelector<S> = S extends object
+  ? {
+      [K in keyof S]: SelectorFn<any, any, S[K]>;
+    }
+  : never;

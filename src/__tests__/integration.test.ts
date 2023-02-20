@@ -1,3 +1,4 @@
+import waitForExpect from 'wait-for-expect';
 import { createDispatchSpy, waitUntil } from '../test-helpers';
 import { timeoutSchedular } from '../vanilla/effect';
 import { Slice } from '../vanilla/slice';
@@ -63,6 +64,10 @@ describe('Single slice', () => {
 
     expect(testSlice.getState(testStore.state)).toEqual({
       val: 'bananaEffect',
+    });
+
+    await waitForExpect(() => {
+      expect(dispatchSpy.getSimplifiedTransactions()).toHaveLength(3);
     });
 
     expect(dispatchSpy.getSimplifiedTransactions()).toMatchInlineSnapshot(`

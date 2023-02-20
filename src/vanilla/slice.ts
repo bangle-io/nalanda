@@ -1,5 +1,5 @@
 import { mapObjectValues, uuid, weakCache } from './helpers';
-import { AnyFn, NoInfer, TxApplicator } from './internal-types';
+import { AnyFn, TxApplicator } from './internal-types';
 import {
   Effect,
   SelectorFn,
@@ -9,9 +9,10 @@ import {
 } from './public-types';
 import { StoreState } from './state';
 import { Transaction } from './transaction';
+import type { Simplify } from 'type-fest';
 
 let sliceUidCounter = 0;
-let fileUid = uuid(5);
+let fileUid = uuid(4);
 
 type IfSliceRegistered<
   SState extends StoreState<any>,
@@ -36,23 +37,16 @@ function actionsToTxCreators(
 
 export interface BareSlice<K extends string = any, SS = any> {
   readonly key: K;
-  readonly sliceUid: string;
-
+  readonly lineageId: string;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
-  // Internal things are here
-  // This carried forward in forks
-  readonly _bare: Readonly<{
-    children: BareSlice[];
-    mappedDependencies: BareSlice[];
-    siblingSliceUids?: Set<string>;
-  }>;
 
-  readonly config: {
+  readonly spec: {
     key: K;
     dependencies: BareSlice[];
     // Adding effects breaks everything
     effects?: any[];
+    _additionalSlices?: BareSlice[];
   };
 
   applyTx(
@@ -61,15 +55,15 @@ export interface BareSlice<K extends string = any, SS = any> {
     tx: Transaction<K, unknown[]>,
   ): SS;
 
-  keyMapping(key: string): string;
+  readonly keyMap: KeyMap;
 }
 
-interface SliceInternalOpts {
-  sliceUid?: string;
-  modifiedKey?: string;
+interface SliceConfig {
+  lineageId: string;
+  originalSpec: SliceSpec<any, any, any, any, any>;
 }
 
-export interface SliceConfig<
+export interface SliceSpec<
   K extends string,
   SS,
   DS extends AnySlice,
@@ -82,6 +76,8 @@ export interface SliceConfig<
   actions: A;
   selectors: SE;
   effects?: Effect<Slice<K, SS, DS, A, SE>, DS | Slice<K, SS, DS, A, SE>>[];
+  // used internally by mergeSlices
+  _additionalSlices?: AnySlice[];
 }
 
 export class Slice<
@@ -92,48 +88,64 @@ export class Slice<
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > implements BareSlice<K, SS>
 {
-  private txCreators: Record<string, TxCreator>;
-
-  private txApplicators: Record<string, TxApplicator<string, any>>;
-  public readonly key: K;
   public readonly initState: SS;
+  public readonly key: K;
+  public readonly originalKey: string;
+  public readonly lineageId: string;
 
-  // This carried forward in forks
-  public _bare: BareSlice<K, SS>['_bare'];
+  public readonly keyMap: KeyMap;
 
-  public readonly sliceUid: string;
+  public _metadata: Record<string | symbol, any> = {};
+
+  get a() {
+    return this.actions;
+  }
+
+  get actions(): ActionsToTxCreator<K, A> {
+    return this.txCreators as any;
+  }
+
+  get selectors(): SE {
+    return this.spec.selectors;
+  }
+
+  private txCreators: Record<string, TxCreator>;
+  private txApplicators: Record<string, TxApplicator<string, any>>;
 
   constructor(
-    // config  & sliceUid always stays the same for all the forks
-    public readonly config: SliceConfig<K, SS, DS, A, SE>,
-    _internalOpts?: SliceInternalOpts,
+    public readonly spec: SliceSpec<K, SS, DS, A, SE>,
+    public readonly config: SliceConfig = {
+      originalSpec: spec,
+      lineageId: `${spec.key}-${fileUid}-${sliceUidCounter++}`,
+    },
   ) {
-    // key can be modified by the fork
-    const key = (_internalOpts?.modifiedKey ?? config.key) as K;
-    this.sliceUid =
-      _internalOpts?.sliceUid ?? `${fileUid}-${sliceUidCounter++}`;
+    const key = spec.key;
 
     this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
 
+    this.initState = spec.initState;
     this.key = key;
-    this.initState = config.initState;
+    this.originalKey = this.config.originalSpec.key;
+    this.lineageId = this.config.lineageId;
 
-    this.txCreators = actionsToTxCreators(key, config.actions);
+    this.keyMap = new KeyMap(
+      {
+        key,
+        originalKey: this.originalKey,
+      },
+      spec.dependencies,
+    );
 
+    this.txCreators = actionsToTxCreators(key, spec.actions);
     this.txApplicators = mapObjectValues(
-      config.actions,
+      spec.actions,
       (action, actionId): TxApplicator<string, any> => {
         return (sliceState, storeState, tx) => {
           return action(...tx.payload)(sliceState, storeState);
         };
       },
     );
-
-    this._bare = {
-      mappedDependencies: config.dependencies,
-      children: [],
-    };
   }
 
   getState<SState extends StoreState<any>>(
@@ -145,7 +157,7 @@ export class Slice<
   resolveSelectors<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, K, SState>,
   ): ResolvedSelectors<SE> {
-    const result = mapObjectValues(this.config.selectors, (selector) => {
+    const result = mapObjectValues(this.spec.selectors, (selector) => {
       return selector(this.getState(storeState), storeState);
     });
 
@@ -154,23 +166,11 @@ export class Slice<
 
   resolveState<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, K, SState>,
-  ): SS & ResolvedSelectors<SE> {
+  ): Simplify<SS & ResolvedSelectors<SE>> {
     return {
       ...this.getState(storeState),
       ...this.resolveSelectors(storeState),
     };
-  }
-
-  get a() {
-    return this.actions;
-  }
-
-  get actions(): ActionsToTxCreator<K, A> {
-    return this.txCreators as any;
-  }
-
-  get selectors(): SE {
-    return this.config.selectors;
   }
 
   applyTx(
@@ -190,7 +190,7 @@ export class Slice<
   }
 
   pick<T>(
-    cb: (resolvedState: SS & ResolvedSelectors<SE>) => T,
+    cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
   ): [Slice<K, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
     return [
       this,
@@ -201,53 +201,20 @@ export class Slice<
   }
 
   _fork(
-    bare: Partial<Slice<K, SS, any, any, any>['_bare']>,
-    internalOpts?: SliceInternalOpts,
+    spec: Partial<SliceSpec<any, any, any, any, any>>,
   ): Slice<K, SS, DS, A, SE> {
-    const newInternalOpts = {
-      ...internalOpts,
-      // sliceUid is always the same for all the forks
-      sliceUid: this.sliceUid,
-    };
-
-    // TODO: fix this
-    if (this.key !== this.config.key || internalOpts?.modifiedKey) {
-      newInternalOpts.modifiedKey = internalOpts?.modifiedKey || this.key;
-    }
-
-    const slice = new Slice(this.config, newInternalOpts);
-    slice._bare = { ...slice._bare, ...this._bare, ...bare };
-
-    return slice;
-  }
-
-  keyMapping(key: string): string {
-    if (this._bare.siblingSliceUids) {
-      let match = this._bare.mappedDependencies.find(
-        (dep) =>
-          dep.config.key === key &&
-          this._bare.siblingSliceUids?.has(dep.sliceUid),
-      );
-      if (match) {
-        return match.key;
-      }
-      // TODO throw error if not in dependencies
-    }
-
-    return key;
-  }
-
-  _nestSlice(prefix: string, siblingSliceUids: Set<string>) {
-    const newKey = prefix + ':' + this.key;
-
-    return this._fork(
+    let metadata = this._metadata;
+    let newSlice = new Slice(
       {
-        siblingSliceUids,
+        ...this.spec,
+        ...spec,
       },
-      {
-        modifiedKey: newKey,
-      },
+      this.config,
     );
+
+    newSlice._metadata = metadata;
+
+    return newSlice;
   }
 }
 
@@ -263,3 +230,25 @@ export type ActionsToTxCreator<
 type ResolvedSelectors<SE extends Record<string, SelectorFn<any, any, any>>> = {
   [K in keyof SE]: SE[K] extends AnyFn ? ReturnType<SE[K]> : never;
 };
+
+export class KeyMap {
+  public readonly sliceKey: string;
+  private map: Record<string, string>;
+
+  constructor(
+    slice: { key: string; originalKey: string },
+    dependencies: AnySlice[],
+  ) {
+    this.sliceKey = slice.key;
+
+    this.map = Object.fromEntries(
+      dependencies.map((dep) => [dep.originalKey, dep.key]),
+    );
+    this.map[slice.originalKey] = slice.key;
+  }
+
+  // resolves original key to current key
+  resolve(key: string): string {
+    return this.map[key] || key;
+  }
+}

@@ -196,7 +196,7 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     });
-    const reducedStore = new ReducedStore(myStore, '', testSlice1);
+    const reducedStore = new ReducedStore(myStore, '', testSlice1.keyMap);
 
     reducedStore.dispatch(testSlice1.actions.increment({ increment: true }));
 
@@ -223,7 +223,7 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     }) as Store;
-    const reducedStore = myStore.getReducedStore('debug', testSlice1);
+    const reducedStore = myStore.getReducedStore('debug', testSlice1.keyMap);
 
     reducedStore.destroy();
 
@@ -255,12 +255,12 @@ describe('ReducedStore', () => {
       state: [testSlice1, testSlice2, testSlice3, mySlice],
     });
 
-    const redStore = (myStore as Store).getReducedStore('', mySlice);
+    const redStore = (myStore as Store).getReducedStore('', mySlice.keyMap);
 
     redStore.dispatch(mySlice.actions.addOne());
 
     await waitUntil(
-      (myStore as Store).getReducedStore('', mySlice),
+      (myStore as Store).getReducedStore('', mySlice.keyMap),
       (state) => {
         return mySlice.getState(state).num === 5;
       },
