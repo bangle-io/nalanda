@@ -33,7 +33,7 @@ export function testOverrideSlice<SL extends AnySlice>(
   },
 ): SL {
   return new Slice({
-    key: slice.key,
+    key: slice.name,
     initState,
     actions,
     selectors,

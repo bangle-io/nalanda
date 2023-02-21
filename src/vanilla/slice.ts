@@ -32,7 +32,7 @@ type IfSliceRegistered<
   N extends string,
   Result,
 > = SState extends StoreState<infer SL>
-  ? N extends SL['key']
+  ? N extends SL['name']
     ? Result
     : never
   : never;

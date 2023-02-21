@@ -8,7 +8,7 @@ export type ResolveSliceIfRegistered<
   SL extends BareSlice,
   SliceRegistry extends BareSlice,
 > = SL extends BareSlice<infer K, any>
-  ? K extends SliceRegistry['key']
+  ? K extends SliceRegistry['name']
     ? SL
     : never
   : never;
@@ -19,7 +19,7 @@ export interface StoreState<RegSlices extends BareSlice> {
   ): SL['initState'];
 
   applyTransaction(
-    tx: Transaction<RegSlices['key'], unknown[]>,
+    tx: Transaction<RegSlices['name'], unknown[]>,
   ): StoreState<RegSlices>;
 
   context: SliceContext | undefined;

@@ -1,3 +1,8 @@
+import {
+  createSliceNameOpaque,
+  nestSliceKey,
+  SliceNameOpaque,
+} from '../vanilla/internal-types';
 import { AnySlice } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
 import { InternalStoreState } from '../vanilla/state';
@@ -17,7 +22,7 @@ import { InternalStoreState } from '../vanilla/state';
 // }
 
 export function mergeSlices<K extends string, SL extends AnySlice>({
-  key: parentKey,
+  key: parentName,
   children,
 }: {
   key: K;
@@ -27,13 +32,13 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
 
   let mappingRecord: Map<string, AnySlice> = new Map();
 
-  function nestSlice(slice: AnySlice, prefix: string) {
-    const newKey = prefix + ':' + slice.key;
+  function nestSlice(slice: AnySlice, prefix: SliceNameOpaque) {
+    const newKey = nestSliceKey(slice.newKeyNew, prefix);
 
     let newSlice = slice._fork({
       key: newKey,
     });
-    mappingRecord.set(slice.key, newSlice);
+    mappingRecord.set(slice.newKeyNew, newSlice);
     return newSlice;
   }
 
@@ -48,21 +53,21 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
       ];
     })
     .map((child) => {
-      return nestSlice(child, parentKey);
+      return nestSlice(child, createSliceNameOpaque(parentName));
     });
 
   // update the dependencies so that they point to the new slices
   newChildren = newChildren.map((c) => {
     return c._fork({
       dependencies: c.spec.dependencies.map((dep) => {
-        const mappedDep = mappingRecord.get(dep.key);
+        const mappedDep = mappingRecord.get(dep.newKeyNew);
         return mappedDep || dep;
       }),
     });
   });
 
   const mergedSlice = new Slice({
-    key: parentKey,
+    key: parentName,
     dependencies: [],
     initState: {},
     actions: {},

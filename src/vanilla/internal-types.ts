@@ -89,3 +89,10 @@ export function isSliceKey(key: unknown): key is SliceKey {
 export function createSliceNameOpaque(name: string): SliceNameOpaque {
   return name as SliceNameOpaque;
 }
+
+export function nestSliceKey(
+  key: SliceKey,
+  parentName: SliceNameOpaque,
+): SliceKey {
+  return createSliceKey(parentName + ':' + key);
+}

@@ -168,7 +168,7 @@ export class Store implements BareStore<any> {
 }
 
 export class ReducedStore<SB extends BareSlice> {
-  dispatch = (tx: Transaction<SB['key'], any>, debugDispatch?: string) => {
+  dispatch = (tx: Transaction<SB['name'], any>, debugDispatch?: string) => {
     if (this._debugDispatchSrc) {
       tx.metadata.appendMetadata(
         TX_META_DISPATCH_SOURCE,

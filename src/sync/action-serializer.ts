@@ -92,7 +92,7 @@ export class ActionSerializer<
 
     if (!action) {
       throw new Error(
-        `Action ${actionId} not found in slice ${this.slice.key}`,
+        `Action ${actionId} not found in slice ${this.slice.newKeyNew}`,
       );
     }
 
@@ -100,7 +100,7 @@ export class ActionSerializer<
 
     if (!serialData) {
       throw new Error(
-        `Action ${actionId} in slice ${this.slice.key} is not serializable`,
+        `Action ${actionId} in slice ${this.slice.newKeyNew} is not serializable`,
       );
     }
 
@@ -140,7 +140,7 @@ export class ActionSerializer<
 
     if (!action) {
       throw new Error(
-        `Action ${actionId} not found in slice ${this.slice.key}`,
+        `Action ${actionId} not found in slice ${this.slice.newKeyNew}`,
       );
     }
 
@@ -148,7 +148,7 @@ export class ActionSerializer<
 
     if (!serialData) {
       throw new Error(
-        `Serialize Action ${actionId} in slice ${this.slice.key} not found`,
+        `Serialize Action ${actionId} in slice ${this.slice.newKeyNew} not found`,
       );
     }
 
