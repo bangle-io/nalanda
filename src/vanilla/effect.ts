@@ -76,7 +76,7 @@ export class SideEffectsManager {
     // fill in record of effects
     slices.forEach((slice) => {
       if (slice.spec.effects) {
-        this._effects.record[slice.newKeyNew] = slice.spec.effects.map(
+        this._effects.record[slice.key] = slice.spec.effects.map(
           (effect) => new EffectHandler(effect, initState, slice, _debug),
         );
       }
@@ -249,7 +249,7 @@ export class EffectHandler {
     this._syncPrevState = this.initStoreState;
 
     this._sliceContext = {
-      sliceKey: this._slice.newKeyNew,
+      sliceKey: this._slice.key,
     };
   }
 
@@ -288,14 +288,14 @@ export class EffectHandler {
   }
 
   get sliceKey() {
-    return this._slice.newKeyNew;
+    return this._slice.key;
   }
 
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
       store.getReducedStore(this.effect.name, {
-        sliceKey: this._slice.newKeyNew,
+        sliceKey: this._slice.key,
       }),
       this._ref,
     );

@@ -33,12 +33,12 @@ export function mergeSlices<N extends string, SL extends AnySlice>({
   let mappingRecord: Map<string, AnySlice> = new Map();
 
   function nestSlice(slice: AnySlice, prefix: SliceNameOpaque) {
-    const newKey = nestSliceKey(slice.newKeyNew, prefix);
+    const newKey = nestSliceKey(slice.key, prefix);
 
     let newSlice = slice._fork({
       name: newKey,
     });
-    mappingRecord.set(slice.newKeyNew, newSlice);
+    mappingRecord.set(slice.key, newSlice);
     return newSlice;
   }
 
@@ -60,7 +60,7 @@ export function mergeSlices<N extends string, SL extends AnySlice>({
   newChildren = newChildren.map((c) => {
     return c._fork({
       dependencies: c.spec.dependencies.map((dep) => {
-        const mappedDep = mappingRecord.get(dep.newKeyNew);
+        const mappedDep = mappingRecord.get(dep.key);
         return mappedDep || dep;
       }),
     });

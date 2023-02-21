@@ -161,8 +161,7 @@ export class Store implements BareStore<any> {
   // TODO: this will be removed once we have better way of adding dynamic slices
   _tempRegisterOnSyncChange(sl: BareSlice, cb: () => void) {
     return (
-      this._effectsManager?._tempRegisterOnSyncChange(sl.newKeyNew, cb) ||
-      (() => {})
+      this._effectsManager?._tempRegisterOnSyncChange(sl.key, cb) || (() => {})
     );
   }
 }

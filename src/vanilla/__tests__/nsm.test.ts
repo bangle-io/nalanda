@@ -188,7 +188,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[key_e1]',
       'afterUpdate[key_e1]',
-      `afterUpdate[${coreReadySlice.newKeyNew}]`,
+      `afterUpdate[${coreReadySlice.key}]`,
       's1',
       's2',
     ]);
@@ -198,7 +198,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[key_e1]',
       'afterUpdate[key_e1]',
-      `afterUpdate[${coreReadySlice.newKeyNew}]`,
+      `afterUpdate[${coreReadySlice.key}]`,
       's1',
       's2',
       'afterUpdate[key_e2]',
@@ -209,7 +209,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[key_e1]',
       'afterUpdate[key_e1]',
-      `afterUpdate[${coreReadySlice.newKeyNew}]`,
+      `afterUpdate[${coreReadySlice.key}]`,
       's1',
       's2',
       'afterUpdate[key_e2]',

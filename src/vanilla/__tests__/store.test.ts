@@ -143,8 +143,8 @@ describe('store', () => {
         actionId: 'ready',
         dispatcher: undefined,
         payload: [],
-        sourceSliceKey: coreReadySlice.newKeyNew,
-        targetSliceKey: coreReadySlice.newKeyNew,
+        sourceSliceKey: coreReadySlice.key,
+        targetSliceKey: coreReadySlice.key,
         store: 'myStore',
         txId: expect.any(String),
         type: 'TX',
@@ -174,7 +174,7 @@ describe('store', () => {
         source: [
           {
             actionId: 'ready',
-            sliceKey: coreReadySlice.newKeyNew,
+            sliceKey: coreReadySlice.key,
           },
         ],
         type: 'SYNC_UPDATE_EFFECT',
@@ -201,7 +201,7 @@ describe('ReducedStore', () => {
       state: [testSlice1, testSlice2, testSlice3],
     });
     const reducedStore = new ReducedStore(myStore, '', {
-      sliceKey: testSlice1.newKeyNew,
+      sliceKey: testSlice1.key,
     });
 
     reducedStore.dispatch(testSlice1.actions.increment({ increment: true }));
@@ -230,7 +230,7 @@ describe('ReducedStore', () => {
       state: [testSlice1, testSlice2, testSlice3],
     }) as Store;
     const reducedStore = myStore.getReducedStore('debug', {
-      sliceKey: testSlice1.newKeyNew,
+      sliceKey: testSlice1.key,
     });
 
     reducedStore.destroy();
@@ -264,14 +264,14 @@ describe('ReducedStore', () => {
     });
 
     const redStore = (myStore as Store).getReducedStore('', {
-      sliceKey: testSlice1.newKeyNew,
+      sliceKey: testSlice1.key,
     });
 
     redStore.dispatch(mySlice.actions.addOne());
 
     await waitUntil(
       (myStore as Store).getReducedStore('', {
-        sliceKey: testSlice1.newKeyNew,
+        sliceKey: testSlice1.key,
       }),
       (state) => {
         return mySlice.getState(state).num === 5;

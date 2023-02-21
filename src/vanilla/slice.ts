@@ -53,7 +53,7 @@ function actionsToTxCreators(
 
 export interface BareSlice<K extends string = string, SS = unknown> {
   readonly name: K;
-  readonly newKeyNew: SliceKey;
+  readonly key: SliceKey;
   readonly lineageId: string;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
@@ -110,7 +110,7 @@ export class Slice<
   public readonly nameOpaque: SliceNameOpaque;
   public readonly lineageId: string;
   public readonly keyMap: KeyMap;
-  public newKeyNew: SliceKey;
+  public key: SliceKey;
   public _metadata: Record<string | symbol, any> = {};
 
   get a() {
@@ -142,7 +142,7 @@ export class Slice<
       );
     }
 
-    this.newKeyNew = createSliceKey(this.spec.name);
+    this.key = createSliceKey(this.spec.name);
     this.name = config?.originalSpec.name ?? spec.name;
     this.nameOpaque = createSliceNameOpaque(this.name);
 
@@ -154,14 +154,14 @@ export class Slice<
     this.lineageId = this.config.lineageId;
     this.keyMap = new KeyMap(
       {
-        key: this.newKeyNew,
+        key: this.key,
         sliceName: this.nameOpaque,
       },
       spec.dependencies,
     );
 
     this.txCreators = actionsToTxCreators(
-      this.newKeyNew,
+      this.key,
       this.nameOpaque,
       spec.actions,
     );
@@ -218,7 +218,7 @@ export class Slice<
 
     if (!apply) {
       throw new Error(
-        `Action "${tx.actionId}" not found in Slice "${this.newKeyNew}"`,
+        `Action "${tx.actionId}" not found in Slice "${this.key}"`,
       );
     }
 
@@ -278,7 +278,7 @@ export class KeyMap {
     this.sliceKey = slice.key;
 
     this.map = Object.fromEntries(
-      dependencies.map((dep) => [dep.name, dep.newKeyNew]),
+      dependencies.map((dep) => [dep.name, dep.key]),
     );
     this.map[slice.sliceName] = slice.key;
   }
@@ -302,7 +302,7 @@ export function resolveSliceInContext(
 ): BareSlice {
   const sourceSliceKey = context?.sliceKey;
 
-  if (!sourceSliceKey || sourceSliceKey === currentSlice.newKeyNew) {
+  if (!sourceSliceKey || sourceSliceKey === currentSlice.key) {
     return currentSlice;
   }
 
