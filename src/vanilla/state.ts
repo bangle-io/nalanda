@@ -7,8 +7,8 @@ import { Transaction } from './transaction';
 export type ResolveSliceIfRegistered<
   SL extends BareSlice,
   SliceRegistry extends BareSlice,
-> = SL extends BareSlice<infer K, any>
-  ? K extends SliceRegistry['name']
+> = SL extends BareSlice<infer N, any>
+  ? N extends SliceRegistry['name']
     ? SL
     : never
   : never;

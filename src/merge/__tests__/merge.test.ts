@@ -48,7 +48,7 @@ describe('merging', () => {
     });
 
     const x0 = mergeSlices({
-      key: 'x0',
+      name: 'x0',
       children: [t1],
     });
 
@@ -68,7 +68,7 @@ describe('merging', () => {
       ]
     `);
     const z0 = mergeSlices({
-      key: 'z0',
+      name: 'z0',
       children: [x0],
     });
 
@@ -212,12 +212,12 @@ describe('merging', () => {
     });
 
     const x0 = mergeSlices({
-      key: 'x0',
+      name: 'x0',
       children: [t1, t2, t3],
     });
 
     const z0 = mergeSlices({
-      key: 'z0',
+      name: 'z0',
       children: [x0],
     });
 

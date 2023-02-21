@@ -21,13 +21,13 @@ import { InternalStoreState } from '../vanilla/state';
 //   return slice._metadata[MERGE_KEY];
 // }
 
-export function mergeSlices<K extends string, SL extends AnySlice>({
-  key: parentName,
+export function mergeSlices<N extends string, SL extends AnySlice>({
+  name: parentName,
   children,
 }: {
-  key: K;
+  name: N;
   children: SL[];
-}): Slice<K, object, any, any, any> {
+}): Slice<N, object, any, any, any> {
   InternalStoreState.checkUniqueKeys(children);
 
   let mappingRecord: Map<string, AnySlice> = new Map();
