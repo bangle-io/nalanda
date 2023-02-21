@@ -76,14 +76,19 @@ export type SliceContext = {
   sliceKey: SliceKey;
 };
 
+export const KEY_PREFIX = 'key_';
+
 // TODO make this create key from name
 export function createSliceKey(key: string): SliceKey {
-  return key as SliceKey;
+  if (isSliceKey(key)) {
+    return key;
+  }
+  return (KEY_PREFIX + key) as SliceKey;
 }
 
 export function isSliceKey(key: unknown): key is SliceKey {
   // TODO make this string by prefixing with `key_`
-  return typeof key === 'string';
+  return typeof key === 'string' && key.startsWith(KEY_PREFIX);
 }
 
 export function createSliceNameOpaque(name: string): SliceNameOpaque {
@@ -94,5 +99,6 @@ export function nestSliceKey(
   key: SliceKey,
   parentName: SliceNameOpaque,
 ): SliceKey {
-  return createSliceKey(parentName + ':' + key);
+  const rawKey = key.slice(KEY_PREFIX.length);
+  return createSliceKey(parentName + ':' + rawKey);
 }

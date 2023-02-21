@@ -40,7 +40,7 @@ export function onceEffect<K extends string, DS extends AnySlice>(
   const cb = args.length === 1 ? args[0] : args[1];
 
   const effect = new Slice({
-    key: name,
+    name: name,
     selectors: {},
     dependencies: [
       ...deps,
@@ -94,7 +94,7 @@ export function syncOnceEffect<DS extends AnySlice>(
   const cb = args.length === 1 ? args[0] : args[1];
 
   return new Slice({
-    key: name,
+    name: name,
     dependencies: deps,
     actions: {},
     selectors: {},
@@ -203,7 +203,7 @@ export const changeEffect = <
   deps.push(coreReadySlice);
 
   return new Slice({
-    key: name,
+    name: name,
     dependencies: deps,
     initState: {},
     actions: {},

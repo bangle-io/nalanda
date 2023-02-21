@@ -3,6 +3,8 @@ import {
   AnyFn,
   createSliceKey,
   createSliceNameOpaque,
+  isSliceKey,
+  KEY_PREFIX,
   SliceContext,
   SliceKey,
   SliceNameOpaque,
@@ -18,11 +20,6 @@ import {
 import { InternalStoreState, StoreState } from './state';
 import { Transaction } from './transaction';
 import type { Simplify } from 'type-fest';
-
-export interface ActionPayload<K extends string, P extends unknown[]> {
-  sliceKey: K;
-  payload: P;
-}
 
 let sliceUidCounter = 0;
 let fileUid = uuid(4);
@@ -55,16 +52,14 @@ function actionsToTxCreators(
 }
 
 export interface BareSlice<K extends string = string, SS = unknown> {
-  readonly key: K;
   readonly name: K;
-  readonly nameOpaque: SliceNameOpaque;
   readonly newKeyNew: SliceKey;
   readonly lineageId: string;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
 
   readonly spec: {
-    key: K;
+    name: K;
     dependencies: BareSlice[];
     // Adding effects breaks everything
     effects?: any[];
@@ -92,7 +87,7 @@ export interface SliceSpec<
   A extends Record<string, Action<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
-  key: N;
+  name: N;
   dependencies: DS[];
   initState: SS;
   actions: A;
@@ -111,15 +106,11 @@ export class Slice<
 > implements BareSlice<N, SS>
 {
   public readonly initState: SS;
-  public readonly key: N;
   public readonly name: N;
   public readonly nameOpaque: SliceNameOpaque;
-  public readonly originalKey: string;
   public readonly lineageId: string;
   public readonly keyMap: KeyMap;
-
   public newKeyNew: SliceKey;
-
   public _metadata: Record<string | symbol, any> = {};
 
   get a() {
@@ -136,36 +127,31 @@ export class Slice<
 
   private txCreators: Record<string, TxCreator>;
   private txApplicators: Record<string, TxApplicator<string, any>>;
-  public readonly config: SliceConfig;
 
   constructor(
     public readonly spec: SliceSpec<N, SS, DS, A, SE>,
-    config?: SliceConfig,
+    public readonly config: SliceConfig = {
+      originalSpec: spec,
+      lineageId: `${spec.name}-${fileUid}-${sliceUidCounter++}`,
+    },
   ) {
-    const key = spec.key;
+    // can only set slice key as a name when forking
+    if (config.originalSpec === spec && isSliceKey(spec.name)) {
+      throw new Error(
+        `Slice name cannot start with "${KEY_PREFIX}". Please use a different name for slice "${spec.name}"`,
+      );
+    }
 
-    this.newKeyNew = createSliceKey(key);
+    this.newKeyNew = createSliceKey(this.spec.name);
+    this.name = config?.originalSpec.name ?? spec.name;
+    this.nameOpaque = createSliceNameOpaque(this.name);
 
     this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
 
     this.initState = spec.initState;
-    this.key = key;
-    this.config = config
-      ? config
-      : {
-          originalSpec: spec,
-          // TODO spec.key to spec.name
-          lineageId: `${spec.key}-${fileUid}-${sliceUidCounter++}`,
-        };
-
-    this.originalKey = this.config.originalSpec.key;
-    // TODO fix this !!
-    this.name = this.originalKey as N;
-    this.nameOpaque = createSliceNameOpaque(this.originalKey);
 
     this.lineageId = this.config.lineageId;
-
     this.keyMap = new KeyMap(
       {
         key: this.newKeyNew,
@@ -292,7 +278,7 @@ export class KeyMap {
     this.sliceKey = slice.key;
 
     this.map = Object.fromEntries(
-      dependencies.map((dep) => [dep.originalKey, dep.newKeyNew]),
+      dependencies.map((dep) => [dep.name, dep.newKeyNew]),
     );
     this.map[slice.sliceName] = slice.key;
   }
@@ -310,7 +296,7 @@ export class KeyMap {
 // next we need find how to resolve the current sliceA in this context.
 // TODO add tests
 export function resolveSliceInContext(
-  currentSlice: BareSlice<string, unknown>,
+  currentSlice: AnySlice,
   sliceLookupByKey: Record<SliceKey, BareSlice>,
   context?: SliceContext,
 ): BareSlice {

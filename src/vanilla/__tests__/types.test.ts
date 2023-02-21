@@ -3,7 +3,7 @@ import { Slice } from '../slice';
 import { InternalStoreState } from '../state';
 
 const testSlice0 = new Slice({
-  key: 'testSlice0',
+  name: 'testSlice0',
   initState: {
     balloons: {
       quantity: 10,
@@ -15,7 +15,7 @@ const testSlice0 = new Slice({
 });
 
 const testSlice1 = new Slice({
-  key: 'testSlice1',
+  name: 'testSlice1',
   initState: {
     a: 1,
   },
@@ -25,7 +25,7 @@ const testSlice1 = new Slice({
 });
 
 const testSlice2 = new Slice({
-  key: 'testSlice2',
+  name: 'testSlice2',
   initState: {
     football: true,
   },
@@ -37,7 +37,7 @@ const testSlice2 = new Slice({
 });
 
 const testSlice3 = new Slice({
-  key: 'testSlice3',
+  name: 'testSlice3',
   initState: {
     name: 'raja',
   },
@@ -75,7 +75,7 @@ const testSlice3 = new Slice({
 });
 
 const testSlice4 = new Slice({
-  key: 'testSlice4',
+  name: 'testSlice4',
   initState: {
     basket: 'fine',
   },
@@ -121,7 +121,7 @@ const testSlice4 = new Slice({
 describe('types', () => {
   test('Create slice', () => {
     const mySlice = new Slice({
-      key: 'mySlice',
+      name: 'mySlice',
       initState: 0,
       actions: {},
       selectors: {
@@ -148,14 +148,14 @@ describe('types', () => {
       // @ts-expect-error - since not registered
       let result2 = testSlice2.getState(storeState);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "testSlice2" not found in store"`,
+      `"Slice "key_testSlice2" not found in store"`,
     );
 
     expect(() => {
       // @ts-expect-error - since not registered
       let result2Reverse = storeState.getSliceState(testSlice2);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "testSlice2" not found in store"`,
+      `"Slice "key_testSlice2" not found in store"`,
     );
 
     let mySliceSelectors = mySlice.resolveSelectors(storeState);

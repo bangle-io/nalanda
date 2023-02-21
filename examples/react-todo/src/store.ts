@@ -15,7 +15,7 @@ const todosInitState: {
 
 export const todoSlice = new Slice({
   dependencies: [],
-  key: 'todo-slice',
+  name: 'todo-slice',
   initState: todosInitState,
   selectors: {
     filteredTodos: (state) => {

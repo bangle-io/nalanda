@@ -177,17 +177,17 @@ describe('sync effects', () => {
     });
     store.dispatch(e1.actions.increment());
 
-    expect(callOrder).toEqual(['afterUpdate[e1]']);
+    expect(callOrder).toEqual(['afterUpdate[key_e1]']);
 
     store.dispatch(e1.actions.increment());
 
-    expect(callOrder).toEqual(['afterUpdate[e1]', 'afterUpdate[e1]']);
+    expect(callOrder).toEqual(['afterUpdate[key_e1]', 'afterUpdate[key_e1]']);
 
     // effects should run after microtasks
     await Promise.resolve();
     expect(callOrder).toEqual([
-      'afterUpdate[e1]',
-      'afterUpdate[e1]',
+      'afterUpdate[key_e1]',
+      'afterUpdate[key_e1]',
       `afterUpdate[${coreReadySlice.newKeyNew}]`,
       's1',
       's2',
@@ -196,23 +196,23 @@ describe('sync effects', () => {
     store.dispatch(e2.actions.increment());
 
     expect(callOrder).toEqual([
-      'afterUpdate[e1]',
-      'afterUpdate[e1]',
+      'afterUpdate[key_e1]',
+      'afterUpdate[key_e1]',
       `afterUpdate[${coreReadySlice.newKeyNew}]`,
       's1',
       's2',
-      'afterUpdate[e2]',
+      'afterUpdate[key_e2]',
     ]);
 
     await Promise.resolve();
     // should run only e2 effects
     expect(callOrder).toEqual([
-      'afterUpdate[e1]',
-      'afterUpdate[e1]',
+      'afterUpdate[key_e1]',
+      'afterUpdate[key_e1]',
       `afterUpdate[${coreReadySlice.newKeyNew}]`,
       's1',
       's2',
-      'afterUpdate[e2]',
+      'afterUpdate[key_e2]',
       's2',
     ]);
   });
@@ -648,25 +648,25 @@ describe('effects', () => {
 
     expect(callOrder.slice(0, 20)).toMatchInlineSnapshot(`
       [
-        "afterUpdate[e1]",
-        "afterUpdate[$nalanda/CORE_SLICE_READY]",
+        "afterUpdate[key_e1]",
+        "afterUpdate[key_$nalanda/CORE_SLICE_READY]",
         "s1= 2,0",
-        "afterUpdate[e1]",
+        "afterUpdate[key_e1]",
         "s2= 4,0",
         "s1= 4,2",
-        "afterUpdate[e1]",
+        "afterUpdate[key_e1]",
         "s1= 6,4",
-        "afterUpdate[e1]",
+        "afterUpdate[key_e1]",
         "s2= 8,4",
         "s1= 8,6",
-        "afterUpdate[e1]",
+        "afterUpdate[key_e1]",
         "s1= 10,8",
-        "afterUpdate[e1]",
+        "afterUpdate[key_e1]",
         "s2= 12,8",
         "s1= 12,10",
-        "afterUpdate[e1]",
+        "afterUpdate[key_e1]",
         "s1= 14,12",
-        "afterUpdate[e1]",
+        "afterUpdate[key_e1]",
         "s2= 16,12",
       ]
     `);

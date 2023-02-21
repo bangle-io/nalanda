@@ -36,7 +36,7 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
     const newKey = nestSliceKey(slice.newKeyNew, prefix);
 
     let newSlice = slice._fork({
-      key: newKey,
+      name: newKey,
     });
     mappingRecord.set(slice.newKeyNew, newSlice);
     return newSlice;
@@ -67,7 +67,7 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
   });
 
   const mergedSlice = new Slice({
-    key: parentName,
+    name: parentName,
     dependencies: [],
     initState: {},
     actions: {},

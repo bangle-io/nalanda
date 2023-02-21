@@ -152,7 +152,7 @@ describe('validations', () => {
 
     expect(() => {
       InternalStoreState.create([mySlice, mySlice2]);
-    }).toThrowErrorMatchingInlineSnapshot(`"Duplicate slice keys test"`);
+    }).toThrowErrorMatchingInlineSnapshot(`"Duplicate slice keys key_test"`);
   });
 
   test('throws error if slice dependency is not registered', () => {
@@ -172,7 +172,7 @@ describe('validations', () => {
     expect(() => {
       InternalStoreState.create([mySlice]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "test" has a dependency on Slice "test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
     );
   });
 
@@ -193,7 +193,7 @@ describe('validations', () => {
     expect(() => {
       InternalStoreState.create([mySlice, sliceDep]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "test" has a dependency on Slice "test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
     );
   });
 });
@@ -297,10 +297,10 @@ describe('State creation', () => {
       opts: undefined,
       sliceLookupByKey: expect.any(Object),
       slicesCurrentState: {
-        mySlice: {
+        key_mySlice: {
           val: null,
         },
-        [CORE_SLICE_READY]: {
+        [createSliceKey(CORE_SLICE_READY)]: {
           ready: false,
         },
       },
@@ -324,7 +324,7 @@ describe('State creation', () => {
           actionId: 'updateNum',
         }),
       ),
-    ).toThrowError(`Action "updateNum" not found in Slice "mySlice"`);
+    ).toThrowError(`Action "updateNum" not found in Slice "key_mySlice"`);
   });
 
   test('applying action preserves states of those who donot have apply', () => {
