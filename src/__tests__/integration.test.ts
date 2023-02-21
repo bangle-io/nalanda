@@ -78,13 +78,15 @@ describe('Single slice', () => {
           "payload": [
             "banana",
           ],
-          "sliceKey": "test",
+          "sourceSliceKey": "test",
+          "targetSliceKey": "test",
         },
         {
           "actionId": "ready",
           "dispatchSource": undefined,
           "payload": [],
-          "sliceKey": "$nalanda/CORE_SLICE_READY",
+          "sourceSliceKey": "$nalanda/CORE_SLICE_READY",
+          "targetSliceKey": "$nalanda/CORE_SLICE_READY",
         },
         {
           "actionId": "testAction",
@@ -92,7 +94,8 @@ describe('Single slice', () => {
           "payload": [
             "bananaEffect",
           ],
-          "sliceKey": "test",
+          "sourceSliceKey": "test",
+          "targetSliceKey": "test",
         },
       ]
     `);
@@ -109,8 +112,9 @@ describe('Single slice', () => {
           "payload": [
             "banana",
           ],
-          "slice": "test",
+          "sourceSliceKey": "test",
           "store": "test-store",
+          "targetSliceKey": "test",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -118,8 +122,9 @@ describe('Single slice', () => {
           "actionId": "ready",
           "dispatcher": undefined,
           "payload": [],
-          "slice": "$nalanda/CORE_SLICE_READY",
+          "sourceSliceKey": "$nalanda/CORE_SLICE_READY",
           "store": "test-store",
+          "targetSliceKey": "$nalanda/CORE_SLICE_READY",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -139,8 +144,9 @@ describe('Single slice', () => {
           "payload": [
             "bananaEffect",
           ],
-          "slice": "test",
+          "sourceSliceKey": "test",
           "store": "test-store",
+          "targetSliceKey": "test",
           "txId": "<txId>",
           "type": "TX",
         },

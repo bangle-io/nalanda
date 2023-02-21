@@ -33,7 +33,7 @@ interface StoreStateOptions {
 export type SliceLookupByKey = Record<SliceKey, BareSlice>;
 
 const createSliceLookup = weakCache((slices: BareSlice[]) => {
-  return Object.fromEntries(slices.map((s) => [s.key, s]));
+  return Object.fromEntries(slices.map((s) => [s.newKeyNew, s]));
 });
 
 export class InternalStoreState implements StoreState<any> {
@@ -48,14 +48,14 @@ export class InternalStoreState implements StoreState<any> {
       return [...(slice.spec._additionalSlices || []), slice];
     });
 
-    if (!slices.find((s) => s.key === coreReadySlice.key)) {
+    if (!slices.find((s) => s.newKeyNew === coreReadySlice.newKeyNew)) {
       slices.unshift(coreReadySlice);
     }
 
     const instance = new InternalStoreState(slices);
 
     for (const slice of slices) {
-      instance.slicesCurrentState[slice.key] = slice.initState;
+      instance.slicesCurrentState[slice.newKeyNew] = slice.initState;
     }
 
     return instance;
@@ -81,22 +81,22 @@ export class InternalStoreState implements StoreState<any> {
     let found = false;
 
     for (const slice of this._slices) {
-      if (slice.key === tx.sliceKey) {
+      if (slice.newKeyNew === tx.targetSliceKey) {
         found = true;
 
-        const sliceState = newStoreState._getDirectSliceState(slice.key);
+        const sliceState = newStoreState._getDirectSliceState(slice.newKeyNew);
 
         if (!sliceState.found) {
           throw new Error(
-            `Slice "${slice.key}" or one of its dependencies not found in store`,
+            `Slice "${slice.newKeyNew}" or one of its dependencies not found in store`,
           );
         }
 
         const scopedStoreState = newStoreState._withContext({
-          sliceKey: slice.key,
+          sliceKey: slice.newKeyNew,
         });
 
-        newState[slice.key] = slice.applyTx(
+        newState[slice.newKeyNew] = slice.applyTx(
           sliceState.value,
           scopedStoreState,
           tx,
@@ -113,14 +113,14 @@ export class InternalStoreState implements StoreState<any> {
 
   // TODO make sure this works with mapping keys
   getSliceState(sl: BareSlice): unknown {
-    let result = this._getDirectSliceState(sl.key);
+    let result = this._getDirectSliceState(sl.newKeyNew);
     if (!result.found) {
-      throw new Error(`Slice "${sl.key}" not found in store`);
+      throw new Error(`Slice "${sl.newKeyNew}" not found in store`);
     }
     return result.value;
   }
 
-  private _getDirectSliceState(key: string) {
+  private _getDirectSliceState(key: SliceKey) {
     if (Object.prototype.hasOwnProperty.call(this.slicesCurrentState, key)) {
       return {
         found: true,
@@ -160,11 +160,12 @@ export class InternalStoreState implements StoreState<any> {
     for (const slice of slices) {
       const dependencies = slice.spec.dependencies;
       if (
-        new Set(dependencies.map((d) => d.key)).size !== dependencies.length
+        new Set(dependencies.map((d) => d.newKeyNew)).size !==
+        dependencies.length
       ) {
         throw new Error(
-          `Slice "${slice.key}" has duplicate dependencies: ${dependencies
-            .map((d) => d.key)
+          `Slice "${slice.newKeyNew}" has duplicate dependencies: ${dependencies
+            .map((d) => d.newKeyNew)
             .join(', ')}`,
         );
       }
@@ -176,21 +177,21 @@ export class InternalStoreState implements StoreState<any> {
     for (const slice of slices) {
       const dependencies = slice.spec.dependencies;
       if (dependencies !== undefined) {
-        const depKeys = dependencies.map((d) => d.key);
+        const depKeys = dependencies.map((d) => d.newKeyNew);
         for (const depKey of depKeys) {
           if (!seenKeys.has(depKey)) {
             throw new Error(
-              `Slice "${slice.key}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
+              `Slice "${slice.newKeyNew}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
             );
           }
         }
       }
-      seenKeys.add(slice.key);
+      seenKeys.add(slice.newKeyNew);
     }
   }
 
   static checkUniqueKeys(slices: BareSlice[]) {
-    const keys = slices.map((s) => s.key);
+    const keys = slices.map((s) => s.newKeyNew);
     const unique = new Set(keys);
 
     if (keys.length !== unique.size) {
@@ -204,7 +205,7 @@ export class InternalStoreState implements StoreState<any> {
     const visited = new Set<string>();
 
     const checkCycle = (slice: BareSlice): boolean => {
-      const key = slice.key;
+      const key = slice.newKeyNew;
       if (stack.has(key)) return true;
       if (visited.has(key)) return false;
 
@@ -224,11 +225,11 @@ export class InternalStoreState implements StoreState<any> {
       const cycle = checkCycle(slice);
       if (cycle) {
         const path = [...stack];
-        path.push(slice.key);
+        path.push(slice.newKeyNew);
 
         throw new Error(
           `Circular dependency detected in slice "${
-            slice.key
+            slice.newKeyNew
           }" with path ${path.join(' ->')}`,
         );
       }

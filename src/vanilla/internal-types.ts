@@ -69,7 +69,23 @@ export type SliceStateToSelector<S> = S extends object
 export declare const __brand: unique symbol;
 export type Brand<T, K> = T & { [__brand]: K };
 
-export type SliceKey = string;
+export type SliceKey = Brand<string, 'SliceKey'>;
+export type SliceNameOpaque = Brand<string, 'SliceName'>;
+
 export type SliceContext = {
   sliceKey: SliceKey;
 };
+
+// TODO make this create key from name
+export function createSliceKey(key: string): SliceKey {
+  return key as SliceKey;
+}
+
+export function isSliceKey(key: unknown): key is SliceKey {
+  // TODO make this string by prefixing with `key_`
+  return typeof key === 'string';
+}
+
+export function createSliceNameOpaque(name: string): SliceNameOpaque {
+  return name as SliceNameOpaque;
+}

@@ -2,7 +2,7 @@
 
 import { testOverrideSlice } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
-import { expectType, rejectAny } from '../internal-types';
+import { createSliceKey, expectType, rejectAny } from '../internal-types';
 import { AnySlice, Effect, TxCreator } from '../public-types';
 import { Slice } from '../slice';
 import { InternalStoreState, StoreState } from '../state';
@@ -182,7 +182,12 @@ describe('actions', () => {
     );
 
     expect(testSlice2.actions.prefix('me')).toEqual(
-      new Transaction('test-2', ['me'], 'prefix'),
+      new Transaction({
+        sourceSliceName: 'test-2',
+        sourceSliceKey: createSliceKey('test-2'),
+        payload: ['me'],
+        actionId: 'prefix',
+      }),
     );
 
     expectType<
@@ -197,12 +202,22 @@ describe('actions', () => {
     expectType<Transaction<'test-2', Array<string | number>>>(tx);
 
     expect(testSlice2.actions.padEnd(6, 'me')).toEqual(
-      new Transaction('test-2', [6, 'me'], 'padEnd'),
+      new Transaction({
+        sourceSliceName: 'test-2',
+        sourceSliceKey: createSliceKey('test-2'),
+        payload: [6, 'me'],
+        actionId: 'padEnd',
+      }),
     );
 
     expectType<() => Transaction<'test-2', []>>(testSlice2.actions.uppercase);
     expect(testSlice2.actions.uppercase()).toEqual(
-      new Transaction('test-2', [], 'uppercase'),
+      new Transaction({
+        sourceSliceName: 'test-2',
+        sourceSliceKey: createSliceKey('test-2'),
+        payload: [],
+        actionId: 'uppercase',
+      }),
     );
   });
 
@@ -242,13 +257,23 @@ describe('actions', () => {
     expect(result(1)).toMatchInlineSnapshot(`
       Transaction {
         "actionId": "myAction",
+        "config": {
+          "actionId": "myAction",
+          "payload": [
+            1,
+          ],
+          "sourceSliceKey": "my-slice-1",
+          "sourceSliceName": "my-slice-1",
+        },
         "metadata": Metadata {
           "_metadata": {},
         },
         "payload": [
           1,
         ],
-        "sliceKey": "my-slice-1",
+        "sourceSliceKey": "my-slice-1",
+        "targetSliceKey": "my-slice-1",
+        "targetSliceName": "my-slice-1",
       }
     `);
   });

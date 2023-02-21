@@ -1,5 +1,5 @@
 import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
-import { SliceContext } from './internal-types';
+import { SliceContext, SliceKey } from './internal-types';
 import { AnySlice, Effect } from './public-types';
 import type { BareSlice } from './slice';
 import type { InternalStoreState } from './state';
@@ -76,7 +76,7 @@ export class SideEffectsManager {
     // fill in record of effects
     slices.forEach((slice) => {
       if (slice.spec.effects) {
-        this._effects.record[slice.key] = slice.spec.effects.map(
+        this._effects.record[slice.newKeyNew] = slice.spec.effects.map(
           (effect) => new EffectHandler(effect, initState, slice, _debug),
         );
       }
@@ -84,7 +84,7 @@ export class SideEffectsManager {
   }
 
   // TODO: this will be removed once we have better way of adding dynamic slices
-  _tempRegisterOnSyncChange(sliceKey: string, cb: () => void) {
+  _tempRegisterOnSyncChange(sliceKey: SliceKey, cb: () => void) {
     let set = this._tempOnSyncChange.get(sliceKey);
 
     if (!set) {
@@ -116,7 +116,7 @@ export class SideEffectsManager {
       sliceKey,
       actionId,
     }: {
-      sliceKey: string;
+      sliceKey: SliceKey;
       actionId: string;
     },
   ) {
@@ -249,7 +249,7 @@ export class EffectHandler {
     this._syncPrevState = this.initStoreState;
 
     this._sliceContext = {
-      sliceKey: this._slice.key,
+      sliceKey: this._slice.newKeyNew,
     };
   }
 
@@ -288,13 +288,15 @@ export class EffectHandler {
   }
 
   get sliceKey() {
-    return this._slice.key;
+    return this._slice.newKeyNew;
   }
 
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice.keyMap),
+      store.getReducedStore(this.effect.name, {
+        sliceKey: this._slice.newKeyNew,
+      }),
       this._ref,
     );
   }

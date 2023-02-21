@@ -25,7 +25,7 @@ export class Store implements BareStore<any> {
       let newState = store.state.applyTransaction(tx);
 
       if (newState === store.state) {
-        console.debug('No state change, skipping update', tx.sliceKey);
+        console.debug('No state change, skipping update', tx.targetSliceKey);
 
         return;
       }
@@ -152,7 +152,7 @@ export class Store implements BareStore<any> {
 
     if (tx) {
       this._effectsManager?.queueSideEffectExecution(this, {
-        sliceKey: tx.sliceKey,
+        sliceKey: tx.targetSliceKey,
         actionId: tx.actionId,
       });
     }
@@ -161,7 +161,8 @@ export class Store implements BareStore<any> {
   // TODO: this will be removed once we have better way of adding dynamic slices
   _tempRegisterOnSyncChange(sl: BareSlice, cb: () => void) {
     return (
-      this._effectsManager?._tempRegisterOnSyncChange(sl.key, cb) || (() => {})
+      this._effectsManager?._tempRegisterOnSyncChange(sl.newKeyNew, cb) ||
+      (() => {})
     );
   }
 }
@@ -182,7 +183,10 @@ export class ReducedStore<SB extends BareSlice> {
         this.internalStoreState.sliceLookupByKey[sliceContext.sliceKey];
 
       if (matchingSlice) {
-        tx = tx.changeKey(matchingSlice?.keyMap.resolve(tx.sliceKey));
+        const newKey = matchingSlice?.keyMap.resolve(tx.targetSliceName);
+        if (newKey) {
+          tx = tx.changeTargetSlice(newKey);
+        }
       }
     }
 

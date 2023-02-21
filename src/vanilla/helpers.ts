@@ -72,8 +72,8 @@ export function calcDependencies(
 ): Record<string, Set<string>> {
   return Object.fromEntries(
     slices.map((slice) => [
-      slice.key,
-      new Set(slice.spec.dependencies.map((dep) => dep.key)),
+      slice.newKeyNew,
+      new Set(slice.spec.dependencies.map((dep) => dep.newKeyNew)),
     ]),
   );
 }
@@ -121,14 +121,14 @@ export function calcReverseDependencies(
 
   for (const slice of slices) {
     for (const dep of slice.spec.dependencies) {
-      let result = reverseDependencies[dep.key];
+      let result = reverseDependencies[dep.newKeyNew];
 
       if (!result) {
         result = new Set();
-        reverseDependencies[dep.key] = result;
+        reverseDependencies[dep.newKeyNew] = result;
       }
 
-      result.add(slice.key);
+      result.add(slice.newKeyNew);
     }
   }
 

@@ -1,7 +1,7 @@
 import { testOverrideSlice } from '../../test-helpers';
 import { coreReadySlice, CORE_SLICE_READY } from '../core-effects';
 import { createKey, slice } from '../create';
-import { expectType } from '../internal-types';
+import { createSliceKey, expectType } from '../internal-types';
 import { InternalStoreState, StoreState as StoreState } from '../state';
 import { Transaction } from '../transaction';
 
@@ -316,7 +316,14 @@ describe('State creation', () => {
     const appState = InternalStoreState.create([mySlice]);
 
     expect(() =>
-      appState.applyTransaction(new Transaction('mySlice', [5], 'updateNum')),
+      appState.applyTransaction(
+        new Transaction({
+          sourceSliceName: 'mySlice',
+          sourceSliceKey: createSliceKey('mySlice'),
+          payload: [5],
+          actionId: 'updateNum',
+        }),
+      ),
     ).toThrowError(`Action "updateNum" not found in Slice "mySlice"`);
   });
 

@@ -94,7 +94,7 @@ test('custom dispatch', () => {
     state: [testSlice1, testSlice2],
 
     dispatchTx(store, tx) {
-      expectType<'test-1' | 'test-2'>(tx.sliceKey);
+      expectType<'test-1' | 'test-2'>(tx.config.sourceSliceName);
 
       let oldState = store.state;
       let newState = store.state.applyTransaction(tx);
@@ -165,14 +165,14 @@ describe('sync effects', () => {
         let newState = store.state.applyTransaction(tx);
 
         if (newState === store.state) {
-          console.debug('No state change, skipping update', tx.sliceKey);
+          console.debug('No state change, skipping update', tx.sourceSliceKey);
 
           return;
         }
 
         store.updateState(newState, tx);
 
-        callOrder.push(`afterUpdate[${tx.sliceKey}]`);
+        callOrder.push(`afterUpdate[${tx.sourceSliceKey}]`);
       },
     });
     store.dispatch(e1.actions.increment());
@@ -188,7 +188,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[e1]',
       'afterUpdate[e1]',
-      `afterUpdate[${coreReadySlice.key}]`,
+      `afterUpdate[${coreReadySlice.newKeyNew}]`,
       's1',
       's2',
     ]);
@@ -198,7 +198,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[e1]',
       'afterUpdate[e1]',
-      `afterUpdate[${coreReadySlice.key}]`,
+      `afterUpdate[${coreReadySlice.newKeyNew}]`,
       's1',
       's2',
       'afterUpdate[e2]',
@@ -209,7 +209,7 @@ describe('sync effects', () => {
     expect(callOrder).toEqual([
       'afterUpdate[e1]',
       'afterUpdate[e1]',
-      `afterUpdate[${coreReadySlice.key}]`,
+      `afterUpdate[${coreReadySlice.newKeyNew}]`,
       's1',
       's2',
       'afterUpdate[e2]',
@@ -635,7 +635,7 @@ describe('effects', () => {
 
         store.updateState(newState, tx);
 
-        callOrder.push(`afterUpdate[${tx.sliceKey}]`);
+        callOrder.push(`afterUpdate[${tx.sourceSliceKey}]`);
       },
     });
 

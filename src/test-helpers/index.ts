@@ -92,12 +92,15 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
       return txs;
     },
     getSimplifiedTransactions() {
-      return txs.map(({ sliceKey, metadata, payload, actionId }) => ({
-        sliceKey,
-        actionId,
-        payload,
-        dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
-      }));
+      return txs.map(
+        ({ sourceSliceKey, targetSliceKey, metadata, payload, config }) => ({
+          sourceSliceKey,
+          targetSliceKey,
+          actionId: config.actionId,
+          payload,
+          dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
+        }),
+      );
     },
   };
 }

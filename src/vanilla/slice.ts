@@ -1,5 +1,13 @@
 import { mapObjectValues, uuid, weakCache } from './helpers';
-import { AnyFn, SliceContext, SliceKey, TxApplicator } from './internal-types';
+import {
+  AnyFn,
+  createSliceKey,
+  createSliceNameOpaque,
+  SliceContext,
+  SliceKey,
+  SliceNameOpaque,
+  TxApplicator,
+} from './internal-types';
 import {
   Effect,
   SelectorFn,
@@ -30,18 +38,27 @@ type IfSliceRegistered<
   : never;
 
 function actionsToTxCreators(
-  key: string,
+  sliceKey: SliceKey,
+  sliceName: SliceNameOpaque,
   actions: Record<string, Action<any[], any, any>>,
 ) {
   return mapObjectValues(actions, (action, actionId): TxCreator => {
     return (...params) => {
-      return new Transaction(key, params, actionId);
+      return new Transaction({
+        sourceSliceKey: sliceKey,
+        sourceSliceName: sliceName,
+        payload: params,
+        actionId,
+      });
     };
   });
 }
 
-export interface BareSlice<K extends string = any, SS = any> {
+export interface BareSlice<K extends string = string, SS = unknown> {
   readonly key: K;
+  readonly name: K;
+  readonly nameOpaque: SliceNameOpaque;
+  readonly newKeyNew: SliceKey;
   readonly lineageId: string;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
@@ -95,9 +112,13 @@ export class Slice<
 {
   public readonly initState: SS;
   public readonly key: N;
+  public readonly name: N;
+  public readonly nameOpaque: SliceNameOpaque;
   public readonly originalKey: string;
   public readonly lineageId: string;
   public readonly keyMap: KeyMap;
+
+  public newKeyNew: SliceKey;
 
   public _metadata: Record<string | symbol, any> = {};
 
@@ -115,33 +136,49 @@ export class Slice<
 
   private txCreators: Record<string, TxCreator>;
   private txApplicators: Record<string, TxApplicator<string, any>>;
+  public readonly config: SliceConfig;
 
   constructor(
     public readonly spec: SliceSpec<N, SS, DS, A, SE>,
-    public readonly config: SliceConfig = {
-      originalSpec: spec,
-      lineageId: `${spec.key}-${fileUid}-${sliceUidCounter++}`,
-    },
+    config?: SliceConfig,
   ) {
     const key = spec.key;
+
+    this.newKeyNew = createSliceKey(key);
 
     this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
 
     this.initState = spec.initState;
     this.key = key;
+    this.config = config
+      ? config
+      : {
+          originalSpec: spec,
+          // TODO spec.key to spec.name
+          lineageId: `${spec.key}-${fileUid}-${sliceUidCounter++}`,
+        };
+
     this.originalKey = this.config.originalSpec.key;
+    // TODO fix this !!
+    this.name = this.originalKey as N;
+    this.nameOpaque = createSliceNameOpaque(this.originalKey);
+
     this.lineageId = this.config.lineageId;
 
     this.keyMap = new KeyMap(
       {
-        key,
-        originalKey: this.originalKey,
+        key: this.newKeyNew,
+        sliceName: this.nameOpaque,
       },
       spec.dependencies,
     );
 
-    this.txCreators = actionsToTxCreators(key, spec.actions);
+    this.txCreators = actionsToTxCreators(
+      this.newKeyNew,
+      this.nameOpaque,
+      spec.actions,
+    );
     this.txApplicators = mapObjectValues(
       spec.actions,
       (action, actionId): TxApplicator<string, any> => {
@@ -158,7 +195,7 @@ export class Slice<
     const { context, sliceLookupByKey } =
       storeState as unknown as InternalStoreState;
 
-    const resolvedSlice = resolveSliceInContext(
+    const resolvedSlice: any = resolveSliceInContext(
       this,
       sliceLookupByKey,
       context,
@@ -195,7 +232,7 @@ export class Slice<
 
     if (!apply) {
       throw new Error(
-        `Action "${tx.actionId}" not found in Slice "${this.key}"`,
+        `Action "${tx.actionId}" not found in Slice "${this.newKeyNew}"`,
       );
     }
 
@@ -246,23 +283,23 @@ type ResolvedSelectors<SE extends Record<string, SelectorFn<any, any, any>>> = {
 
 export class KeyMap {
   public readonly sliceKey: string;
-  private map: Record<string, string>;
+  private map: Record<SliceNameOpaque, SliceKey>;
 
   constructor(
-    slice: { key: string; originalKey: string },
+    slice: { key: SliceKey; sliceName: SliceNameOpaque },
     dependencies: AnySlice[],
   ) {
     this.sliceKey = slice.key;
 
     this.map = Object.fromEntries(
-      dependencies.map((dep) => [dep.originalKey, dep.key]),
+      dependencies.map((dep) => [dep.originalKey, dep.newKeyNew]),
     );
-    this.map[slice.originalKey] = slice.key;
+    this.map[slice.sliceName] = slice.key;
   }
 
   // resolves original key to current key
-  resolve(key: string): string {
-    return this.map[key] || key;
+  resolve(key: SliceNameOpaque): SliceKey | undefined {
+    return this.map[key];
   }
 }
 
@@ -273,13 +310,13 @@ export class KeyMap {
 // next we need find how to resolve the current sliceA in this context.
 // TODO add tests
 export function resolveSliceInContext(
-  currentSlice: BareSlice,
+  currentSlice: BareSlice<string, unknown>,
   sliceLookupByKey: Record<SliceKey, BareSlice>,
   context?: SliceContext,
 ): BareSlice {
   const sourceSliceKey = context?.sliceKey;
 
-  if (!sourceSliceKey || sourceSliceKey === currentSlice.key) {
+  if (!sourceSliceKey || sourceSliceKey === currentSlice.newKeyNew) {
     return currentSlice;
   }
 
@@ -288,8 +325,10 @@ export function resolveSliceInContext(
   if (!sourceSlice) {
     throw new Error(`Slice "${sourceSliceKey}" not found in store state`);
   }
-  const resolvedKey = sourceSlice.keyMap.resolve(currentSlice.key);
-  const mappedSlice = sliceLookupByKey[resolvedKey];
+  const resolvedKey = sourceSlice.keyMap.resolve(currentSlice.nameOpaque);
+  const mappedSlice = resolvedKey
+    ? sliceLookupByKey[resolvedKey]
+    : currentSlice;
 
   if (!mappedSlice) {
     throw new Error(`Mapped slice "${resolvedKey}" not found in store state`);

@@ -1,24 +1,56 @@
+import {
+  createSliceNameOpaque,
+  SliceKey,
+  SliceNameOpaque,
+} from './internal-types';
+
 export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
 export const TX_META_STORE_TX_ID = 'store-tx-id';
 export const TX_META_STORE_NAME = 'store-name';
 export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
 
-export class Transaction<K extends string, P extends unknown[]> {
+export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
 
+  public readonly sourceSliceKey: SliceKey;
+  public readonly targetSliceKey: SliceKey;
+  public readonly targetSliceName: SliceNameOpaque;
+  public readonly payload: P;
+  public readonly actionId: string;
+
   constructor(
-    public readonly sliceKey: K,
-    public readonly payload: P,
-    public readonly actionId: string,
-  ) {}
+    public readonly config: {
+      sourceSliceKey: SliceKey;
+      sourceSliceName: N;
+      targetSliceKey?: SliceKey;
+      targetSliceName?: SliceNameOpaque;
+      payload: P;
+      actionId: string;
+    },
+  ) {
+    this.sourceSliceKey = config.sourceSliceKey;
+    this.targetSliceKey = config.targetSliceKey ?? config.sourceSliceKey;
+    this.targetSliceName =
+      config.targetSliceName ?? createSliceNameOpaque(config.sourceSliceName);
 
-  changeKey(key: string): Transaction<string, P> {
-    const tx = new Transaction(key, this.payload, this.actionId);
+    this.payload = config.payload;
+    this.actionId = config.actionId;
+  }
+
+  changeTargetSlice(key: SliceKey): Transaction<N, P> {
+    if (this.targetSliceKey === key) {
+      return this;
+    }
+
+    const originalTarget = this.targetSliceKey;
+    const tx = new Transaction({
+      ...this.config,
+      targetSliceKey: key,
+    });
     tx.metadata = this.metadata.fork();
-
     tx.metadata.appendMetadata(
       TX_META_CHANGE_KEY,
-      `changeKey(${this.sliceKey} -> ${key})`,
+      `changeTargetKey(${originalTarget} -> ${key})`,
     );
 
     return tx;
@@ -56,7 +88,8 @@ export interface EffectLog {
 
 export interface TransactionLog {
   type: 'TX';
-  slice: string;
+  sourceSliceKey: SliceKey;
+  targetSliceKey: SliceKey;
   actionId: string;
   dispatcher: string | undefined;
   store: string | undefined;
@@ -67,9 +100,9 @@ export interface TransactionLog {
 export function txLog(tx: Transaction<any, any>): TransactionLog {
   return {
     type: 'TX',
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    slice: tx.sliceKey,
-    actionId: tx.actionId,
+    sourceSliceKey: tx.sourceSliceKey,
+    targetSliceKey: tx.targetSliceKey,
+    actionId: tx.config.actionId,
     dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
     store: tx.metadata.getMetadata(TX_META_STORE_NAME),
     txId: tx.metadata.getMetadata(TX_META_STORE_TX_ID),

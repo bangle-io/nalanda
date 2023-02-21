@@ -5,6 +5,7 @@ import { coreReadySlice } from '../../vanilla';
 import { CORE_SLICE_READY } from '../../vanilla/core-effects';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
+import { createSliceNameOpaque } from '../../vanilla/internal-types';
 import { AnySlice } from '../../vanilla/public-types';
 import { Slice } from '../../vanilla/slice';
 import { Store } from '../../vanilla/store';
@@ -279,7 +280,9 @@ describe('merging', () => {
       expect(
         mappedT2?.config.originalSpec.dependencies.map((d) => d.key),
       ).toEqual(['t1']);
-      expect(mappedT2?.keyMap.resolve('t1')).toBe('z0:x0:t1');
+      expect(mappedT2?.keyMap.resolve(createSliceNameOpaque('t1'))).toBe(
+        'z0:x0:t1',
+      );
     });
 
     test('In Z0 t3 child slice spec are mapped correctly', () => {
@@ -296,8 +299,12 @@ describe('merging', () => {
         mappedT3?.config.originalSpec.dependencies.map((d) => d.key),
       ).toEqual(['g1', 't1']);
 
-      expect(mappedT3?.keyMap.resolve('t1')).toBe('z0:x0:t1');
-      expect(mappedT3?.keyMap.resolve('t3')).toBe('z0:x0:t3');
+      expect(mappedT3?.keyMap.resolve(createSliceNameOpaque('t1'))).toBe(
+        'z0:x0:t1',
+      );
+      expect(mappedT3?.keyMap.resolve(createSliceNameOpaque('t3'))).toBe(
+        'z0:x0:t3',
+      );
     });
 
     test('state looks okay', () => {
@@ -335,7 +342,9 @@ describe('merging', () => {
       [...(z0.spec._additionalSlices || []), z0]?.map((r) => {
         let miniResult: string[] = [];
         for (const sl of [g1, t1, t2, t3, x0, z0]) {
-          miniResult.push([sl.key, r.keyMap.resolve?.(sl.key)].join('>'));
+          miniResult.push(
+            [sl.key, r.keyMap.resolve?.(sl.nameOpaque)].join('>'),
+          );
         }
         result.push([r.key, miniResult.join(', ')]);
       });
@@ -344,23 +353,23 @@ describe('merging', () => {
         [
           [
             "z0:x0:t1",
-            "g1>g1, t1>z0:x0:t1, t2>t2, t3>t3, x0>x0, z0>z0",
+            "g1>g1, t1>z0:x0:t1, t2>, t3>, x0>, z0>",
           ],
           [
             "z0:x0:t2",
-            "g1>g1, t1>z0:x0:t1, t2>z0:x0:t2, t3>t3, x0>x0, z0>z0",
+            "g1>, t1>z0:x0:t1, t2>z0:x0:t2, t3>, x0>, z0>",
           ],
           [
             "z0:x0:t3",
-            "g1>g1, t1>z0:x0:t1, t2>t2, t3>z0:x0:t3, x0>x0, z0>z0",
+            "g1>g1, t1>z0:x0:t1, t2>, t3>z0:x0:t3, x0>, z0>",
           ],
           [
             "z0:x0",
-            "g1>g1, t1>t1, t2>t2, t3>t3, x0>z0:x0, z0>z0",
+            "g1>, t1>, t2>, t3>, x0>z0:x0, z0>",
           ],
           [
             "z0",
-            "g1>g1, t1>t1, t2>t2, t3>t3, x0>x0, z0>z0",
+            "g1>, t1>, t2>, t3>, x0>, z0>z0",
           ],
         ]
       `);
@@ -480,31 +489,36 @@ describe('merging', () => {
           actionId: 'updateG1State',
           dispatchSource: undefined,
           payload: [],
-          sliceKey: 'g1',
+          sourceSliceKey: 'g1',
+          targetSliceKey: 'g1',
         },
         {
           actionId: 'ready',
           dispatchSource: undefined,
           payload: [],
-          sliceKey: '$nalanda/CORE_SLICE_READY',
+          sourceSliceKey: '$nalanda/CORE_SLICE_READY',
+          targetSliceKey: '$nalanda/CORE_SLICE_READY',
         },
         {
           actionId: 'updateT1State',
           dispatchSource: 't1Effect',
           payload: [],
-          sliceKey: 'z0:x0:t1',
+          sourceSliceKey: 'z0:x0:t1',
+          targetSliceKey: 'z0:x0:t1',
         },
         {
           actionId: 'updateT1State',
           dispatchSource: 't2Effect',
           payload: [],
-          sliceKey: 'z0:x0:t1',
+          sourceSliceKey: 't1',
+          targetSliceKey: 'z0:x0:t1',
         },
         {
           actionId: 'updateT3State',
           dispatchSource: 't3Effect',
           payload: [],
-          sliceKey: 'z0:x0:t3',
+          sourceSliceKey: 'z0:x0:t3',
+          targetSliceKey: 'z0:x0:t3',
         },
       ]);
 
@@ -514,8 +528,9 @@ describe('merging', () => {
             "actionId": "updateG1State",
             "dispatcher": undefined,
             "payload": [],
-            "slice": "g1",
+            "sourceSliceKey": "g1",
             "store": "test-store",
+            "targetSliceKey": "g1",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -523,8 +538,9 @@ describe('merging', () => {
             "actionId": "ready",
             "dispatcher": undefined,
             "payload": [],
-            "slice": "$nalanda/CORE_SLICE_READY",
+            "sourceSliceKey": "$nalanda/CORE_SLICE_READY",
             "store": "test-store",
+            "targetSliceKey": "$nalanda/CORE_SLICE_READY",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -542,8 +558,9 @@ describe('merging', () => {
             "actionId": "updateT1State",
             "dispatcher": "t1Effect",
             "payload": [],
-            "slice": "z0:x0:t1",
+            "sourceSliceKey": "z0:x0:t1",
             "store": "test-store",
+            "targetSliceKey": "z0:x0:t1",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -565,8 +582,9 @@ describe('merging', () => {
             "actionId": "updateT1State",
             "dispatcher": "t2Effect",
             "payload": [],
-            "slice": "z0:x0:t1",
+            "sourceSliceKey": "t1",
             "store": "test-store",
+            "targetSliceKey": "z0:x0:t1",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -592,8 +610,9 @@ describe('merging', () => {
             "actionId": "updateT3State",
             "dispatcher": "t3Effect",
             "payload": [],
-            "slice": "z0:x0:t3",
+            "sourceSliceKey": "z0:x0:t3",
             "store": "test-store",
+            "targetSliceKey": "z0:x0:t3",
             "txId": "<txId>",
             "type": "TX",
           },
