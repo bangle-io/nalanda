@@ -11,14 +11,14 @@ export function createUseSliceHook<SSL extends AnySlice>(
   store: BareStore<SSL>,
 ) {
   function useSlice<SL extends AnySlice>(
-    sl: SL['key'] extends SSL['key'] ? SL : never,
+    sl: SL['name'] extends SSL['name'] ? SL : never,
   ): [ReturnType<SL['resolveState']>, BareStore<SSL>['dispatch']];
   function useSlice<SL extends AnySlice, SLS>(
-    sl: SL['key'] extends SSL['key'] ? SL : never,
+    sl: SL['name'] extends SSL['name'] ? SL : never,
     selector: (state: ReturnType<SL['resolveState']>) => SLS,
   ): [SLS, BareStore<SSL>['dispatch']];
   function useSlice<SL extends AnySlice, SLS>(
-    sl: SL['key'] extends SSL['key'] ? SL : never,
+    sl: SL['name'] extends SSL['name'] ? SL : never,
     selector?: (p: SL['spec']['initState']) => SLS,
   ): [SLS, BareStore<SSL>['dispatch']] {
     const [subscribe] = useState(() => {

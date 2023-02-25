@@ -1,3 +1,8 @@
+import {
+  createSliceNameOpaque,
+  nestSliceKey,
+  SliceNameOpaque,
+} from '../vanilla/internal-types';
 import { AnySlice } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
 import { InternalStoreState } from '../vanilla/state';
@@ -16,22 +21,22 @@ import { InternalStoreState } from '../vanilla/state';
 //   return slice._metadata[MERGE_KEY];
 // }
 
-export function mergeSlices<K extends string, SL extends AnySlice>({
-  key: parentKey,
+export function mergeSlices<N extends string, SL extends AnySlice>({
+  name: parentName,
   children,
 }: {
-  key: K;
+  name: N;
   children: SL[];
-}): Slice<K, object, any, any, any> {
+}): Slice<N, object, any, any, any> {
   InternalStoreState.checkUniqueKeys(children);
 
   let mappingRecord: Map<string, AnySlice> = new Map();
 
-  function nestSlice(slice: AnySlice, prefix: string) {
-    const newKey = prefix + ':' + slice.key;
+  function nestSlice(slice: AnySlice, prefix: SliceNameOpaque) {
+    const newKey = nestSliceKey(slice.key, prefix);
 
     let newSlice = slice._fork({
-      key: newKey,
+      name: newKey,
     });
     mappingRecord.set(slice.key, newSlice);
     return newSlice;
@@ -48,7 +53,7 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
       ];
     })
     .map((child) => {
-      return nestSlice(child, parentKey);
+      return nestSlice(child, createSliceNameOpaque(parentName));
     });
 
   // update the dependencies so that they point to the new slices
@@ -62,7 +67,7 @@ export function mergeSlices<K extends string, SL extends AnySlice>({
   });
 
   const mergedSlice = new Slice({
-    key: parentKey,
+    name: parentName,
     dependencies: [],
     initState: {},
     actions: {},

@@ -1,7 +1,7 @@
 import { testOverrideSlice } from '../../test-helpers';
 import { coreReadySlice, CORE_SLICE_READY } from '../core-effects';
 import { createKey, slice } from '../create';
-import { expectType } from '../internal-types';
+import { createSliceKey, expectType } from '../internal-types';
 import { InternalStoreState, StoreState as StoreState } from '../state';
 import { Transaction } from '../transaction';
 
@@ -152,7 +152,7 @@ describe('validations', () => {
 
     expect(() => {
       InternalStoreState.create([mySlice, mySlice2]);
-    }).toThrowErrorMatchingInlineSnapshot(`"Duplicate slice keys test"`);
+    }).toThrowErrorMatchingInlineSnapshot(`"Duplicate slice keys key_test"`);
   });
 
   test('throws error if slice dependency is not registered', () => {
@@ -172,7 +172,7 @@ describe('validations', () => {
     expect(() => {
       InternalStoreState.create([mySlice]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "test" has a dependency on Slice "test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
     );
   });
 
@@ -193,7 +193,7 @@ describe('validations', () => {
     expect(() => {
       InternalStoreState.create([mySlice, sliceDep]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "test" has a dependency on Slice "test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
     );
   });
 });
@@ -269,11 +269,14 @@ describe('State creation', () => {
       {
         _slices: expect.any(Array),
         slicesCurrentState: expect.any(Object),
+        sliceLookupByKey: expect.any(Object),
       } as any,
       `
       {
         "_slices": Any<Array>,
+        "context": undefined,
         "opts": undefined,
+        "sliceLookupByKey": Any<Object>,
         "slicesCurrentState": Any<Object>,
       }
     `,
@@ -292,11 +295,12 @@ describe('State creation', () => {
     expect(appState).toEqual({
       _slices: expect.any(Array),
       opts: undefined,
+      sliceLookupByKey: expect.any(Object),
       slicesCurrentState: {
-        mySlice: {
+        key_mySlice: {
           val: null,
         },
-        [CORE_SLICE_READY]: {
+        [createSliceKey(CORE_SLICE_READY)]: {
           ready: false,
         },
       },
@@ -312,8 +316,15 @@ describe('State creation', () => {
     const appState = InternalStoreState.create([mySlice]);
 
     expect(() =>
-      appState.applyTransaction(new Transaction('mySlice', [5], 'updateNum')),
-    ).toThrowError(`Action "updateNum" not found in Slice "mySlice"`);
+      appState.applyTransaction(
+        new Transaction({
+          sourceSliceName: 'mySlice',
+          sourceSliceKey: createSliceKey('mySlice'),
+          payload: [5],
+          actionId: 'updateNum',
+        }),
+      ),
+    ).toThrowError(`Action "updateNum" not found in Slice "key_mySlice"`);
   });
 
   test('applying action preserves states of those who donot have apply', () => {

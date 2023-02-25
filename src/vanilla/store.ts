@@ -11,6 +11,7 @@ import {
   TX_META_STORE_TX_ID,
 } from './transaction';
 import { BareStore } from './public-types';
+import { SliceContext } from './internal-types';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
@@ -24,7 +25,7 @@ export class Store implements BareStore<any> {
       let newState = store.state.applyTransaction(tx);
 
       if (newState === store.state) {
-        console.debug('No state change, skipping update', tx.sliceKey);
+        console.debug('No state change, skipping update', tx.targetSliceKey);
 
         return;
       }
@@ -133,9 +134,9 @@ export class Store implements BareStore<any> {
    */
   getReducedStore<SB extends BareSlice>(
     debugDispatch?: string,
-    keyMap?: KeyMap,
+    sliceContext?: SliceContext,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, debugDispatch, keyMap);
+    return new ReducedStore(this, debugDispatch, sliceContext);
   }
 
   updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
@@ -151,7 +152,7 @@ export class Store implements BareStore<any> {
 
     if (tx) {
       this._effectsManager?.queueSideEffectExecution(this, {
-        sliceKey: tx.sliceKey,
+        sliceKey: tx.targetSliceKey,
         actionId: tx.actionId,
       });
     }
@@ -166,7 +167,7 @@ export class Store implements BareStore<any> {
 }
 
 export class ReducedStore<SB extends BareSlice> {
-  dispatch = (tx: Transaction<SB['key'], any>, debugDispatch?: string) => {
+  dispatch = (tx: Transaction<SB['name'], any>, debugDispatch?: string) => {
     if (this._debugDispatchSrc) {
       tx.metadata.appendMetadata(
         TX_META_DISPATCH_SOURCE,
@@ -174,9 +175,18 @@ export class ReducedStore<SB extends BareSlice> {
       );
     }
 
-    if (this._keyMap) {
-      // change the key of the transaction to match the correct mapping
-      tx = tx.changeKey(this._keyMap.resolve(tx.sliceKey));
+    const sliceContext = this._sliceContext;
+
+    if (sliceContext) {
+      const matchingSlice =
+        this.internalStoreState.sliceLookupByKey[sliceContext.sliceKey];
+
+      if (matchingSlice) {
+        const newKey = matchingSlice?.keyMap.resolve(tx.targetSliceName);
+        if (newKey) {
+          tx = tx.changeTargetSlice(newKey);
+        }
+      }
     }
 
     if (debugDispatch) {
@@ -189,21 +199,19 @@ export class ReducedStore<SB extends BareSlice> {
   constructor(
     private _store: Store | BareStore<any>,
     public _debugDispatchSrc?: string,
-    public _keyMap?: KeyMap,
+    public readonly _sliceContext?: SliceContext,
   ) {}
 
   get destroyed() {
     return this._store.destroyed;
   }
 
+  private get internalStoreState(): InternalStoreState {
+    return this._store.state as InternalStoreState;
+  }
+
   get state(): StoreState<SB> {
-    if (this._keyMap) {
-      return (this._store.state as InternalStoreState)._withKeyMap(
-        this._keyMap,
-      );
-    }
-    // }
-    return this._store.state;
+    return this.internalStoreState._withContext(this._sliceContext);
   }
 
   destroy() {

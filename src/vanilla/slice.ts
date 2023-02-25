@@ -1,5 +1,15 @@
 import { mapObjectValues, uuid, weakCache } from './helpers';
-import { AnyFn, TxApplicator } from './internal-types';
+import {
+  AnyFn,
+  createSliceKey,
+  createSliceNameOpaque,
+  isSliceKey,
+  KEY_PREFIX,
+  SliceContext,
+  SliceKey,
+  SliceNameOpaque,
+  TxApplicator,
+} from './internal-types';
 import {
   Effect,
   SelectorFn,
@@ -7,7 +17,7 @@ import {
   AnySlice,
   TxCreator,
 } from './public-types';
-import { StoreState } from './state';
+import { InternalStoreState, StoreState } from './state';
 import { Transaction } from './transaction';
 import type { Simplify } from 'type-fest';
 
@@ -16,33 +26,40 @@ let fileUid = uuid(4);
 
 type IfSliceRegistered<
   SState extends StoreState<any>,
-  K extends string,
+  N extends string,
   Result,
 > = SState extends StoreState<infer SL>
-  ? K extends SL['key']
+  ? N extends SL['name']
     ? Result
     : never
   : never;
 
 function actionsToTxCreators(
-  key: string,
+  sliceKey: SliceKey,
+  sliceName: SliceNameOpaque,
   actions: Record<string, Action<any[], any, any>>,
 ) {
   return mapObjectValues(actions, (action, actionId): TxCreator => {
     return (...params) => {
-      return new Transaction(key, params, actionId);
+      return new Transaction({
+        sourceSliceKey: sliceKey,
+        sourceSliceName: sliceName,
+        payload: params,
+        actionId,
+      });
     };
   });
 }
 
-export interface BareSlice<K extends string = any, SS = any> {
-  readonly key: K;
+export interface BareSlice<K extends string = string, SS = unknown> {
+  readonly name: K;
+  readonly key: SliceKey;
   readonly lineageId: string;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
 
   readonly spec: {
-    key: K;
+    name: K;
     dependencies: BareSlice[];
     // Adding effects breaks everything
     effects?: any[];
@@ -64,44 +81,43 @@ interface SliceConfig {
 }
 
 export interface SliceSpec<
-  K extends string,
+  N extends string,
   SS,
   DS extends AnySlice,
   A extends Record<string, Action<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
-  key: K;
+  name: N;
   dependencies: DS[];
   initState: SS;
   actions: A;
   selectors: SE;
-  effects?: Effect<Slice<K, SS, DS, A, SE>, DS | Slice<K, SS, DS, A, SE>>[];
+  effects?: Effect<Slice<N, SS, DS, A, SE>, DS | Slice<N, SS, DS, A, SE>>[];
   // used internally by mergeSlices
   _additionalSlices?: AnySlice[];
 }
 
 export class Slice<
-  K extends string,
+  N extends string,
   SS,
   DS extends AnySlice,
   A extends Record<string, Action<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
-> implements BareSlice<K, SS>
+> implements BareSlice<N, SS>
 {
   public readonly initState: SS;
-  public readonly key: K;
-  public readonly originalKey: string;
+  public readonly name: N;
+  public readonly nameOpaque: SliceNameOpaque;
   public readonly lineageId: string;
-
   public readonly keyMap: KeyMap;
-
+  public key: SliceKey;
   public _metadata: Record<string | symbol, any> = {};
 
   get a() {
     return this.actions;
   }
 
-  get actions(): ActionsToTxCreator<K, A> {
+  get actions(): ActionsToTxCreator<N, A> {
     return this.txCreators as any;
   }
 
@@ -113,31 +129,42 @@ export class Slice<
   private txApplicators: Record<string, TxApplicator<string, any>>;
 
   constructor(
-    public readonly spec: SliceSpec<K, SS, DS, A, SE>,
+    public readonly spec: SliceSpec<N, SS, DS, A, SE>,
     public readonly config: SliceConfig = {
       originalSpec: spec,
-      lineageId: `${spec.key}-${fileUid}-${sliceUidCounter++}`,
+      lineageId: `${spec.name}-${fileUid}-${sliceUidCounter++}`,
     },
   ) {
-    const key = spec.key;
+    // can only set slice key as a name when forking
+    if (config.originalSpec === spec && isSliceKey(spec.name)) {
+      throw new Error(
+        `Slice name cannot start with "${KEY_PREFIX}". Please use a different name for slice "${spec.name}"`,
+      );
+    }
+
+    this.key = createSliceKey(this.spec.name);
+    this.name = config?.originalSpec.name ?? spec.name;
+    this.nameOpaque = createSliceNameOpaque(this.name);
 
     this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
 
     this.initState = spec.initState;
-    this.key = key;
-    this.originalKey = this.config.originalSpec.key;
-    this.lineageId = this.config.lineageId;
 
+    this.lineageId = this.config.lineageId;
     this.keyMap = new KeyMap(
       {
-        key,
-        originalKey: this.originalKey,
+        key: this.key,
+        sliceName: this.nameOpaque,
       },
       spec.dependencies,
     );
 
-    this.txCreators = actionsToTxCreators(key, spec.actions);
+    this.txCreators = actionsToTxCreators(
+      this.key,
+      this.nameOpaque,
+      spec.actions,
+    );
     this.txApplicators = mapObjectValues(
       spec.actions,
       (action, actionId): TxApplicator<string, any> => {
@@ -149,13 +176,22 @@ export class Slice<
   }
 
   getState<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, K, SState>,
-  ): IfSliceRegistered<SState, K, SS> {
-    return storeState.getSliceState(this as any);
+    storeState: IfSliceRegistered<SState, N, SState>,
+  ): IfSliceRegistered<SState, N, SS> {
+    const { context, sliceLookupByKey } =
+      storeState as unknown as InternalStoreState;
+
+    const resolvedSlice: any = resolveSliceInContext(
+      this,
+      sliceLookupByKey,
+      context,
+    );
+
+    return storeState.getSliceState(resolvedSlice);
   }
 
   resolveSelectors<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, K, SState>,
+    storeState: IfSliceRegistered<SState, N, SState>,
   ): ResolvedSelectors<SE> {
     const result = mapObjectValues(this.spec.selectors, (selector) => {
       return selector(this.getState(storeState), storeState);
@@ -165,7 +201,7 @@ export class Slice<
   }
 
   resolveState<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, K, SState>,
+    storeState: IfSliceRegistered<SState, N, SState>,
   ): Simplify<SS & ResolvedSelectors<SE>> {
     return {
       ...this.getState(storeState),
@@ -176,7 +212,7 @@ export class Slice<
   applyTx(
     sliceState: SS,
     storeState: StoreState<any>,
-    tx: Transaction<K, unknown[]>,
+    tx: Transaction<N, unknown[]>,
   ): SS {
     const apply = this.txApplicators[tx.actionId];
 
@@ -191,7 +227,7 @@ export class Slice<
 
   pick<T>(
     cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
-  ): [Slice<K, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
+  ): [Slice<N, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
     return [
       this,
       (storeState: StoreState<any>) => {
@@ -202,7 +238,7 @@ export class Slice<
 
   _fork(
     spec: Partial<SliceSpec<any, any, any, any, any>>,
-  ): Slice<K, SS, DS, A, SE> {
+  ): Slice<N, SS, DS, A, SE> {
     let metadata = this._metadata;
     let newSlice = new Slice(
       {
@@ -219,11 +255,11 @@ export class Slice<
 }
 
 export type ActionsToTxCreator<
-  K extends string,
+  N extends string,
   A extends Record<string, Action<any[], any, any>>,
 > = {
   [KK in keyof A]: A[KK] extends (...param: infer P) => any
-    ? TxCreator<K, P>
+    ? TxCreator<N, P>
     : never;
 };
 
@@ -233,22 +269,56 @@ type ResolvedSelectors<SE extends Record<string, SelectorFn<any, any, any>>> = {
 
 export class KeyMap {
   public readonly sliceKey: string;
-  private map: Record<string, string>;
+  private map: Record<SliceNameOpaque, SliceKey>;
 
   constructor(
-    slice: { key: string; originalKey: string },
+    slice: { key: SliceKey; sliceName: SliceNameOpaque },
     dependencies: AnySlice[],
   ) {
     this.sliceKey = slice.key;
 
     this.map = Object.fromEntries(
-      dependencies.map((dep) => [dep.originalKey, dep.key]),
+      dependencies.map((dep) => [dep.name, dep.key]),
     );
-    this.map[slice.originalKey] = slice.key;
+    this.map[slice.sliceName] = slice.key;
   }
 
   // resolves original key to current key
-  resolve(key: string): string {
-    return this.map[key] || key;
+  resolve(key: SliceNameOpaque): SliceKey | undefined {
+    return this.map[key];
   }
+}
+
+// if this was called from
+// sliceA.getState(storeState)
+// we need to first find the possible context this was executed in
+// by looking at storeContext
+// next we need find how to resolve the current sliceA in this context.
+// TODO add tests
+export function resolveSliceInContext(
+  currentSlice: AnySlice,
+  sliceLookupByKey: Record<SliceKey, BareSlice>,
+  context?: SliceContext,
+): BareSlice {
+  const sourceSliceKey = context?.sliceKey;
+
+  if (!sourceSliceKey || sourceSliceKey === currentSlice.key) {
+    return currentSlice;
+  }
+
+  const sourceSlice = sliceLookupByKey[sourceSliceKey];
+
+  if (!sourceSlice) {
+    throw new Error(`Slice "${sourceSliceKey}" not found in store state`);
+  }
+  const resolvedKey = sourceSlice.keyMap.resolve(currentSlice.nameOpaque);
+  const mappedSlice = resolvedKey
+    ? sliceLookupByKey[resolvedKey]
+    : currentSlice;
+
+  if (!mappedSlice) {
+    throw new Error(`Mapped slice "${resolvedKey}" not found in store state`);
+  }
+
+  return mappedSlice;
 }

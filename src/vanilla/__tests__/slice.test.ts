@@ -2,7 +2,7 @@
 
 import { testOverrideSlice } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
-import { expectType, rejectAny } from '../internal-types';
+import { createSliceKey, expectType, rejectAny } from '../internal-types';
 import { AnySlice, Effect, TxCreator } from '../public-types';
 import { Slice } from '../slice';
 import { InternalStoreState, StoreState } from '../state';
@@ -98,14 +98,14 @@ describe('dependencies', () => {
         // @ts-expect-error - slice is not registered should always error
         unknownSlice.getState(state),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Slice "unknown-test" not found in store"`,
+        `"Slice "key_unknown-test" not found in store"`,
       );
 
       expect(() =>
         // @ts-expect-error - slice does not exist should always error
         state.getSliceState(unknownSlice),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Slice "unknown-test" not found in store"`,
+        `"Slice "key_unknown-test" not found in store"`,
       );
     });
   });
@@ -145,7 +145,7 @@ describe('dependencies', () => {
           mySlice2,
         ]),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Circular dependency detected in slice "test-1" with path test-1 ->my-slice-2 ->my-slice-1 ->test-1"`,
+        `"Circular dependency detected in slice "key_test-1" with path key_test-1 ->key_my-slice-2 ->key_my-slice-1 ->key_test-1"`,
       );
     });
 
@@ -169,7 +169,7 @@ describe('dependencies', () => {
       expect(() =>
         InternalStoreState.create([sl0, sl1, sl2, sl3, sl4]),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Circular dependency detected in slice "sl0" with path sl0 ->sl1 ->sl3 ->sl4 ->sl0"`,
+        `"Circular dependency detected in slice "key_sl0" with path key_sl0 ->key_sl1 ->key_sl3 ->key_sl4 ->key_sl0"`,
       );
     });
   });
@@ -182,7 +182,12 @@ describe('actions', () => {
     );
 
     expect(testSlice2.actions.prefix('me')).toEqual(
-      new Transaction('test-2', ['me'], 'prefix'),
+      new Transaction({
+        sourceSliceName: 'test-2',
+        sourceSliceKey: createSliceKey('test-2'),
+        payload: ['me'],
+        actionId: 'prefix',
+      }),
     );
 
     expectType<
@@ -197,12 +202,22 @@ describe('actions', () => {
     expectType<Transaction<'test-2', Array<string | number>>>(tx);
 
     expect(testSlice2.actions.padEnd(6, 'me')).toEqual(
-      new Transaction('test-2', [6, 'me'], 'padEnd'),
+      new Transaction({
+        sourceSliceName: 'test-2',
+        sourceSliceKey: createSliceKey('test-2'),
+        payload: [6, 'me'],
+        actionId: 'padEnd',
+      }),
     );
 
     expectType<() => Transaction<'test-2', []>>(testSlice2.actions.uppercase);
     expect(testSlice2.actions.uppercase()).toEqual(
-      new Transaction('test-2', [], 'uppercase'),
+      new Transaction({
+        sourceSliceName: 'test-2',
+        sourceSliceKey: createSliceKey('test-2'),
+        payload: [],
+        actionId: 'uppercase',
+      }),
     );
   });
 
@@ -210,7 +225,7 @@ describe('actions', () => {
     type StateType = { num: number };
 
     let mySlice = new Slice({
-      key: 'my-slice-1',
+      name: 'my-slice-1',
       initState: {
         num: 3,
       },
@@ -242,13 +257,23 @@ describe('actions', () => {
     expect(result(1)).toMatchInlineSnapshot(`
       Transaction {
         "actionId": "myAction",
+        "config": {
+          "actionId": "myAction",
+          "payload": [
+            1,
+          ],
+          "sourceSliceKey": "key_my-slice-1",
+          "sourceSliceName": "my-slice-1",
+        },
         "metadata": Metadata {
           "_metadata": {},
         },
         "payload": [
           1,
         ],
-        "sliceKey": "my-slice-1",
+        "sourceSliceKey": "key_my-slice-1",
+        "targetSliceKey": "key_my-slice-1",
+        "targetSliceName": "my-slice-1",
       }
     `);
   });
@@ -643,6 +668,19 @@ describe('effects', () => {
 
     expect(effect).toBeDefined();
   });
+});
+
+test('throws error if name starts with key_', () => {
+  expect(() =>
+    createSlice([], {
+      key: 'key_my-test-slice',
+      initState: { num: 3 },
+      selectors: {},
+      actions: {},
+    }),
+  ).toThrowErrorMatchingInlineSnapshot(
+    `"Slice name cannot start with "key_". Please use a different name for slice "key_my-test-slice""`,
+  );
 });
 
 describe('creating with slice', () => {

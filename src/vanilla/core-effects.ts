@@ -6,7 +6,7 @@ const initState: { ready: boolean } = {
 };
 
 export const coreReadySlice = new Slice({
-  key: CORE_SLICE_READY,
+  name: CORE_SLICE_READY,
   initState,
   actions: {
     ready: () => () => ({ ready: true }),

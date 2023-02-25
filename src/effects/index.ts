@@ -40,7 +40,7 @@ export function onceEffect<K extends string, DS extends AnySlice>(
   const cb = args.length === 1 ? args[0] : args[1];
 
   const effect = new Slice({
-    key: name,
+    name: name,
     selectors: {},
     dependencies: [
       ...deps,
@@ -94,7 +94,7 @@ export function syncOnceEffect<DS extends AnySlice>(
   const cb = args.length === 1 ? args[0] : args[1];
 
   return new Slice({
-    key: name,
+    name: name,
     dependencies: deps,
     actions: {},
     selectors: {},
@@ -116,10 +116,10 @@ export type ExtractSliceFromEffectSelectors<
   : never;
 
 export const changeEffect = <
-  K extends string,
+  N extends string,
   ES extends Record<string, [AnySlice, (storeState: StoreState<any>) => any]>,
 >(
-  name: K,
+  name: N,
   effectSelectors: ES,
   cb: (
     selectedVal: ExtractReturnTypes<{
@@ -141,7 +141,7 @@ export const changeEffect = <
   };
 
   const run = (
-    sl: Slice<K, unknown, any, any, any>,
+    sl: Slice<N, unknown, any, any, any>,
     store: BareStore<any>,
     prevStoreState: BareStore<any>['state'],
     ref: EffectRef,
@@ -178,7 +178,7 @@ export const changeEffect = <
     }
   };
 
-  const effect: Effect<Slice<K, {}, AnySlice, {}, {}>> = {
+  const effect: Effect<Slice<N, {}, AnySlice, {}, {}>> = {
     init(slice, store, ref: EffectRef) {
       ref.firstRun = true;
       ref.prevCleanup = undefined;
@@ -203,7 +203,7 @@ export const changeEffect = <
   deps.push(coreReadySlice);
 
   return new Slice({
-    key: name,
+    name: name,
     dependencies: deps,
     initState: {},
     actions: {},

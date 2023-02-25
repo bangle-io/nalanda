@@ -1,4 +1,5 @@
 import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
+import { SliceContext, SliceKey } from './internal-types';
 import { AnySlice, Effect } from './public-types';
 import type { BareSlice } from './slice';
 import type { InternalStoreState } from './state';
@@ -83,7 +84,7 @@ export class SideEffectsManager {
   }
 
   // TODO: this will be removed once we have better way of adding dynamic slices
-  _tempRegisterOnSyncChange(sliceKey: string, cb: () => void) {
+  _tempRegisterOnSyncChange(sliceKey: SliceKey, cb: () => void) {
     let set = this._tempOnSyncChange.get(sliceKey);
 
     if (!set) {
@@ -115,7 +116,7 @@ export class SideEffectsManager {
       sliceKey,
       actionId,
     }: {
-      sliceKey: string;
+      sliceKey: SliceKey;
       actionId: string;
     },
   ) {
@@ -236,6 +237,7 @@ export class EffectHandler {
   public debugSyncLastRanBy: { sliceKey: string; actionId: string }[] = [];
   public debugDeferredLastRanBy: { sliceKey: string; actionId: string }[] = [];
   private _ref = {};
+  private _sliceContext: SliceContext;
 
   constructor(
     public effect: Effect<any>,
@@ -245,6 +247,10 @@ export class EffectHandler {
   ) {
     this._deferredPrevState = this.initStoreState;
     this._syncPrevState = this.initStoreState;
+
+    this._sliceContext = {
+      sliceKey: this._slice.key,
+    };
   }
 
   public addDebugInfo(payload: { sliceKey: string; actionId: string }) {
@@ -288,7 +294,9 @@ export class EffectHandler {
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice.keyMap),
+      store.getReducedStore(this.effect.name, {
+        sliceKey: this._slice.key,
+      }),
       this._ref,
     );
   }
@@ -311,8 +319,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.updateSync?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice.keyMap),
-      previouslySeenState._withKeyMap(this._slice.keyMap),
+      store.getReducedStore(this.effect.name, this._sliceContext),
+      previouslySeenState._withContext(this._sliceContext),
       this._ref,
     );
   }
@@ -326,8 +334,8 @@ export class EffectHandler {
     // TODO error handling
     this.effect.update?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._slice.keyMap),
-      previouslySeenState._withKeyMap(this._slice.keyMap),
+      store.getReducedStore(this.effect.name, this._sliceContext),
+      previouslySeenState._withContext(this._sliceContext),
       this._ref,
     );
   }

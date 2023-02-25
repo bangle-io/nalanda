@@ -165,5 +165,5 @@ test('EffectHandler with deps', () => {
     mySlice,
   );
 
-  expect(effect.sliceKey).toMatchInlineSnapshot(`"myslice"`);
+  expect(effect.sliceKey).toMatchInlineSnapshot(`"key_myslice"`);
 });

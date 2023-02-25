@@ -20,7 +20,7 @@ export type EmptySlice = Slice<never, {}, EmptySlice, {}, {}>;
 
 export interface BareStore<SL extends BareSlice> {
   state: StoreState<SL>;
-  dispatch: (tx: Transaction<SL['key'], any>, debugDispatch?: string) => void;
+  dispatch: (tx: Transaction<SL['name'], any>, debugDispatch?: string) => void;
   destroy: () => void;
   destroyed: boolean;
 }

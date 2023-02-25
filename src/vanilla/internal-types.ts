@@ -61,3 +61,44 @@ export type SliceStateToSelector<S> = S extends object
       [K in keyof S]: SelectorFn<any, any, S[K]>;
     }
   : never;
+
+/**
+ * Hack for nominal typing
+ * https://basarat.gitbook.io/typescript/main-1/nominaltyping
+ */
+export declare const __brand: unique symbol;
+export type Brand<T, K> = T & { [__brand]: K };
+
+export type SliceKey = Brand<string, 'SliceKey'>;
+export type SliceNameOpaque = Brand<string, 'SliceName'>;
+
+export type SliceContext = {
+  sliceKey: SliceKey;
+};
+
+export const KEY_PREFIX = 'key_';
+
+// TODO make this create key from name
+export function createSliceKey(key: string): SliceKey {
+  if (isSliceKey(key)) {
+    return key;
+  }
+  return (KEY_PREFIX + key) as SliceKey;
+}
+
+export function isSliceKey(key: unknown): key is SliceKey {
+  // TODO make this string by prefixing with `key_`
+  return typeof key === 'string' && key.startsWith(KEY_PREFIX);
+}
+
+export function createSliceNameOpaque(name: string): SliceNameOpaque {
+  return name as SliceNameOpaque;
+}
+
+export function nestSliceKey(
+  key: SliceKey,
+  parentName: SliceNameOpaque,
+): SliceKey {
+  const rawKey = key.slice(KEY_PREFIX.length);
+  return createSliceKey(parentName + ':' + rawKey);
+}

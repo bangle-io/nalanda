@@ -6,7 +6,7 @@ import { Store } from '../vanilla/store';
 
 describe('Single slice', () => {
   const testSlice = new Slice({
-    key: 'test',
+    name: 'test',
     dependencies: [],
     initState: {
       val: 'apple',
@@ -78,13 +78,15 @@ describe('Single slice', () => {
           "payload": [
             "banana",
           ],
-          "sliceKey": "test",
+          "sourceSliceKey": "key_test",
+          "targetSliceKey": "key_test",
         },
         {
           "actionId": "ready",
           "dispatchSource": undefined,
           "payload": [],
-          "sliceKey": "$nalanda/CORE_SLICE_READY",
+          "sourceSliceKey": "key_$nalanda/CORE_SLICE_READY",
+          "targetSliceKey": "key_$nalanda/CORE_SLICE_READY",
         },
         {
           "actionId": "testAction",
@@ -92,10 +94,15 @@ describe('Single slice', () => {
           "payload": [
             "bananaEffect",
           ],
-          "sliceKey": "test",
+          "sourceSliceKey": "key_test",
+          "targetSliceKey": "key_test",
         },
       ]
     `);
+
+    await waitForExpect(() => {
+      expect(dispatchSpy.getDebugLogItems()).toHaveLength(8);
+    });
 
     expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
       [
@@ -105,8 +112,9 @@ describe('Single slice', () => {
           "payload": [
             "banana",
           ],
-          "slice": "test",
+          "sourceSliceKey": "key_test",
           "store": "test-store",
+          "targetSliceKey": "key_test",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -114,8 +122,9 @@ describe('Single slice', () => {
           "actionId": "ready",
           "dispatcher": undefined,
           "payload": [],
-          "slice": "$nalanda/CORE_SLICE_READY",
+          "sourceSliceKey": "key_$nalanda/CORE_SLICE_READY",
           "store": "test-store",
+          "targetSliceKey": "key_$nalanda/CORE_SLICE_READY",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -124,7 +133,7 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "testAction",
-              "sliceKey": "test",
+              "sliceKey": "key_test",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
@@ -135,8 +144,9 @@ describe('Single slice', () => {
           "payload": [
             "bananaEffect",
           ],
-          "slice": "test",
+          "sourceSliceKey": "key_test",
           "store": "test-store",
+          "targetSliceKey": "key_test",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -145,7 +155,7 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "ready",
-              "sliceKey": "$nalanda/CORE_SLICE_READY",
+              "sliceKey": "key_$nalanda/CORE_SLICE_READY",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
@@ -155,7 +165,7 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "testAction",
-              "sliceKey": "test",
+              "sliceKey": "key_test",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
@@ -165,11 +175,11 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "testAction",
-              "sliceKey": "test",
+              "sliceKey": "key_test",
             },
             {
               "actionId": "testAction",
-              "sliceKey": "test",
+              "sliceKey": "key_test",
             },
           ],
           "type": "UPDATE_EFFECT",
@@ -179,7 +189,7 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "ready",
-              "sliceKey": "$nalanda/CORE_SLICE_READY",
+              "sliceKey": "key_$nalanda/CORE_SLICE_READY",
             },
           ],
           "type": "UPDATE_EFFECT",

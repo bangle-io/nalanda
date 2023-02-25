@@ -2,13 +2,13 @@ import { Action, AnySlice, Effect, SelectorFn } from './public-types';
 import { Slice } from './slice';
 
 class SliceKey<
-  K extends string,
+  N extends string,
   SS extends object,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
   DS extends AnySlice,
 > {
   constructor(
-    public key: K,
+    public name: N,
     public dependencies: DS[],
     public initState: SS,
     public selectors: SE,
@@ -57,14 +57,14 @@ export function slice<
   actions: A;
   effects?: Effect<
     Slice<
-      SK['key'],
+      SK['name'],
       InferInitState<SK>,
       InferDependencies<SK>,
       A,
       InferSelectors<SK>
     >,
     | Slice<
-        SK['key'],
+        SK['name'],
         InferInitState<SK>,
         InferDependencies<SK>,
         A,
@@ -78,7 +78,7 @@ export function slice<
     dependencies: key.dependencies,
     effects: effects || [],
     initState: key.initState,
-    key: key.key,
+    name: key.name,
     selectors: key.selectors,
   });
 }
@@ -103,7 +103,7 @@ export function createSlice<
     dependencies,
     effects: [],
     initState: arg.initState,
-    key: arg.key,
+    name: arg.key,
     selectors: arg.selectors || {},
   });
 }
