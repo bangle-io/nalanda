@@ -247,7 +247,6 @@ export class EffectHandler {
   ) {
     this._deferredPrevState = this.initStoreState;
     this._syncPrevState = this.initStoreState;
-
     this._sliceContext = {
       sliceKey: this._slice.key,
     };
@@ -257,10 +256,8 @@ export class EffectHandler {
     if (!this._debug) {
       return;
     }
-    {
-      this.debugSyncLastRanBy.push(payload);
-      this.debugDeferredLastRanBy.push(payload);
-    }
+    this.debugSyncLastRanBy.push(payload);
+    this.debugDeferredLastRanBy.push(payload);
   }
 
   private _sendDebugInfo(type: 'sync' | 'deferred') {

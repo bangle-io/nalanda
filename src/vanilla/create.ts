@@ -92,7 +92,7 @@ export function createSlice<
 >(
   dependencies: DS[],
   arg: {
-    key: K;
+    name: K;
     initState: SS;
     actions: A;
     selectors: SE;
@@ -103,7 +103,7 @@ export function createSlice<
     dependencies,
     effects: [],
     initState: arg.initState,
-    name: arg.key,
+    name: arg.name,
     selectors: arg.selectors || {},
   });
 }

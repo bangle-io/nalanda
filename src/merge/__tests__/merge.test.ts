@@ -32,14 +32,14 @@ function findChildSlice(
 describe('merging', () => {
   test('works', () => {
     const g1 = createSlice([], {
-      key: 'g1',
+      name: 'g1',
       initState: {},
       actions: {},
       selectors: {},
     });
 
     const t1 = createSlice([g1], {
-      key: 't1',
+      name: 't1',
       initState: {
         f: 4,
       },
@@ -97,7 +97,7 @@ describe('merging', () => {
 
   describe('merging', () => {
     const g1 = createSlice([], {
-      key: 'g1',
+      name: 'g1',
       initState: {
         g1State: 0,
       },
@@ -419,9 +419,9 @@ describe('merging', () => {
       const store = Store.create({
         scheduler: timeoutSchedular(0),
         dispatchTx: dispatchSpy.dispatch,
+        debug: dispatchSpy.debug,
         storeName: 'test-store',
         state: [g1, z0],
-        debug: dispatchSpy.debug,
       });
 
       store.dispatch(g1.actions.updateG1State());
@@ -492,7 +492,9 @@ describe('merging', () => {
         }
       `);
 
-      expect(dispatchSpy.getSimplifiedTransactions()).toEqual([
+      expect(
+        dispatchSpy.getSimplifiedTransactions({ hideInternal: false }),
+      ).toEqual([
         {
           actionId: 'updateG1State',
           dispatchSource: undefined,
