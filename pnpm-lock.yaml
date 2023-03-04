@@ -59,6 +59,12 @@ importers:
       wait-for-expect: 3.0.2
       zod: 3.20.2
 
+  documentation:
+    specifiers:
+      nalanda: workspace:*
+    dependencies:
+      nalanda: link:..
+
   examples/react-todo:
     specifiers:
       '@ant-design/icons': ^5.0.1
