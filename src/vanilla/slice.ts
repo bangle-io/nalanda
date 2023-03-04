@@ -34,6 +34,10 @@ type IfSliceRegistered<
     : never
   : never;
 
+export type PickOpts = {
+  ignoreChanges?: boolean;
+};
+
 function actionsToTxCreators(
   sliceKey: SliceKey,
   sliceName: SliceNameOpaque,
@@ -225,14 +229,30 @@ export class Slice<
     return apply(sliceState, storeState, tx);
   }
 
+  /**
+   * Ignore running the callback if this value changes. This is useful
+   * when you want to just read the value and not trigger the effect if
+   * it changes.
+   */
+  passivePick<T>(
+    cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
+  ) {
+    const opts: PickOpts = {
+      ignoreChanges: true,
+    };
+    return this.pick(cb, opts);
+  }
+
   pick<T>(
     cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
-  ): [Slice<N, SS, DS, A, SE>, (storeState: StoreState<any>) => T] {
+    _opts: PickOpts = {},
+  ): [Slice<N, SS, DS, A, SE>, (storeState: StoreState<any>) => T, PickOpts] {
     return [
       this,
       (storeState: StoreState<any>) => {
         return cb(this.resolveState(storeState));
       },
+      _opts,
     ];
   }
 

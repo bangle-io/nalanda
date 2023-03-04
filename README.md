@@ -53,7 +53,7 @@ const [{ apple, orange }, dispatch] = useSelectStore(
 
 It is recommended that you define your own hooks, for better typing support.
 
-````tsx
+```tsx
 // store.ts
 import { Slice, Store } from 'nalanda';
 import { sliceA } from './slice-a';
@@ -71,18 +71,14 @@ export const MyStoreContext = React.createContext(store);
 // Wrap your Application with this provider
 export function MyStoreProvider({ children }) {
   return (
-    <MyStoreContext.Provider value={store}>
-    {children}
-    </MyStoreContext.Provider>
+    <MyStoreContext.Provider value={store}>{children}</MyStoreContext.Provider>
   );
 }
 
 export function useSliceState<SL extends Slice>(sl: SL) {
   const store = useContext(MyStoreContext).current;
-
 }
-
-
+```
 
 ## Features
 
@@ -122,4 +118,80 @@ const workerStore = Store.create({
     slices: [replica(mySlice, { mainStore: 'main-store' })],
   }),
 });
-````
+```
+
+### Effects
+
+```ts
+const appleCountSlice = createSlice([], {
+  name: 'appleCountSlice',
+  initState: {
+    count: 0,
+  },
+  actions: {
+    increment: () => (state) => ({
+      count: state.count + 1,
+    }),
+  },
+  selectors: {},
+});
+
+const appleCountChangeEffect = changeEffect(
+  'appleCountChangeEffect',
+  {
+    count: appleCountSlice.pick((state) => state.count),
+  },
+  // The effect will run whenever the count changes.
+  // Note: The effect will also run after the store is initialized.
+  ({ count }) => {
+    console.log('count', count);
+  },
+);
+
+export const appleSliceFamily = [appleCountSlice, appleCountChangeEffect];
+```
+
+### Passive pick
+
+Sometimes you want to passively read a value from the state but you don't want to trigger an effect run when the value changes.
+
+```ts
+const appleCountSlice = createSlice([], {
+  name: 'appleCountSlice',
+  initState: {
+    count: 0,
+    spoilCount: 0,
+  },
+  actions: {
+    increment: () => (state) => ({
+      ...state,
+      count: state.count + 1,
+    }),
+    setSpoilCount: (spoil: number) => (state) => ({
+      ...state,
+      spoilCount: spoil,
+    }),
+  },
+  selectors: {},
+});
+
+const appleCountChangeEffect = changeEffect(
+  'appleCountChangeEffect',
+  {
+    appleCount: appleCountSlice.pick((state) => state.count),
+    // Read the value but don't trigger the effect if it changes.
+    spoilCount: appleCountSlice.passivePick((state) => state.spoilCount),
+  },
+  // The effect will only run when the apple count changes.
+  ({ appleCount, spoilCount }, dispatch) => {
+    console.log(`fruit count ${appleCount}}`);
+
+    const spoilCount = calculateSpoilCount(appleCount, spoilCount);
+
+    // updating spoil count will not cause the effect to run again.
+    dispatch(appleCountSlice.actions.setSpoilCount(spoilCount));
+  },
+);
+
+export const appleSliceFamily = [appleCountSlice, appleCountChangeEffect];
+```

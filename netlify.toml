@@ -1,0 +1,9 @@
+[[headers]]
+
+[build]
+  publish = "documentation/dist/"
+  command = "cd documentation && pnpm build" 
+
+[build.environment]
+  NODE_VERSION = "lts/*"
+  NETLIFY_NEXT_PLUGIN_SKIP="true"

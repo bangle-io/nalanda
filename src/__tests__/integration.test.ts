@@ -67,10 +67,15 @@ describe('Single slice', () => {
     });
 
     await waitForExpect(() => {
-      expect(dispatchSpy.getSimplifiedTransactions()).toHaveLength(3);
+      expect(
+        dispatchSpy.getSimplifiedTransactions({
+          hideInternal: false,
+        }),
+      ).toHaveLength(3);
     });
 
-    expect(dispatchSpy.getSimplifiedTransactions()).toMatchInlineSnapshot(`
+    expect(dispatchSpy.getSimplifiedTransactions({ hideInternal: false }))
+      .toMatchInlineSnapshot(`
       [
         {
           "actionId": "testAction",
