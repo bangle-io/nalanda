@@ -6,3 +6,4 @@
 
 [build.environment]
   NODE_VERSION = "lts/*"
+  NETLIFY_NEXT_PLUGIN_SKIP="true"
