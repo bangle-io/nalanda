@@ -2,9 +2,16 @@
   "name": "documentation",
   "version": "0.0.0",
   "private": true,
-  "scripts": {},
-  "dependencies": {
-    "nalanda": "workspace:*"
+  "scripts": {
+    "build": "next build && next export -o dist",
+    "preview": "next dev"
   },
-  "devDependencies": {}
+  "dependencies": {
+    "nalanda": "workspace:*",
+    "next": "^13.2.3",
+    "nextra": "^2.2.17",
+    "nextra-theme-docs": "^2.2.17",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
 }

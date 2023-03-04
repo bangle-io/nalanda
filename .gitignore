@@ -3,6 +3,8 @@
 /custom
 /dist
 /gh-pages
+documentation/dist
+documentation/.next
 
 # Node.js
 node_modules/
