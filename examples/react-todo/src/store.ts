@@ -1,4 +1,4 @@
-import { Store, createUseSliceHook, Slice } from 'nalanda';
+import { Store, createUseSliceHook, Slice } from '../../../src/index';
 
 type Todo = {
   title: string;
