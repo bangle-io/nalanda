@@ -7,20 +7,6 @@ import { AnySlice } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
 import { InternalStoreState } from '../vanilla/state';
 
-// const MERGE_KEY = '$nalanda/MERGE_METADATA_KEY';
-
-// interface MergeData {
-//   isMerge: true;
-// }
-
-// function setMetadata(slice: AnySlice, metadata: MergeData) {
-//   slice._metadata[MERGE_KEY] = metadata;
-// }
-
-// function getMetadata(slice: AnySlice): MergeData | undefined {
-//   return slice._metadata[MERGE_KEY];
-// }
-
 export function mergeSlices<N extends string, SL extends AnySlice>({
   name: parentName,
   children,

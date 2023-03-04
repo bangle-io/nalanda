@@ -282,7 +282,7 @@ describe('actions', () => {
 describe('selectors', () => {
   test('works', () => {
     const mySlice = createSlice([], {
-      key: 'my-test-slice',
+      name: 'my-test-slice',
       initState: { num: 3 },
       selectors: {
         numSquared: (state) => state.num * state.num,
@@ -673,7 +673,7 @@ describe('effects', () => {
 test('throws error if name starts with key_', () => {
   expect(() =>
     createSlice([], {
-      key: 'key_my-test-slice',
+      name: 'key_my-test-slice',
       initState: { num: 3 },
       selectors: {},
       actions: {},

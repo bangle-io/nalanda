@@ -1,123 +1,36 @@
 import { coreReadySlice } from '../vanilla';
-import { incrementalId } from '../vanilla/helpers';
 import { ExtractReturnTypes } from '../vanilla/internal-types';
-import { AnySlice, BareStore, Effect, typed } from '../vanilla/public-types';
-import { Slice } from '../vanilla/slice';
+import { AnySlice, BareStore, Effect } from '../vanilla/public-types';
+import { PickOpts, Slice } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
 import type { ReducedStore } from '../vanilla/store';
 
-type OpaqueSlice<K extends string, DS extends AnySlice> = Slice<
-  K,
-  {},
-  DS,
-  {},
-  {}
->;
-
-type ReducedStoreFromDS<DS extends AnySlice> = ReducedStore<DS>;
-
-export function onceEffect<K extends string, DS extends AnySlice>(
-  deps: DS[],
-  name: K,
-  cb: (
-    state: ReducedStoreFromDS<DS>['state'],
-    dispatch: ReducedStoreFromDS<DS>['dispatch'],
-  ) => void,
-): OpaqueSlice<K, DS>;
-export function onceEffect<DS extends AnySlice>(
-  deps: DS[],
-  cb: (
-    state: ReducedStoreFromDS<DS>['state'],
-    dispatch: ReducedStoreFromDS<DS>['dispatch'],
-  ) => void,
-): OpaqueSlice<string, DS>;
-export function onceEffect<K extends string, DS extends AnySlice>(
-  deps: DS[],
-  ...args: any[]
-): OpaqueSlice<K, DS> {
-  const name =
-    args.length === 1 ? 'onceEffect(' + incrementalId() + ')' : args[0];
-  const cb = args.length === 1 ? args[0] : args[1];
-
-  const effect = new Slice({
-    name: name,
-    selectors: {},
-    dependencies: [
-      ...deps,
-      // need this dependency to ensure update is run
-      coreReadySlice,
-    ],
-    initState: {},
-    actions: {},
-    effects: [
-      {
-        name: name,
-        update(
-          sl,
-          store: BareStore<any>,
-          prevStoreState: BareStore<any>['state'],
-          ref: { done?: boolean },
-        ) {
-          if (!ref.done && coreReadySlice.getState(store.state).ready) {
-            cb(store.state, store.dispatch);
-            ref.done = true;
-          }
-        },
-      },
-    ],
-  });
-
-  return effect as unknown as OpaqueSlice<K, DS>;
-}
-
-export function syncOnceEffect<K extends string, DS extends AnySlice>(
-  deps: DS[],
-  name: K,
-  cb: (
-    state: BareStore<DS>['state'],
-    dispatch: BareStore<DS>['dispatch'],
-  ) => void,
-): OpaqueSlice<K, never>;
-export function syncOnceEffect<DS extends AnySlice>(
-  deps: DS[],
-  cb: (
-    state: BareStore<DS>['state'],
-    dispatch: BareStore<DS>['dispatch'],
-  ) => void,
-): OpaqueSlice<string, DS>;
-export function syncOnceEffect<DS extends AnySlice>(
-  deps: DS[],
-  ...args: any[]
-): OpaqueSlice<any, DS> {
-  const name =
-    args.length === 1 ? 'syncOnceEffect(' + incrementalId() + ')' : args[0];
-  const cb = args.length === 1 ? args[0] : args[1];
-
-  return new Slice({
-    name: name,
-    dependencies: deps,
-    actions: {},
-    selectors: {},
-    initState: {},
-    effects: [
-      {
-        init(slice, store) {
-          cb(store.state, store.dispatch as any);
-        },
-      },
-    ],
-  });
-}
-
 export type ExtractSliceFromEffectSelectors<
-  ES extends Record<string, [AnySlice, (storeState: StoreState<any>) => any]>,
-> = ES extends Record<string, [infer S, (storeState: StoreState<any>) => any]>
+  ES extends Record<
+    string,
+    [AnySlice, (storeState: StoreState<any>) => any, any]
+  >,
+> = ES extends Record<
+  string,
+  [infer S, (storeState: StoreState<any>) => any, any]
+>
   ? S
   : never;
 
+export const syncChangeEffect: typeof changeEffect = (
+  name,
+  effectSelectors,
+  cb,
+) => {
+  return changeEffect(name, effectSelectors, cb, { sync: true });
+};
+
 export const changeEffect = <
   N extends string,
-  ES extends Record<string, [AnySlice, (storeState: StoreState<any>) => any]>,
+  ES extends Record<
+    string,
+    [AnySlice, (storeState: StoreState<any>) => any, PickOpts]
+  >,
 >(
   name: N,
   effectSelectors: ES,
@@ -131,7 +44,11 @@ export const changeEffect = <
   opts?: { sync?: boolean },
 ) => {
   const comparisonEntries = Object.entries(effectSelectors).map(
-    (r): [string, (storeState: StoreState<any>) => any] => [r[0], r[1][1]],
+    (r): [string, (storeState: StoreState<any>) => any, PickOpts] => [
+      r[0],
+      r[1][1],
+      r[1][2],
+    ],
   );
 
   type EffectRef = {
@@ -148,11 +65,11 @@ export const changeEffect = <
   ) => {
     let hasNew = false;
 
-    const newObjectEntries = comparisonEntries.map(([k, v]) => {
+    const newObjectEntries = comparisonEntries.map(([k, v, opts]) => {
       const newVal = v(store.state);
       const oldVal = v(prevStoreState);
 
-      if (!Object.is(newVal, oldVal)) {
+      if (!opts.ignoreChanges && !Object.is(newVal, oldVal)) {
         hasNew = true;
       }
 

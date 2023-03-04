@@ -1,3 +1,5 @@
+import { CORE_SLICE_READY } from '../vanilla/core-effects';
+import { createSliceKey } from '../vanilla/internal-types';
 import type {
   Action,
   AnySlice,
@@ -91,16 +93,39 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
     getTransactions() {
       return txs;
     },
-    getSimplifiedTransactions() {
-      return txs.map(
-        ({ sourceSliceKey, targetSliceKey, metadata, payload, config }) => ({
-          sourceSliceKey,
-          targetSliceKey,
-          actionId: config.actionId,
-          payload,
-          dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
-        }),
-      );
+    getSimplifiedTransactions(
+      {
+        hideInternal,
+        filterBySource,
+      }: {
+        hideInternal?: boolean;
+        filterBySource?: AnySlice | AnySlice[];
+      } = {
+        hideInternal: true,
+      },
+    ) {
+      return txs
+        .filter((r) => {
+          return !hideInternal
+            ? true
+            : r.sourceSliceKey !== createSliceKey(CORE_SLICE_READY);
+        })
+        .filter((r) => {
+          return !filterBySource
+            ? true
+            : [filterBySource]
+                .flatMap((s) => s)
+                .some((s) => r.sourceSliceKey == createSliceKey(s.name));
+        })
+        .map(
+          ({ sourceSliceKey, targetSliceKey, metadata, payload, config }) => ({
+            sourceSliceKey,
+            targetSliceKey,
+            actionId: config.actionId,
+            payload,
+            dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
+          }),
+        );
     },
   };
 }

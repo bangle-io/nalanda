@@ -1,4 +1,4 @@
-import { Store, createUseSliceHook, Slice, onceEffect } from 'nalanda';
+import { Store, createUseSliceHook, Slice } from '../../../src/index';
 
 type Todo = {
   title: string;
@@ -65,13 +65,9 @@ export const todoSlice = new Slice({
   },
 });
 
-const onceDay = onceEffect([todoSlice], (state, dispatch) => {
-  console.log(todoSlice.getState(state).todos);
-});
-
 const myStore = Store.create({
   storeName: 'myStore',
-  state: [todoSlice, onceDay],
+  state: [todoSlice],
   debug: console.log.bind(console),
 });
 
