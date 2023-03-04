@@ -1,0 +1,8 @@
+[[headers]]
+
+[build]
+  publish = "build-docs"
+  command = "pnpm build-docs" 
+
+[build.environment]
+  NODE_VERSION = "lts/*"

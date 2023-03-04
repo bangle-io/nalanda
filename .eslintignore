@@ -1,5 +1,7 @@
 dist
 build
+docs-dist
+
 node_modules
 **.d.ts
 *.html

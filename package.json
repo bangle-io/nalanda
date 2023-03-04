@@ -23,6 +23,7 @@
     "test": "jest",
     "lint": "eslint . & prettier src --check & tsc --noEmit",
     "build": "tsup",
+    "build-docs": "mkdir -p docs-dist && echo \"hello world\" > docs-dist/index.html",
     "format": "prettier src --write"
   },
   "keywords": [],
