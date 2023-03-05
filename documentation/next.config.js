@@ -5,7 +5,6 @@ const withNextra = require('nextra')({
 
 module.exports = {
   ...withNextra(),
-  output: 'export',
   reactStrictMode: true,
   swcMinify: true,
   trailingSlash: true,

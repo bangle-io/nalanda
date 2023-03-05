@@ -1,8 +1,6 @@
-[[headers]]
-
 [build]
   publish = "documentation/dist/"
-  command = "cd documentation && pnpm build" 
+  command = "pnpm build-docs" 
 
 [build.environment]
   NODE_VERSION = "lts/*"
