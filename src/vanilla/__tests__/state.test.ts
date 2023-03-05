@@ -1,8 +1,7 @@
 import { testOverrideSlice } from '../../test-helpers';
-import { coreReadySlice, CORE_SLICE_READY } from '../core-effects';
 import { createKey, slice } from '../create';
 import { createSliceKey, expectType } from '../internal-types';
-import { InternalStoreState, StoreState as StoreState } from '../state';
+import { InternalStoreState } from '../state';
 import { Transaction } from '../transaction';
 
 const testSlice1 = slice({
@@ -299,9 +298,6 @@ describe('State creation', () => {
       slicesCurrentState: {
         key_mySlice: {
           val: null,
-        },
-        [createSliceKey(CORE_SLICE_READY)]: {
-          ready: false,
         },
       },
     });

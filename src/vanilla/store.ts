@@ -2,7 +2,7 @@ import { incrementalId } from './helpers';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 
-import type { BareSlice, KeyMap } from './slice';
+import type { BareSlice } from './slice';
 import { InternalStoreState, StoreState } from './state';
 import { DebugFunc, Transaction, txLog } from './transaction';
 import {
@@ -12,6 +12,7 @@ import {
 } from './transaction';
 import { BareStore } from './public-types';
 import { SliceContext } from './internal-types';
+import { curateSlices } from './slices-helpers';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
@@ -46,8 +47,7 @@ export class Store implements BareStore<any> {
   }): BareStore<SB> {
     if (!(state instanceof InternalStoreState)) {
       if (Array.isArray(state)) {
-        let slices: BareSlice[] = state;
-
+        let slices: BareSlice[] = curateSlices(state);
         state = InternalStoreState.create(slices);
       }
     }
