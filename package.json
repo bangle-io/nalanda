@@ -22,7 +22,9 @@
     "test": "jest",
     "lint": "eslint . & prettier src --check & tsc --noEmit",
     "build": "tsup",
-    "format": "prettier src --write"
+    "format": "prettier src --write",
+    "preview-docs": "pnpm --filter documentation run preview",
+    "build-docs": "pnpm --filter documentation run build"
   },
   "keywords": [],
   "license": "MIT",
