@@ -7,14 +7,18 @@
     "preview": "next dev"
   },
   "dependencies": {
+    "@codesandbox/sandpack-react": "^2.0.27",
+    "@codesandbox/sandpack-themes": "^2.0.21",
     "nalanda": "workspace:*",
     "next": "^13.2.3",
+    "next-themes": "^0.2.1",
     "nextra": "^2.2.17",
     "nextra-theme-docs": "^2.2.17",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/node": "18.14.6",
     "tailwindcss": "^3.2.7"
   }
 }
