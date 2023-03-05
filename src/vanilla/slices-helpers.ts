@@ -1,14 +1,7 @@
 import { findDuplications } from './helpers';
 import { BareSlice } from './slice';
 
-export function curateSlices(
-  slices: BareSlice[],
-  opts?: {
-    injectCoreSlices?: boolean;
-  },
-) {
-  const { injectCoreSlices = true } = opts || {};
-
+export function curateSlices(slices: BareSlice[], opts?: {}) {
   const expanded = expandSlices(slices);
 
   validateSlices(expanded);
