@@ -27,6 +27,8 @@
     "src/**/*.tsx",
     "examples/**/*.ts",
     "examples/**/*.tsx",
+    "documentation/**/*.ts",
+    "documentation/**/*.tsx",
   ],
   "exclude": [
     "node_modules",

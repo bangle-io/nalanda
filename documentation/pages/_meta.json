@@ -1,8 +1,14 @@
 {
-  "index": "My Homepage",
-  "contact": "Contact Us",
-  "github_link": {
-    "title": "Nalanda",
-    "href": "https://github.com/bangle-io/nalanda"
+  "index": {
+    "type": "page",
+    "title": "Nalanda State",
+    "display": "hidden",
+    "theme": {
+      "layout": "raw"
+    }
+  },
+  "docs": {
+    "type": "page",
+    "title": "Documentation"
   }
 }
