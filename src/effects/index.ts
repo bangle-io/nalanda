@@ -1,6 +1,10 @@
-import { coreReadySlice } from '../vanilla';
 import { ExtractReturnTypes } from '../vanilla/internal-types';
-import { AnySlice, BareStore, Effect } from '../vanilla/public-types';
+import {
+  AnySlice,
+  BareStore,
+  Effect,
+  EmptySlice,
+} from '../vanilla/public-types';
 import { PickOpts, Slice } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
 import type { ReducedStore } from '../vanilla/store';
@@ -42,7 +46,7 @@ export const changeEffect = <
     ref: Record<string, any>,
   ) => void | (() => void),
   opts?: { sync?: boolean },
-) => {
+): Slice<N, {}, never, {}, {}> => {
   const comparisonEntries = Object.entries(effectSelectors).map(
     (r): [string, (storeState: StoreState<any>) => any, PickOpts] => [
       r[0],
@@ -79,8 +83,9 @@ export const changeEffect = <
     if (hasNew || ref.firstRun) {
       if (ref.firstRun) {
         ref.firstRun = false;
+      } else {
+        ref.prevCleanup?.();
       }
-      ref.prevCleanup?.();
 
       const res = cb(
         Object.fromEntries(newObjectEntries),
@@ -95,11 +100,24 @@ export const changeEffect = <
     }
   };
 
-  const effect: Effect<Slice<N, {}, AnySlice, {}, {}>> = {
+  const effect: Effect<
+    Slice<
+      N,
+      {
+        ready: boolean;
+      },
+      AnySlice,
+      {
+        ready: () => () => { ready: boolean };
+      },
+      {}
+    >
+  > = {
     init(slice, store, ref: EffectRef) {
       ref.firstRun = true;
       ref.prevCleanup = undefined;
       ref.userRef = {};
+      store.dispatch(slice.actions.ready());
     },
     destroy(slice, state, ref: EffectRef) {
       ref?.prevCleanup?.();
@@ -116,16 +134,19 @@ export const changeEffect = <
     new Set(Object.values(effectSelectors).map((r) => r[0])),
   ) as any;
 
-  // is needed to trigger the update on first run
-  deps.push(coreReadySlice);
-
-  return new Slice({
+  const slice = new Slice({
     name: name,
     dependencies: deps,
-    initState: {},
-    actions: {},
+    initState: {
+      ready: false,
+    },
+    actions: {
+      ready: () => () => ({ ready: true }),
+    },
     selectors: {},
     effects: [effect],
     terminal: true,
   });
+
+  return slice as any;
 };

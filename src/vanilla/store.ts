@@ -43,7 +43,7 @@ export class Store implements BareStore<any> {
     scheduler?: Scheduler;
     state: StoreState<SB> | SB[];
     storeName: string;
-    debug?: DebugFunc;
+    debug?: DebugFunc | undefined;
   }): BareStore<SB> {
     if (!(state instanceof InternalStoreState)) {
       if (Array.isArray(state)) {

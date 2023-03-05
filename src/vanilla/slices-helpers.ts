@@ -1,4 +1,3 @@
-import { coreReadySlice } from './core-effects';
 import { findDuplications } from './helpers';
 import { BareSlice } from './slice';
 
@@ -11,12 +10,6 @@ export function curateSlices(
   const { injectCoreSlices = true } = opts || {};
 
   const expanded = expandSlices(slices);
-
-  if (injectCoreSlices) {
-    if (!expanded.find((s) => s.key === coreReadySlice.key)) {
-      expanded.unshift(coreReadySlice);
-    }
-  }
 
   validateSlices(expanded);
 
