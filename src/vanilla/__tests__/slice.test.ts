@@ -277,6 +277,34 @@ describe('actions', () => {
       }
     `);
   });
+
+  test('throws error if depending on terminal slice', () => {
+    let terminalSlice = new Slice({
+      name: 'my-terminal-slice-1',
+      initState: {
+        num: 3,
+      },
+      actions: {},
+      dependencies: [],
+      terminal: true,
+      selectors: {},
+    });
+
+    expect(
+      () =>
+        new Slice({
+          name: 'my-slice-1',
+          initState: {
+            num: 3,
+          },
+          actions: {},
+          dependencies: [testSlice1, testSlice2, terminalSlice],
+          selectors: {},
+        }),
+    ).toThrowError(
+      'A slice cannot have a dependency on a terminal slice. Remove "my-terminal-slice-1" from the dependencies of "my-slice-1".',
+    );
+  });
 });
 
 describe('selectors', () => {

@@ -96,6 +96,7 @@ export interface SliceSpec<
   initState: SS;
   actions: A;
   selectors: SE;
+  terminal?: boolean;
   effects?: Effect<Slice<N, SS, DS, A, SE>, DS | Slice<N, SS, DS, A, SE>>[];
   // used internally by mergeSlices
   _additionalSlices?: AnySlice[];
@@ -143,6 +144,14 @@ export class Slice<
     if (config.originalSpec === spec && isSliceKey(spec.name)) {
       throw new Error(
         `Slice name cannot start with "${KEY_PREFIX}". Please use a different name for slice "${spec.name}"`,
+      );
+    }
+
+    if (spec.dependencies.some((dep) => dep.spec.terminal)) {
+      throw new Error(
+        `A slice cannot have a dependency on a terminal slice. Remove "${
+          spec.dependencies.find((dep) => dep.spec.terminal)?.spec.name
+        }" from the dependencies of "${spec.name}".`,
       );
     }
 

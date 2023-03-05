@@ -126,5 +126,6 @@ export const changeEffect = <
     actions: {},
     selectors: {},
     effects: [effect],
+    terminal: true,
   });
 };
