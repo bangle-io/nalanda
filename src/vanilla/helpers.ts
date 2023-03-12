@@ -1,4 +1,4 @@
-import { Action } from './public-types';
+import { Action, AnySlice } from './public-types';
 import { BareSlice } from './slice';
 
 const contextId = uuid(4);
@@ -133,4 +133,12 @@ export function calcReverseDependencies(
   }
 
   return reverseDependencies;
+}
+
+// internal method for changing the type and accessing some methods
+export function changeBareSlice<SL extends BareSlice>(
+  slice: SL,
+  cb: (sl: AnySlice) => AnySlice,
+): SL {
+  return cb(slice as unknown as AnySlice) as unknown as SL;
 }

@@ -281,6 +281,12 @@ export class Slice<
 
     return newSlice;
   }
+
+  withoutEffects() {
+    return this._fork({
+      effects: [],
+    });
+  }
 }
 
 export type ActionsToTxCreator<

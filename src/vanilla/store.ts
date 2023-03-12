@@ -12,7 +12,7 @@ import {
 } from './transaction';
 import { BareStore } from './public-types';
 import { SliceContext } from './internal-types';
-import { curateSlices } from './slices-helpers';
+import { expandSlices } from './slices-helpers';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
@@ -47,7 +47,8 @@ export class Store implements BareStore<any> {
   }): BareStore<SB> {
     if (!(state instanceof InternalStoreState)) {
       if (Array.isArray(state)) {
-        let slices: BareSlice[] = curateSlices(state);
+        let slices: BareSlice[] = expandSlices(state);
+
         state = InternalStoreState.create(slices);
       }
     }
@@ -114,6 +115,10 @@ export class Store implements BareStore<any> {
         once: true,
       },
     );
+  }
+
+  get destroySignal() {
+    return this._abortController.signal;
   }
 
   get destroyed() {

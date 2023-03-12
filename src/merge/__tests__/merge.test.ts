@@ -3,10 +3,7 @@ import { mergeSlices } from '..';
 import { createDispatchSpy } from '../../test-helpers';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
-import {
-  createSliceKey,
-  createSliceNameOpaque,
-} from '../../vanilla/internal-types';
+import { createSliceNameOpaque } from '../../vanilla/internal-types';
 import { AnySlice } from '../../vanilla/public-types';
 import { Slice } from '../../vanilla/slice';
 import { Store } from '../../vanilla/store';

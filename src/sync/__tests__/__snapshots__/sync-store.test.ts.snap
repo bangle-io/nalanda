@@ -1,0 +1,173 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`basic test one slice sync - case 1 1`] = `
+[
+  {
+    "actionId": "increment",
+    "dispatcher": undefined,
+    "payload": [],
+    "sourceSliceKey": "key_testSlice1",
+    "store": "test-main",
+    "targetSliceKey": "key_testSlice1",
+    "txId": "<txId>",
+    "type": "TX",
+  },
+  {
+    "actionId": "ready",
+    "dispatcher": undefined,
+    "payload": [],
+    "sourceSliceKey": "key_watch-in-main",
+    "store": "test-main",
+    "targetSliceKey": "key_watch-in-main",
+    "txId": "<txId>",
+    "type": "TX",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+      {
+        "actionId": "ready",
+        "sliceKey": "key_watch-in-main",
+      },
+    ],
+    "type": "SYNC_UPDATE_EFFECT",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+      {
+        "actionId": "ready",
+        "sliceKey": "key_watch-in-main",
+      },
+    ],
+    "type": "UPDATE_EFFECT",
+  },
+  {
+    "actionId": "increment",
+    "dispatcher": undefined,
+    "payload": [],
+    "sourceSliceKey": "key_testSlice1",
+    "store": "test-main",
+    "targetSliceKey": "key_testSlice1",
+    "txId": "<txId>",
+    "type": "TX",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+    ],
+    "type": "SYNC_UPDATE_EFFECT",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+    ],
+    "type": "UPDATE_EFFECT",
+  },
+]
+`;
+
+exports[`basic test one slice sync - case 2 - replica slice depends on sync slice 1`] = `
+[
+  {
+    "actionId": "ready",
+    "dispatcher": undefined,
+    "payload": [],
+    "sourceSliceKey": "key_watch-in-replica-store",
+    "store": "test-replica-store-1",
+    "targetSliceKey": "key_watch-in-replica-store",
+    "txId": "<txId>",
+    "type": "TX",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "ready",
+        "sliceKey": "key_watch-in-replica-store",
+      },
+    ],
+    "type": "SYNC_UPDATE_EFFECT",
+  },
+  {
+    "actionId": "increment",
+    "dispatcher": undefined,
+    "payload": [],
+    "sourceSliceKey": "key_testSlice1",
+    "store": "test-main",
+    "targetSliceKey": "key_testSlice1",
+    "txId": "<txId>",
+    "type": "TX",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+    ],
+    "type": "SYNC_UPDATE_EFFECT",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "ready",
+        "sliceKey": "key_watch-in-replica-store",
+      },
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+    ],
+    "type": "UPDATE_EFFECT",
+  },
+  {
+    "actionId": "increment",
+    "dispatcher": undefined,
+    "payload": [],
+    "sourceSliceKey": "key_testSlice1",
+    "store": "test-replica-store-1",
+    "targetSliceKey": "key_testSlice1",
+    "txId": "<txId>",
+    "type": "TX",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+    ],
+    "type": "SYNC_UPDATE_EFFECT",
+  },
+  {
+    "name": "<unknownEffect>",
+    "source": [
+      {
+        "actionId": "increment",
+        "sliceKey": "key_testSlice1",
+      },
+    ],
+    "type": "UPDATE_EFFECT",
+  },
+]
+`;

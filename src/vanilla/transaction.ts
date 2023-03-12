@@ -1,3 +1,4 @@
+import { uuid } from './helpers';
 import {
   createSliceNameOpaque,
   SliceKey,
@@ -17,6 +18,8 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly targetSliceName: SliceNameOpaque;
   public readonly payload: P;
   public readonly actionId: string;
+
+  public readonly uid = 'txn_' + uuid();
 
   constructor(
     public readonly config: {

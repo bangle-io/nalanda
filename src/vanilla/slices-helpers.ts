@@ -1,14 +1,6 @@
 import { findDuplications } from './helpers';
 import { BareSlice } from './slice';
 
-export function curateSlices(slices: BareSlice[], opts?: {}) {
-  const expanded = expandSlices(slices);
-
-  validateSlices(expanded);
-
-  return expanded;
-}
-
 export function expandSlices(slices: BareSlice[]) {
   return slices.flatMap((slice) => {
     return [...(slice.spec._additionalSlices || []), slice];
