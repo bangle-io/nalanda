@@ -1,14 +1,12 @@
 import { Store, Transaction } from '../vanilla';
 import { idleCallbackScheduler, Scheduler } from '../vanilla/effect';
-import { changeBareSlice } from '../vanilla/helpers';
+import { changeBareSlice, weakCache } from '../vanilla/helpers';
 import { BareStore } from '../vanilla/public-types';
 import { BareSlice } from '../vanilla/slice';
 import { expandSlices } from '../vanilla/slices-helpers';
 import { InternalStoreState } from '../vanilla/state';
 import { DispatchTx } from '../vanilla/store';
 import { DebugFunc } from '../vanilla/transaction';
-
-export const TX_META_SYNC_ORDER_COUNTER = 'TX_META_SYNC_ORDER_COUNTER';
 
 export interface ReplicaStoreInfo {
   storeName: string;
@@ -23,7 +21,7 @@ export interface MainStoreInfo {
 }
 
 export interface MainChannel {
-  sendTxToReplicas(tx: Transaction<any, any>): void;
+  sendTxToReplicas(replicaStoreName: string, tx: Transaction<any, any>): void;
   receiveTx(cb: (tx: Transaction<any, any>) => void): void;
   getReplicaStoreInfo: (replicaStoreName: string) => Promise<ReplicaStoreInfo>;
   provideMainStoreInfo: (cb: () => MainStoreInfo) => void;
@@ -62,6 +60,26 @@ interface SyncReplicaConfig<SbSync extends BareSlice> {
   slices: SbSync[];
   channel: ReplicaChannel;
 }
+
+export const sliceKeyToReplicaStoreLookup = weakCache(
+  (
+    replicaInfoMap: Record<string, ReplicaStoreInfo>,
+  ): Record<string, string[]> => {
+    const sliceKeyRecord: Record<string, string[]> = {};
+    for (const [replicaStoreName, info] of Object.entries(replicaInfoMap)) {
+      for (const sliceKey of info.syncSliceKeys) {
+        let val = sliceKeyRecord[sliceKey];
+        if (!val) {
+          val = [];
+          sliceKeyRecord[sliceKey] = val;
+        }
+        val.push(replicaStoreName);
+      }
+    }
+
+    return sliceKeyRecord;
+  },
+);
 
 export function createSyncState({
   type,
@@ -131,6 +149,24 @@ const defaultDispatchTx: DispatchTx<Transaction<any, any>> = (store, tx) => {
   store.updateState(newState, tx);
 };
 
+export const sendTxToReplicas = (
+  replicaInfos: Record<string, ReplicaStoreInfo>,
+  tx: Transaction<any, any>,
+  channel: MainChannel,
+) => {
+  const storeNames =
+    sliceKeyToReplicaStoreLookup(replicaInfos)[tx.targetSliceKey];
+
+  if (!storeNames) {
+    console.warn(`No replica store found for slice key ${tx.targetSliceKey}`);
+    return;
+  }
+
+  for (const replicaStoreName of storeNames) {
+    channel.sendTxToReplicas(replicaStoreName, tx);
+  }
+};
+
 function syncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice>({
   scheduler = idleCallbackScheduler(10),
   sync,
@@ -143,17 +179,15 @@ function syncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice>({
 }: {
   sync: SyncMainConfig<SbSync>;
 } & StoreConfig<SbOther>) {
-  let txOrderCounter = 0;
-
   const { state: internalState, syncSliceKeys } = createSyncState({
     syncSlices: sync.slices,
     otherSlices: slices,
     type: 'main',
   });
 
-  let replicasReady = false;
   let replicaSyncFailed = false;
   let queuedTx: Transaction<any, any>[] = [];
+  let replicaInfos: Record<string, ReplicaStoreInfo> | null = null;
 
   // validate the replica stores
   Promise.all(
@@ -169,11 +203,14 @@ function syncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice>({
         });
       }
 
-      queuedTx.forEach((tx) => {
-        sync.channel.sendTxToReplicas(tx);
-      });
+      replicaInfos = Object.fromEntries(
+        infos.map((info) => [info.storeName, info]),
+      );
+
+      for (const tx of queuedTx) {
+        sendTxToReplicas(replicaInfos, tx, sync.channel);
+      }
       queuedTx = [];
-      replicasReady = true;
       onSyncReady?.();
     })
     .catch((error) => {
@@ -186,8 +223,6 @@ function syncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice>({
     });
 
   const syncDispatchTx: DispatchTx<Transaction<any, any>> = (store, tx) => {
-    tx.metadata.setMetadata(TX_META_SYNC_ORDER_COUNTER, '' + txOrderCounter++);
-
     dispatchTx(store, tx);
 
     if (replicaSyncFailed) {
@@ -196,12 +231,11 @@ function syncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice>({
       );
       return;
     }
-
-    if (replicasReady) {
-      // send it to all the replica stores
-      sync.channel.sendTxToReplicas(tx);
-    } else {
+    if (!replicaInfos) {
       queuedTx.push(tx);
+    } else {
+      // send it to all the replica stores
+      sendTxToReplicas(replicaInfos, tx, sync.channel);
     }
   };
 
