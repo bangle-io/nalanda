@@ -1,14 +1,9 @@
 import waitForExpect from 'wait-for-expect';
 import { mergeSlices } from '..';
-import { createDispatchSpy, waitUntil } from '../../test-helpers';
-import { coreReadySlice } from '../../vanilla';
-import { CORE_SLICE_READY } from '../../vanilla/core-effects';
+import { createDispatchSpy } from '../../test-helpers';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
-import {
-  createSliceKey,
-  createSliceNameOpaque,
-} from '../../vanilla/internal-types';
+import { createSliceNameOpaque } from '../../vanilla/internal-types';
 import { AnySlice } from '../../vanilla/public-types';
 import { Slice } from '../../vanilla/slice';
 import { Store } from '../../vanilla/store';
@@ -428,9 +423,6 @@ describe('merging', () => {
 
       expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
         {
-          "key_$nalanda/CORE_SLICE_READY": {
-            "ready": false,
-          },
           "key_g1": {
             "g1State": 1,
           },
@@ -456,21 +448,12 @@ describe('merging', () => {
         expect(
           dispatchSpy
             .getDebugLogItems()
-            .find(
-              (d) =>
-                d.type === 'UPDATE_EFFECT' &&
-                d.source.find(
-                  (s) => s.sliceKey === createSliceKey(CORE_SLICE_READY),
-                ),
-            ),
+            .find((d) => d.type === 'UPDATE_EFFECT'),
         ).toBeDefined();
       });
 
       expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
         {
-          "key_$nalanda/CORE_SLICE_READY": {
-            "ready": true,
-          },
           "key_g1": {
             "g1State": 1,
           },
@@ -492,22 +475,13 @@ describe('merging', () => {
         }
       `);
 
-      expect(
-        dispatchSpy.getSimplifiedTransactions({ hideInternal: false }),
-      ).toEqual([
+      expect(dispatchSpy.getSimplifiedTransactions({})).toEqual([
         {
           actionId: 'updateG1State',
           dispatchSource: undefined,
           payload: [],
           sourceSliceKey: 'key_g1',
           targetSliceKey: 'key_g1',
-        },
-        {
-          actionId: 'ready',
-          dispatchSource: undefined,
-          payload: [],
-          sourceSliceKey: 'key_$nalanda/CORE_SLICE_READY',
-          targetSliceKey: 'key_$nalanda/CORE_SLICE_READY',
         },
         {
           actionId: 'updateT1State',
@@ -541,16 +515,6 @@ describe('merging', () => {
             "sourceSliceKey": "key_g1",
             "store": "test-store",
             "targetSliceKey": "key_g1",
-            "txId": "<txId>",
-            "type": "TX",
-          },
-          {
-            "actionId": "ready",
-            "dispatcher": undefined,
-            "payload": [],
-            "sourceSliceKey": "key_$nalanda/CORE_SLICE_READY",
-            "store": "test-store",
-            "targetSliceKey": "key_$nalanda/CORE_SLICE_READY",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -627,16 +591,6 @@ describe('merging', () => {
             "type": "TX",
           },
           {
-            "name": "<unknownEffect>",
-            "source": [
-              {
-                "actionId": "ready",
-                "sliceKey": "key_$nalanda/CORE_SLICE_READY",
-              },
-            ],
-            "type": "SYNC_UPDATE_EFFECT",
-          },
-          {
             "name": "t1Effect",
             "source": [
               {
@@ -724,16 +678,6 @@ describe('merging', () => {
               {
                 "actionId": "updateT3State",
                 "sliceKey": "key_z0:x0:t3",
-              },
-            ],
-            "type": "UPDATE_EFFECT",
-          },
-          {
-            "name": "<unknownEffect>",
-            "source": [
-              {
-                "actionId": "ready",
-                "sliceKey": "key_$nalanda/CORE_SLICE_READY",
               },
             ],
             "type": "UPDATE_EFFECT",

@@ -5,7 +5,7 @@ import {
 } from '../vanilla/internal-types';
 import { AnySlice } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
-import { InternalStoreState } from '../vanilla/state';
+import { checkUniqueKeys } from '../vanilla/slices-helpers';
 
 export function mergeSlices<N extends string, SL extends AnySlice>({
   name: parentName,
@@ -14,7 +14,7 @@ export function mergeSlices<N extends string, SL extends AnySlice>({
   name: N;
   children: SL[];
 }): Slice<N, object, any, any, any> {
-  InternalStoreState.checkUniqueKeys(children);
+  checkUniqueKeys(children);
 
   let mappingRecord: Map<string, AnySlice> = new Map();
 

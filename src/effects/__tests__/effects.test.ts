@@ -72,6 +72,8 @@ describe('run once', () => {
       };
     });
 
+    expect(once.spec.terminal).toBe(true);
+
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
