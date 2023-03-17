@@ -326,7 +326,7 @@ describe('basic test', () => {
       expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(0);
       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(0);
 
-      expect(result.mainOnSyncError.mock.calls[0][0]).toMatchInlineSnapshot(
+      expect(result.mainOnSyncError.mock.calls[0]?.[0]).toMatchInlineSnapshot(
         `[Error: Invalid Sync setup. Slice "key_testSlice1" is defined in replica store "test-replica-store-1" but not in main store "test-main".]`,
       );
     });
