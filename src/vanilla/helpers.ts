@@ -1,5 +1,7 @@
-import { Action, AnySlice } from './public-types';
+import { SliceKey } from './internal-types';
+import { Action, AnySlice, BareStore } from './public-types';
 import { BareSlice } from './slice';
+import { Store } from './store';
 
 const contextId = uuid(4);
 let counter = 0;
@@ -141,4 +143,8 @@ export function changeBareSlice<SL extends BareSlice>(
   cb: (sl: AnySlice) => AnySlice,
 ): SL {
   return cb(slice as unknown as AnySlice) as unknown as SL;
+}
+
+export function getSliceByKey(store: BareStore<any>, key: SliceKey): AnySlice {
+  return (store as Store).state.sliceLookupByKey[key] as AnySlice;
 }

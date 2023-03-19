@@ -9,6 +9,8 @@ export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
 export const TX_META_STORE_TX_ID = 'store-tx-id';
 export const TX_META_STORE_NAME = 'store-name';
 export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
+export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
+export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
 
 export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
@@ -18,8 +20,43 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly targetSliceName: SliceNameOpaque;
   public readonly payload: P;
   public readonly actionId: string;
-
   public readonly uid = 'txn_' + uuid();
+
+  toJSONObj(payloadSerializer: (payload: P) => unknown) {
+    return {
+      sourceSliceKey: this.sourceSliceKey,
+      targetSliceKey: this.targetSliceKey,
+      targetSliceName: this.targetSliceName,
+      sourceSliceName: this.config.sourceSliceName,
+      payload: payloadSerializer(this.payload),
+      actionId: this.actionId,
+      uid: this.uid,
+      metadata: this.metadata.toJSONObj(),
+    };
+  }
+
+  static fromJSONObj(
+    obj: ReturnType<Transaction<any, any>['toJSONObj']>,
+    payloadParser: (payload: any) => any,
+    info?: string,
+  ) {
+    let tx = new Transaction({
+      sourceSliceKey: obj.sourceSliceKey,
+      targetSliceKey: obj.targetSliceKey,
+      targetSliceName: obj.targetSliceName,
+      sourceSliceName: obj.sourceSliceName,
+      payload: payloadParser(obj.payload),
+      actionId: obj.actionId,
+    });
+    tx.metadata = Metadata.fromJSONObj(obj.metadata);
+    tx.metadata.appendMetadata(TX_META_DESERIALIZED_FROM, obj.uid);
+
+    if (info) {
+      tx.metadata.appendMetadata(TX_META_DESERIALIZED_META, info);
+    }
+
+    return tx;
+  }
 
   constructor(
     public readonly config: {
@@ -62,6 +99,16 @@ export class Transaction<N extends string, P extends unknown[]> {
 
 export class Metadata {
   private _metadata: Record<string, string> = Object.create(null);
+
+  static fromJSONObj(obj: Record<string, string>) {
+    let meta = new Metadata();
+    meta._metadata = { ...obj };
+    return meta;
+  }
+
+  toJSONObj() {
+    return { ...this._metadata };
+  }
 
   appendMetadata(key: string, val: string) {
     let existing = this.getMetadata(key);

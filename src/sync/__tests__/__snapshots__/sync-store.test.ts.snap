@@ -1,5 +1,101 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`basic test additional slices work in main 1`] = `
+[
+  {
+    "body": {
+      "mainStoreName": "test-main",
+      "storeName": "test-replica-store-1",
+      "syncSliceKeys": [
+        "key_testSlice1",
+      ],
+    },
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-info",
+  },
+  {
+    "body": {
+      "replicaStoreNames": [
+        "test-replica-store-1",
+      ],
+      "storeName": "test-main",
+      "syncSliceKeys": [
+        "key_testSlice1",
+        "key_mySlice",
+      ],
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "main-info",
+  },
+  {
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-ready",
+  },
+  {
+    "body": {
+      "actionId": "increment",
+      "config": {
+        "actionId": "increment",
+        "payload": [],
+        "sourceSliceKey": "key_testSlice1",
+        "sourceSliceName": "testSlice1",
+      },
+      "metadata": {
+        "_metadata": {
+          "store-name": "test-main",
+          "store-tx-id": "<<STORE_TX_ID>>",
+        },
+      },
+      "payload": [],
+      "sourceSliceKey": "key_testSlice1",
+      "targetSliceKey": "key_testSlice1",
+      "targetSliceName": "testSlice1",
+      "uid": "<<UID>>",
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "tx",
+  },
+]
+`;
+
+exports[`basic test having a sync slice in main but no replica 1`] = `
+[
+  {
+    "body": {
+      "mainStoreName": "test-main",
+      "storeName": "test-replica-store-1",
+      "syncSliceKeys": [],
+    },
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-info",
+  },
+  {
+    "body": {
+      "replicaStoreNames": [
+        "test-replica-store-1",
+      ],
+      "storeName": "test-main",
+      "syncSliceKeys": [
+        "key_testSlice1",
+      ],
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "main-info",
+  },
+  {
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-ready",
+  },
+]
+`;
+
 exports[`basic test one slice sync - case 1 1`] = `
 [
   {
@@ -79,6 +175,92 @@ exports[`basic test one slice sync - case 1 1`] = `
       },
     ],
     "type": "UPDATE_EFFECT",
+  },
+]
+`;
+
+exports[`basic test one slice sync - case 1 3`] = `
+[
+  {
+    "body": {
+      "mainStoreName": "test-main",
+      "storeName": "test-replica-store-1",
+      "syncSliceKeys": [
+        "key_testSlice1",
+      ],
+    },
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-info",
+  },
+  {
+    "body": {
+      "replicaStoreNames": [
+        "test-replica-store-1",
+      ],
+      "storeName": "test-main",
+      "syncSliceKeys": [
+        "key_testSlice1",
+      ],
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "main-info",
+  },
+  {
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-ready",
+  },
+  {
+    "body": {
+      "actionId": "increment",
+      "config": {
+        "actionId": "increment",
+        "payload": [],
+        "sourceSliceKey": "key_testSlice1",
+        "sourceSliceName": "testSlice1",
+      },
+      "metadata": {
+        "_metadata": {
+          "store-name": "test-main",
+          "store-tx-id": "<<STORE_TX_ID>>",
+        },
+      },
+      "payload": [],
+      "sourceSliceKey": "key_testSlice1",
+      "targetSliceKey": "key_testSlice1",
+      "targetSliceName": "testSlice1",
+      "uid": "<<UID>>",
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "tx",
+  },
+  {
+    "body": {
+      "actionId": "increment",
+      "config": {
+        "actionId": "increment",
+        "payload": [],
+        "sourceSliceKey": "key_testSlice1",
+        "sourceSliceName": "testSlice1",
+      },
+      "metadata": {
+        "_metadata": {
+          "store-name": "test-main",
+          "store-tx-id": "<<STORE_TX_ID>>",
+        },
+      },
+      "payload": [],
+      "sourceSliceKey": "key_testSlice1",
+      "targetSliceKey": "key_testSlice1",
+      "targetSliceName": "testSlice1",
+      "uid": "<<UID>>",
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "tx",
   },
 ]
 `;
@@ -168,6 +350,142 @@ exports[`basic test one slice sync - case 2 - replica slice depends on sync slic
       },
     ],
     "type": "UPDATE_EFFECT",
+  },
+]
+`;
+
+exports[`sync queuing with a send delay in main & replica 1`] = `
+[
+  {
+    "body": {
+      "mainStoreName": "test-main",
+      "storeName": "test-replica-store-1",
+      "syncSliceKeys": [
+        "key_testSlice1",
+      ],
+    },
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-info",
+  },
+  {
+    "body": {
+      "replicaStoreNames": [
+        "test-replica-store-1",
+      ],
+      "storeName": "test-main",
+      "syncSliceKeys": [
+        "key_testSlice1",
+      ],
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "main-info",
+  },
+  {
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "replica-ready",
+  },
+  {
+    "body": {
+      "actionId": "increment",
+      "config": {
+        "actionId": "increment",
+        "payload": [],
+        "sourceSliceKey": "key_testSlice1",
+        "sourceSliceName": "testSlice1",
+      },
+      "metadata": {
+        "_metadata": {
+          "store-name": "test-main",
+          "store-tx-id": "<<STORE_TX_ID>>",
+        },
+      },
+      "payload": [],
+      "sourceSliceKey": "key_testSlice1",
+      "targetSliceKey": "key_testSlice1",
+      "targetSliceName": "testSlice1",
+      "uid": "<<UID>>",
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "tx",
+  },
+  {
+    "body": {
+      "actionId": "increment",
+      "config": {
+        "actionId": "increment",
+        "payload": [],
+        "sourceSliceKey": "key_testSlice1",
+        "sourceSliceName": "testSlice1",
+      },
+      "metadata": {
+        "_metadata": {
+          "store-name": "test-main",
+          "store-tx-id": "<<STORE_TX_ID>>",
+        },
+      },
+      "payload": [],
+      "sourceSliceKey": "key_testSlice1",
+      "targetSliceKey": "key_testSlice1",
+      "targetSliceName": "testSlice1",
+      "uid": "<<UID>>",
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "tx",
+  },
+  {
+    "body": {
+      "actionId": "increment",
+      "config": {
+        "actionId": "increment",
+        "payload": [],
+        "sourceSliceKey": "key_testSlice1",
+        "sourceSliceName": "testSlice1",
+      },
+      "metadata": {
+        "_metadata": {
+          "store-name": "test-replica-store-1",
+          "store-tx-id": "<<STORE_TX_ID>>",
+        },
+      },
+      "payload": [],
+      "sourceSliceKey": "key_testSlice1",
+      "targetSliceKey": "key_testSlice1",
+      "targetSliceName": "testSlice1",
+      "uid": "<<UID>>",
+    },
+    "from": "test-replica-store-1",
+    "to": "test-main",
+    "type": "tx",
+  },
+  {
+    "body": {
+      "actionId": "increment",
+      "config": {
+        "actionId": "increment",
+        "payload": [],
+        "sourceSliceKey": "key_testSlice1",
+        "sourceSliceName": "testSlice1",
+      },
+      "metadata": {
+        "_metadata": {
+          "store-name": "test-replica-store-1",
+          "store-tx-id": "<<STORE_TX_ID>>",
+        },
+      },
+      "payload": [],
+      "sourceSliceKey": "key_testSlice1",
+      "targetSliceKey": "key_testSlice1",
+      "targetSliceName": "testSlice1",
+      "uid": "<<UID>>",
+    },
+    "from": "test-main",
+    "to": "test-replica-store-1",
+    "type": "tx",
   },
 ]
 `;

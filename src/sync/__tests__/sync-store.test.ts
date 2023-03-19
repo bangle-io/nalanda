@@ -11,13 +11,15 @@ import {
   createSyncStore,
   MainChannel,
   MainStoreInfo,
+  SyncMessage,
   ReplicaChannel,
   ReplicaStoreInfo,
   sliceKeyToReplicaStoreLookup,
 } from '../sync-store';
 import { BareSlice } from '../../vanilla/slice';
-import { changeEffect } from '../../effects';
+import { changeEffect, syncChangeEffect } from '../../effects';
 import { InternalStoreState } from '../../vanilla/state';
+import { abortableSetTimeout } from '../helpers';
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
 }
@@ -33,6 +35,17 @@ const testSlice1 = createSlice([], {
     }),
   },
   selectors: {},
+});
+
+let aborter = new AbortController();
+
+beforeEach(() => {
+  aborter = new AbortController();
+});
+
+afterEach(async () => {
+  aborter.abort();
+  await sleep(0);
 });
 
 const testSlice2 = createSlice([], {
@@ -72,118 +85,6 @@ const depOnTestSlice1Slice = createSlice([testSlice1], {
   },
 });
 
-type Ref<T> = {
-  current: T | undefined;
-};
-
-class MyMainChannel implements MainChannel {
-  constructor(
-    public replicaRefs: Ref<MyReplicaChannel>[],
-    public opts: {
-      // the time to wait before sending tx to replicas
-      sendDelay?: number | undefined;
-      // the time to wait before sending store info
-      setupDelay?: number | undefined;
-    } = {},
-  ) {}
-
-  _mainStoreInfo!: () => MainStoreInfo;
-  _receiveTx!: (tx: Transaction<any, any>) => void;
-
-  private _getReplicaChannel = (name: string) => {
-    const match = this.replicaRefs.find(
-      (ref) => ref.current?.opts.replicaStoreName === name,
-    );
-
-    if (!match?.current) {
-      throw new Error('replicaRef is not set');
-    }
-
-    return match.current;
-  };
-
-  provideMainStoreInfo(cb: () => MainStoreInfo): void {
-    this._mainStoreInfo = cb;
-  }
-
-  destroy(): void {}
-
-  getReplicaStoreInfo(replicaStoreName: string) {
-    return sleep(this.opts?.setupDelay || 0).then(() =>
-      this._getReplicaChannel(replicaStoreName)._replicaStoreInfo(),
-    );
-  }
-
-  receiveTx(cb: (tx: Transaction<any, any>) => void): void {
-    this._receiveTx = cb;
-  }
-
-  sendTxToReplicas(replicaStoreName: string, tx: Transaction<any, any>): void {
-    if (this.opts?.sendDelay != null) {
-      sleep(this.opts.sendDelay)
-        .then(() => {
-          this._getReplicaChannel(replicaStoreName)._receiveTx(tx);
-        })
-        .catch(() => {});
-    } else {
-      this._getReplicaChannel(replicaStoreName)._receiveTx(tx);
-    }
-  }
-}
-
-class MyReplicaChannel implements ReplicaChannel {
-  constructor(
-    public mainRef: Ref<MyMainChannel>,
-    public opts: {
-      replicaStoreName: string;
-      // the time to wait before sending tx to main
-      sendDelay?: number | undefined;
-      // the time to wait before sending replica info
-      setupDelay?: number | undefined;
-    },
-  ) {}
-
-  _replicaStoreInfo!: () => ReplicaStoreInfo;
-  _receiveTx!: (tx: Transaction<any, any>) => void;
-
-  private _getMainChannel = () => {
-    const current = this.mainRef.current;
-    if (!current) {
-      throw new Error('mainRef is not set');
-    }
-
-    return current;
-  };
-
-  provideReplicaStoreInfo(cb: () => ReplicaStoreInfo): void {
-    this._replicaStoreInfo = cb;
-  }
-
-  destroy(): void {}
-
-  getMainStoreInfo() {
-    return sleep(this.opts?.setupDelay || 0).then(() => {
-      return this._getMainChannel()._mainStoreInfo();
-    });
-  }
-
-  receiveTx(cb: (tx: Transaction<any, any>) => void): void {
-    this._receiveTx = cb;
-  }
-
-  sendTxToMain(tx: Transaction<any, any>): void {
-    if (this.opts?.sendDelay != null) {
-      sleep(this.opts.sendDelay)
-        .then(() => {
-          this._getMainChannel()._receiveTx(tx);
-        })
-        .catch(() => {});
-    } else {
-      this._getMainChannel()._receiveTx(tx);
-    }
-  }
-}
-
 const createBasicPair = ({
   main = {},
   replica = {},
@@ -192,7 +93,6 @@ const createBasicPair = ({
     slices?: BareSlice[];
     syncSlices?: BareSlice[];
     replicaStores?: string[];
-    setupDelay?: number;
     sendDelay?: number;
   };
   replica?: {
@@ -203,28 +103,29 @@ const createBasicPair = ({
     sendDelay?: number;
   };
 }) => {
-  let mainOnSyncError = jest.fn((error) => {
-    console.error(error);
-  });
+  let sendMessages: SyncMessage[] = [];
+
+  const cleanMessages = (message: SyncMessage) => {
+    message = JSON.parse(
+      JSON.stringify(message, (key, value) => {
+        if (key === 'uid') {
+          return '<<UID>>';
+        }
+        if (key === 'store-tx-id') {
+          return '<<STORE_TX_ID>>';
+        }
+        return value;
+      }),
+    );
+    return message;
+  };
+
+  let mainOnSyncError = jest.fn((error) => {});
   let mainOnSyncReady = jest.fn();
-  let replicaOnSyncError = jest.fn((error) => {
-    console.error(error);
-  });
+  let replicaOnSyncError = jest.fn((error) => {});
   let replicaOnSyncReady = jest.fn();
 
   const replicaStoreName = 'test-replica-store-1';
-  let mainRef: Ref<MyMainChannel> = { current: undefined };
-  let replicaRef: Ref<MyReplicaChannel> = { current: undefined };
-
-  mainRef.current = new MyMainChannel([replicaRef], {
-    setupDelay: main.setupDelay,
-    sendDelay: main.sendDelay,
-  });
-  replicaRef.current = new MyReplicaChannel(mainRef, {
-    replicaStoreName,
-    setupDelay: replica.setupDelay,
-    sendDelay: replica.sendDelay,
-  });
 
   let mainDispatchSpy = createDispatchSpy();
 
@@ -235,9 +136,22 @@ const createBasicPair = ({
     scheduler: timeoutSchedular(0),
     sync: {
       type: 'main',
-      channel: mainRef.current,
       replicaStores,
       slices: main.syncSlices || [],
+      sendMessage: (message) => {
+        sendMessages.push(cleanMessages(message));
+        if (main.sendDelay) {
+          abortableSetTimeout(
+            () => {
+              replicaStore.receiveMessage(message);
+            },
+            mainStore.store.destroySignal,
+            main.sendDelay,
+          );
+        } else {
+          replicaStore.receiveMessage(message);
+        }
+      },
     },
     slices: main.slices || [],
     debug: mainDispatchSpy.debug,
@@ -248,29 +162,70 @@ const createBasicPair = ({
 
   let replicaDispatchSpy = createDispatchSpy();
 
-  const replicaStore = createSyncStore({
-    storeName: replicaStoreName,
-    scheduler: timeoutSchedular(0),
-    sync: {
-      type: 'replica',
-      channel: replicaRef.current,
-      mainStore: replica.mainStore || 'test-main',
-      slices: replica.syncSlices || [],
+  let replicaStore: any;
+
+  const setupReplica = () => {
+    let _replicaStore = createSyncStore({
+      storeName: replicaStoreName,
+      scheduler: timeoutSchedular(0),
+      sync: {
+        type: 'replica',
+        mainStore: replica.mainStore || 'test-main',
+        slices: replica.syncSlices || [],
+        sendMessage: (message) => {
+          sendMessages.push(cleanMessages(message));
+          if (replica.sendDelay) {
+            abortableSetTimeout(
+              () => {
+                mainStore.receiveMessage(message);
+              },
+              mainStore.store.destroySignal,
+              replica.sendDelay,
+            );
+          } else {
+            mainStore.receiveMessage(message);
+          }
+        },
+      },
+      slices: replica.slices || [],
+      debug: replicaDispatchSpy.debug,
+      dispatchTx: replicaDispatchSpy.dispatch,
+      onSyncError: replicaOnSyncError,
+      onSyncReady: replicaOnSyncReady,
+    });
+
+    replicaStore = _replicaStore;
+  };
+
+  if (replica.setupDelay) {
+    abortableSetTimeout(
+      () => {
+        setupReplica();
+      },
+      mainStore.store.destroySignal,
+      replica.setupDelay,
+    );
+  } else {
+    setupReplica();
+  }
+
+  aborter.signal.addEventListener(
+    'abort',
+    () => {
+      mainStore?.store.destroy();
+      replicaStore?.store.destroy();
     },
-    slices: replica.slices || [],
-    debug: replicaDispatchSpy.debug,
-    dispatchTx: replicaDispatchSpy.dispatch,
-    onSyncError: replicaOnSyncError,
-    onSyncReady: replicaOnSyncReady,
-  });
+    { once: true },
+  );
 
   return {
     mainDispatchSpy,
     replicaDispatchSpy,
-    replicaRef,
-    mainRef,
-    mainStore,
-    replicaStore,
+    sendMessages,
+    mainStore: mainStore.store,
+    getReplicaStore: () => {
+      return replicaStore.store;
+    },
     mainOnSyncError,
     replicaOnSyncError,
     mainOnSyncReady,
@@ -279,34 +234,6 @@ const createBasicPair = ({
 };
 
 describe('basic test', () => {
-  test('empty works', async () => {
-    const result = createBasicPair({});
-    await waitForExpect(() => {
-      expect(result.mainDispatchSpy.getDebugLogItems()).toHaveLength(0);
-    });
-
-    expect(await result.replicaRef.current?.getMainStoreInfo())
-      .toMatchInlineSnapshot(`
-      {
-        "replicaStoreNames": [
-          "test-replica-store-1",
-        ],
-        "storeName": "test-main",
-        "syncSliceKeys": [],
-      }
-    `);
-
-    expect(
-      await result.mainRef.current?.getReplicaStoreInfo('test-replica-store-1'),
-    ).toMatchInlineSnapshot(`
-      {
-        "mainStoreName": "test-main",
-        "storeName": "test-replica-store-1",
-        "syncSliceKeys": [],
-      }
-    `);
-  });
-
   test('erroring - sync slice missing in main', async () => {
     const result = createBasicPair({
       main: {
@@ -384,6 +311,7 @@ describe('basic test', () => {
     expect(testSlice1.getState(result.mainStore.state)).toEqual({
       counter: 1,
     });
+    expect(result.sendMessages).toMatchSnapshot();
   });
 
   test('additional slices work in main', async () => {
@@ -417,9 +345,11 @@ describe('basic test', () => {
       counter: 1,
     });
 
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+    expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
       counter: 1,
     });
+
+    expect(result.sendMessages).toMatchSnapshot();
   });
 
   test('one slice sync - case 1', async () => {
@@ -450,12 +380,12 @@ describe('basic test', () => {
       counter: 1,
     });
 
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+    expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
       counter: 0,
     });
 
     await waitForExpect(() => {
-      expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+      expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
         counter: 2,
       });
     });
@@ -485,6 +415,8 @@ describe('basic test', () => {
         },
       ]
     `);
+
+    expect(result.sendMessages).toMatchSnapshot();
   });
 
   test('one slice sync - case 2 - replica slice depends on sync slice', async () => {
@@ -516,12 +448,12 @@ describe('basic test', () => {
       counter: 1,
     });
 
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+    expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
       counter: 0,
     });
 
     await waitForExpect(() => {
-      expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+      expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
         counter: 2,
       });
     });
@@ -564,7 +496,7 @@ describe('sync queuing', () => {
     });
 
     await waitForExpect(() => {
-      expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
+      expect(result.mainOnSyncReady).toHaveBeenCalledTimes(0);
       expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(0);
     });
 
@@ -573,88 +505,20 @@ describe('sync queuing', () => {
     await sleep(50);
     expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(0);
 
-    // replica effect should still be called, since we have only delayed the
-    // getMainStoreInfo call in replica, which will prevent tx from replica
-    // going to main
-    expect(replicaEffectCalled).toBeCalledTimes(1);
-
-    // even waiting for 50 the state shouldnt update, as we have queued the
-    // txs in replica for 300ms
-    await sleep(50);
-
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+    expect(testSlice1.getState(result.mainStore.state)).toEqual({
       counter: 1,
     });
 
-    await sleep(200);
+    await sleep(300);
 
     expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(1);
 
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+    expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
       counter: 3,
     });
   });
 
-  test('with a setup delay in main', async () => {
-    const mainEffectCalled = jest.fn();
-    const watcherSlice = changeEffect(
-      'watch-in-replica-store',
-      {
-        counter: testSlice1.pick((state) => state.counter),
-      },
-      ({ counter }, dispatch) => {
-        if (counter === 1) {
-          dispatch(testSlice1.actions.increment());
-          dispatch(testSlice1.actions.increment());
-          mainEffectCalled();
-        }
-      },
-    );
-
-    const result = createBasicPair({
-      main: {
-        syncSlices: [testSlice1, watcherSlice],
-        slices: [testSlice2],
-        setupDelay: 300,
-      },
-      replica: {
-        syncSlices: [testSlice1],
-      },
-    });
-
-    expect(testSlice1.getState(result.mainStore.state)).toEqual({
-      counter: 0,
-    });
-
-    await waitForExpect(() => {
-      expect(result.mainOnSyncReady).toHaveBeenCalledTimes(0);
-      expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(1);
-    });
-
-    result.mainStore.dispatch(testSlice1.actions.increment());
-
-    await sleep(10);
-
-    // main store shouldn't be blocked, it should get the update still
-    expect(testSlice1.getState(result.mainStore.state)).toEqual({
-      counter: 3,
-    });
-
-    // replica store should still be blocked
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
-      counter: 0,
-    });
-
-    await waitForExpect(() => {
-      expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
-    });
-
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
-      counter: 3,
-    });
-  });
-
-  test('with a setup delay in main & replica', async () => {
+  test('with a send delay in main & replica', async () => {
     const mainEffectCalled = jest.fn();
     const replicaEffectCalled = jest.fn();
     const watcherMainSlice = changeEffect(
@@ -687,16 +551,17 @@ describe('sync queuing', () => {
       main: {
         syncSlices: [testSlice1],
         slices: [watcherMainSlice],
-        setupDelay: 300,
+        sendDelay: 10,
       },
       replica: {
         syncSlices: [testSlice1],
         slices: [watcherReplicaSlice],
-        setupDelay: 300,
+        sendDelay: 10,
       },
     });
 
     result.mainStore.dispatch(testSlice1.actions.increment());
+    await sleep(100);
 
     await waitForExpect(() => {
       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
@@ -706,8 +571,203 @@ describe('sync queuing', () => {
     expect(testSlice1.getState(result.mainStore.state)).toEqual({
       counter: 3,
     });
-    expect(testSlice1.getState(result.replicaStore.state)).toEqual({
+    expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
       counter: 3,
+    });
+
+    expect(result.sendMessages).toMatchSnapshot();
+  });
+
+  test('both count to 100, with replica starting first', async () => {
+    const watcherMainSlice = changeEffect(
+      'watch-in-main-store',
+      {
+        counter: testSlice1.pick((state) => state.counter),
+      },
+      ({ counter }, dispatch) => {
+        if (counter >= 100) {
+          return;
+        }
+
+        if (counter % 2 === 1) {
+          dispatch(testSlice1.actions.increment());
+        }
+      },
+    );
+
+    const watcherReplicaSlice = changeEffect(
+      'watch-in-replica-store',
+      {
+        counter: testSlice1.pick((state) => state.counter),
+      },
+      ({ counter }, dispatch) => {
+        if (counter >= 100) {
+          return;
+        }
+        if (counter % 2 === 0) {
+          dispatch(testSlice1.actions.increment());
+        }
+      },
+    );
+
+    const fiveSlice = createSlice([], {
+      name: 'five',
+      initState: {
+        fives: 0,
+      },
+      actions: {
+        count: () => (state) => ({
+          ...state,
+          fives: state.fives + 1,
+        }),
+      },
+      selectors: {},
+    });
+
+    const fiveWatch = syncChangeEffect(
+      'watch-five-replica',
+      {
+        fiveSlice: fiveSlice.passivePick((state) => state.fives),
+        counter: testSlice1.pick((state) => state.counter),
+      },
+      ({ counter }, dispatch) => {
+        if (counter % 5 === 0) {
+          dispatch(fiveSlice.actions.count());
+        }
+      },
+    );
+
+    const result = createBasicPair({
+      main: {
+        syncSlices: [testSlice1],
+        slices: [watcherMainSlice],
+        sendDelay: 2,
+      },
+      replica: {
+        syncSlices: [testSlice1],
+        slices: [fiveSlice, fiveWatch, watcherReplicaSlice],
+        sendDelay: 3,
+      },
+    });
+
+    await sleep(100);
+
+    await waitForExpect(() => {
+      expect(testSlice1.getState(result.mainStore.state)).toEqual({
+        counter: 100,
+      });
+      expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
+        counter: 100,
+      });
+
+      expect(fiveSlice.getState(result.getReplicaStore().state)).toEqual({
+        fives: 21,
+      });
+    });
+
+    expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
+      body: expect.objectContaining({
+        actionId: 'increment',
+      }),
+      from: 'test-replica-store-1',
+      to: 'test-main',
+      type: 'tx',
+    });
+  });
+
+  test('both count to 100, with main starting first', async () => {
+    const watcherMainSlice = changeEffect(
+      'watch-in-main-store',
+      {
+        counter: testSlice1.pick((state) => state.counter),
+      },
+      ({ counter }, dispatch) => {
+        if (counter >= 100) {
+          return;
+        }
+
+        if (counter % 2 === 0) {
+          dispatch(testSlice1.actions.increment());
+        }
+      },
+    );
+
+    const fiveSlice = createSlice([], {
+      name: 'five',
+      initState: {
+        fives: 0,
+      },
+      actions: {
+        count: () => (state) => ({
+          ...state,
+          fives: state.fives + 1,
+        }),
+      },
+      selectors: {},
+    });
+
+    const fiveWatch = syncChangeEffect(
+      'watch-five-replica',
+      {
+        fiveSlice: fiveSlice.passivePick((state) => state.fives),
+        counter: testSlice1.pick((state) => state.counter),
+      },
+      ({ counter }, dispatch) => {
+        if (counter % 5 === 0) {
+          dispatch(fiveSlice.actions.count());
+        }
+      },
+    );
+
+    const watcherReplicaSlice = changeEffect(
+      'watch-in-replica-store',
+      {
+        counter: testSlice1.pick((state) => state.counter),
+      },
+      ({ counter }, dispatch) => {
+        if (counter >= 100) {
+          return;
+        }
+        if (counter % 2 === 1) {
+          dispatch(testSlice1.actions.increment());
+        }
+      },
+    );
+
+    const result = createBasicPair({
+      main: {
+        syncSlices: [testSlice1],
+        slices: [watcherMainSlice, fiveSlice, fiveWatch],
+        sendDelay: 1,
+      },
+      replica: {
+        syncSlices: [testSlice1],
+        slices: [watcherReplicaSlice],
+        sendDelay: 2,
+      },
+    });
+
+    await sleep(100);
+
+    await waitForExpect(() => {
+      expect(testSlice1.getState(result.mainStore.state)).toEqual({
+        counter: 100,
+      });
+      expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
+        counter: 100,
+      });
+      expect(fiveSlice.getState(result.mainStore.state)).toEqual({
+        fives: 21,
+      });
+    });
+    // first should be main
+    expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
+      body: expect.objectContaining({
+        actionId: 'increment',
+      }),
+      from: 'test-main',
+      to: 'test-replica-store-1',
+      type: 'tx',
     });
   });
 });

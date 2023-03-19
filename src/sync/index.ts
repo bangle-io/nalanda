@@ -1,2 +1,10 @@
 export * from './action-serializer';
-export * from './sync-store';
+export { createSyncStore } from './sync-store';
+
+export type {
+  MainStoreInfo,
+  ReplicaStoreInfo,
+  MainChannel,
+  ReplicaChannel,
+  SyncMessage,
+} from './sync-store';

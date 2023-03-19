@@ -1,12 +1,46 @@
 import { Store, Transaction } from '../vanilla';
-import { idleCallbackScheduler, Scheduler } from '../vanilla/effect';
+import { Scheduler, timeoutSchedular } from '../vanilla/effect';
 import { changeBareSlice, weakCache } from '../vanilla/helpers';
-import { BareStore } from '../vanilla/public-types';
+import { AnySlice } from '../vanilla/public-types';
 import { BareSlice } from '../vanilla/slice';
 import { expandSlices } from '../vanilla/slices-helpers';
 import { InternalStoreState } from '../vanilla/state';
 import { DispatchTx } from '../vanilla/store';
 import { DebugFunc } from '../vanilla/transaction';
+import { abortableSetTimeout } from './helpers';
+
+// replica sends replica info to main
+// then main sends main info to replica
+// then replica sends replica ready to main
+export type SyncMessage =
+  | {
+      type: 'replica-info';
+      body: ReplicaStoreInfo;
+      from: string;
+      to: string;
+    }
+  | {
+      type: 'main-info';
+      body: MainStoreInfo;
+      from: string;
+      to: string;
+    }
+  | {
+      type: 'tx';
+      from: string;
+      to: string;
+      body: Transaction<any, any>;
+    }
+  | {
+      from: string;
+      to: string;
+      type: 'replica-ready';
+    }
+  | {
+      from: string;
+      to: string;
+      type: 'handshake-error';
+    };
 
 export interface ReplicaStoreInfo {
   storeName: string;
@@ -22,17 +56,12 @@ export interface MainStoreInfo {
 
 export interface MainChannel {
   sendTxToReplicas(replicaStoreName: string, tx: Transaction<any, any>): void;
-  receiveTx(cb: (tx: Transaction<any, any>) => void): void;
-  getReplicaStoreInfo: (replicaStoreName: string) => Promise<ReplicaStoreInfo>;
-  provideMainStoreInfo: (cb: () => MainStoreInfo) => void;
   destroy(): void;
 }
 
 export interface ReplicaChannel {
   sendTxToMain(tx: Transaction<any, any>): void;
-  receiveTx(cb: (tx: Transaction<any, any>) => void): void;
-  getMainStoreInfo: () => Promise<MainStoreInfo>;
-  provideReplicaStoreInfo: (cb: () => ReplicaStoreInfo) => void;
+  getMainStoreInfo: (replicaInfo: ReplicaStoreInfo) => Promise<MainStoreInfo>;
   destroy(): void;
 }
 
@@ -51,14 +80,16 @@ interface SyncMainConfig<SbSync extends BareSlice> {
   type: 'main';
   slices: SbSync[];
   replicaStores: string[];
-  channel: MainChannel;
+  sendMessage: (message: SyncMessage) => void;
+  validate?: ({ syncSlices }: { syncSlices: AnySlice[] }) => void;
 }
 
 interface SyncReplicaConfig<SbSync extends BareSlice> {
   type: 'replica';
   mainStore: string;
   slices: SbSync[];
-  channel: ReplicaChannel;
+  sendMessage: (message: SyncMessage) => void;
+  validate?: ({ syncSlices }: { syncSlices: AnySlice[] }) => void;
 }
 
 export const sliceKeyToReplicaStoreLookup = weakCache(
@@ -104,6 +135,7 @@ export function createSyncState({
 
   return {
     syncSliceKeys,
+    syncSlices,
     state: InternalStoreState.create([
       ...syncSlices,
       ...expandSlices(otherSlices),
@@ -119,27 +151,17 @@ export function createSyncStore<
   ...config
 }: {
   sync: SyncMainConfig<SbSync> | SyncReplicaConfig<SbSync>;
-} & StoreConfig<SbOther>): BareStore<SbSync | SbOther> {
+} & StoreConfig<SbOther>) {
   const store =
     sync.type === 'main'
-      ? syncStoreMain({
+      ? new SyncStoreMain({
           ...config,
           sync,
         })
-      : syncStoreReplica({
+      : new SyncStoreReplica({
           ...config,
           sync,
         });
-
-  store.destroySignal.addEventListener(
-    'abort',
-    () => {
-      sync.channel.destroy();
-    },
-    {
-      once: true,
-    },
-  );
 
   return store;
 }
@@ -150,9 +172,10 @@ const defaultDispatchTx: DispatchTx<Transaction<any, any>> = (store, tx) => {
 };
 
 export const sendTxToReplicas = (
+  mainStoreName: string,
   replicaInfos: Record<string, ReplicaStoreInfo>,
   tx: Transaction<any, any>,
-  channel: MainChannel,
+  send: (message: Extract<SyncMessage, { type: 'tx' }>) => void,
 ) => {
   const storeNames =
     sliceKeyToReplicaStoreLookup(replicaInfos)[tx.targetSliceKey];
@@ -163,229 +186,415 @@ export const sendTxToReplicas = (
   }
 
   for (const replicaStoreName of storeNames) {
-    channel.sendTxToReplicas(replicaStoreName, tx);
+    send({
+      type: 'tx',
+      body: tx,
+      from: mainStoreName,
+      to: replicaStoreName,
+    });
   }
 };
 
-function syncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice>({
-  scheduler = idleCallbackScheduler(10),
-  sync,
-  slices,
-  storeName,
-  dispatchTx = defaultDispatchTx,
-  debug,
-  onSyncError,
-  onSyncReady,
-}: {
-  sync: SyncMainConfig<SbSync>;
-} & StoreConfig<SbOther>) {
-  const { state: internalState, syncSliceKeys } = createSyncState({
-    syncSlices: sync.slices,
-    otherSlices: slices,
-    type: 'main',
-  });
+type Channel = {
+  send?: (message: SyncMessage) => void;
+  readonly receive: (message: SyncMessage) => void;
+};
 
-  let replicaSyncFailed = false;
-  let queuedTx: Transaction<any, any>[] = [];
-  let replicaInfos: Record<string, ReplicaStoreInfo> | null = null;
+class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
+  public readonly store: Store;
+  public sendMessage: (message: SyncMessage) => void;
 
-  // validate the replica stores
-  Promise.all(
-    sync.replicaStores.map((replicaStoreName) => {
-      return sync.channel.getReplicaStoreInfo(replicaStoreName);
-    }),
-  )
-    .then((infos) => {
-      for (const info of infos) {
-        validateReplicaInfo(info, {
-          storeName: storeName,
-          syncSliceKeys,
-        });
-      }
+  private providedDispatchTx: DispatchTx<Transaction<any, any>>;
+  private isReady = false;
+  private queuedTx: Transaction<any, any>[] = [];
+  private readonly storeName: string;
+  private readyReplicas = new Set<string>();
+  private replicaInfos: Record<string, ReplicaStoreInfo> = {};
+  private replicaSyncError = false;
+  private onSyncReady: undefined | (() => void);
+  private onSyncError: undefined | ((error: Error) => void);
 
-      replicaInfos = Object.fromEntries(
-        infos.map((info) => [info.storeName, info]),
-      );
+  private providedReplicatedStoreNames: string[];
 
-      for (const tx of queuedTx) {
-        sendTxToReplicas(replicaInfos, tx, sync.channel);
-      }
-      queuedTx = [];
-      onSyncReady?.();
-    })
-    .catch((error) => {
-      replicaSyncFailed = true;
-      if (onSyncError) {
-        onSyncError(error);
-      } else {
-        throw error;
-      }
-    });
+  private readonly syncSliceKeys: Set<string>;
+  private readonly syncSlices: BareSlice[];
 
-  const syncDispatchTx: DispatchTx<Transaction<any, any>> = (store, tx) => {
-    dispatchTx(store, tx);
+  private storeInfo: MainStoreInfo;
 
-    if (replicaSyncFailed) {
+  private dispatchTx = (store: Store, tx: Transaction<any, any>) => {
+    this.providedDispatchTx(store, tx);
+
+    if (!this.syncSliceKeys.has(tx.targetSliceKey)) {
+      return;
+    }
+
+    if (this.replicaSyncError) {
       console.warn(
-        `Main store "${storeName}" was not able to sync with all replica stores. Transaction "${tx.uid}" was not sent to any replica stores.`,
+        `Main store "${this.storeName}" was not able to sync with all replica stores. Transaction "${tx.uid}" was not sent to any replica stores.`,
       );
       return;
     }
-    if (!replicaInfos) {
-      queuedTx.push(tx);
+    if (!this.isReady) {
+      this.queuedTx.push(tx);
     } else {
       // send it to all the replica stores
-      sendTxToReplicas(replicaInfos, tx, sync.channel);
+      sendTxToReplicas(this.storeName, this.replicaInfos, tx, this.sendMessage);
     }
   };
 
-  const store = new Store(
-    internalState as InternalStoreState,
-    storeName,
-    (store, tx) => {
-      if (!syncSliceKeys.has(tx.targetSliceKey)) {
-        dispatchTx(store, tx);
-        return;
-      }
-      syncDispatchTx(store, tx);
-    },
-    scheduler,
-    false,
-    debug,
-  );
+  constructor(
+    private config: {
+      sync: SyncMainConfig<SbSync>;
+    } & StoreConfig<SbOther>,
+  ) {
+    const { storeName, sync, debug, scheduler, dispatchTx } = config;
+    this.storeName = storeName;
 
-  sync.channel.receiveTx((tx) => {
-    const targetSliceKey = tx.targetSliceKey;
+    this.providedDispatchTx = dispatchTx || defaultDispatchTx;
 
-    if (!syncSliceKeys.has(targetSliceKey)) {
-      throw new Error(
-        `Slice "${targetSliceKey}" not found. Main store "${storeName}" received transaction targeting a slice which was not found in the sync slices.`,
-      );
-    }
+    this.onSyncReady = config.onSyncReady;
+    this.onSyncError = config.onSyncError;
+    this.sendMessage = config.sync.sendMessage;
 
-    //  This is a transaction coming from one of the replica stores
-    syncDispatchTx(store, tx);
-  });
+    this.providedReplicatedStoreNames = sync.replicaStores;
+    const {
+      state: internalState,
+      syncSliceKeys,
+      syncSlices,
+    } = createSyncState({
+      syncSlices: config.sync.slices,
+      otherSlices: config.slices,
+      type: 'main',
+    });
 
-  sync.channel.provideMainStoreInfo(() => {
-    return {
+    this.syncSliceKeys = syncSliceKeys;
+    this.syncSlices = syncSlices;
+
+    config.sync.validate?.({ syncSlices: syncSlices as AnySlice[] });
+
+    this.storeInfo = {
       storeName,
       syncSliceKeys: [...syncSliceKeys],
       replicaStoreNames: sync.replicaStores,
     };
-  });
 
-  return store;
+    // keep this as the last thing ALWAYS to avoid
+    this.store = new Store(
+      internalState as InternalStoreState,
+      config.storeName,
+      this.dispatchTx,
+      scheduler,
+      false,
+      debug,
+    );
+  }
+
+  public receiveMessage(m: SyncMessage) {
+    const type = m.type;
+    switch (type) {
+      case 'tx': {
+        const tx = m.body;
+        const targetSliceKey = tx.targetSliceKey;
+
+        if (!this.syncSliceKeys.has(targetSliceKey)) {
+          throw new Error(
+            `Slice "${targetSliceKey}" not found. Main store "${this.storeName}" received transaction targeting a slice which was not found in the sync slices.`,
+          );
+        }
+
+        //  This is a transaction coming from one of the replica stores
+        this.dispatchTx(this.store, tx);
+        break;
+      }
+
+      case 'replica-info': {
+        const replicaInfo = m.body;
+        try {
+          validateReplicaInfo(replicaInfo, this.storeInfo);
+        } catch (error) {
+          this.replicaSyncError = true;
+
+          if (error instanceof Error) {
+            this.sendMessage({
+              type: 'handshake-error',
+              from: this.storeName,
+              to: replicaInfo.storeName,
+            });
+            this.onSyncError?.(error);
+          }
+          break;
+        }
+        this.replicaInfos[replicaInfo.storeName] = replicaInfo;
+
+        this.sendMessage({
+          type: 'main-info',
+          body: this.storeInfo,
+          from: this.storeName,
+          to: replicaInfo.storeName,
+        });
+        this.onReady();
+        break;
+      }
+
+      case 'main-info': {
+        throw new Error('Main store should not receive main-info message');
+        break;
+      }
+
+      case 'replica-ready': {
+        const from = m.from;
+
+        if (!this.providedReplicatedStoreNames.includes(from)) {
+          throw new Error(
+            `Replica store "${from}" is not registered with main store "${this.storeName}".`,
+          );
+        }
+
+        this.readyReplicas.add(from);
+        this.onReady();
+        break;
+      }
+
+      case 'handshake-error': {
+        this.replicaSyncError = true;
+        this.onSyncError?.(new Error('Handshake error'));
+        break;
+      }
+
+      default: {
+        let _exhaustiveCheck: never = type;
+        throw new Error(`Unknown message type "${_exhaustiveCheck}"`);
+      }
+    }
+  }
+
+  private onReady() {
+    const totalReplicas = this.providedReplicatedStoreNames.length;
+    if (
+      this.isReady ||
+      Object.keys(this.replicaInfos).length !== totalReplicas ||
+      this.readyReplicas.size !== totalReplicas ||
+      this.replicaSyncError
+    ) {
+      return;
+    }
+
+    for (const tx of this.queuedTx) {
+      sendTxToReplicas(this.storeName, this.replicaInfos, tx, this.sendMessage);
+    }
+
+    this.isReady = true;
+    this.queuedTx = [];
+    this.onSyncReady?.();
+  }
 }
 
-function syncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice>({
-  scheduler = idleCallbackScheduler(10),
-  sync,
-  slices,
-  storeName,
-  dispatchTx = defaultDispatchTx,
-  debug,
-  onSyncError,
-  onSyncReady,
-}: StoreConfig<SbOther> & {
-  sync: SyncReplicaConfig<SbSync>;
-}) {
-  const { state: internalState, syncSliceKeys } = createSyncState({
-    syncSlices: sync.slices,
-    otherSlices: slices,
-    type: 'replica',
-  });
+class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
+  public readonly store: Store;
+  public sendMessage: (message: SyncMessage) => void;
 
-  let mainReady = false;
-  let mainSyncError = false;
-  let queuedTx: Transaction<any, any>[] = [];
+  private isReady = false;
+  private mainInfo: MainStoreInfo | null = null;
+  private mainStoreName: string;
+  private mainSyncError = false;
+  private queuedTx: Transaction<any, any>[] = [];
+  private readonly syncSliceKeys: Set<string>;
+  private readonly syncSlices: BareSlice[];
+  private storeInfo: ReplicaStoreInfo;
+  private storeName: string;
 
-  sync.channel
-    .getMainStoreInfo()
-    .then((info) => {
-      validateMainInfo(info, {
-        mainStoreName: sync.mainStore,
-        syncSliceKeys,
-        storeName,
-      });
+  private localDispatch: DispatchTx<Transaction<any, any>>;
 
-      for (const tx of queuedTx) {
-        sync.channel.sendTxToMain(tx);
-      }
-      queuedTx = [];
-      mainReady = true;
-      onSyncReady?.();
-    })
-    .catch((error) => {
-      mainSyncError = true;
-      if (onSyncError) {
-        onSyncError(error);
-      } else {
-        throw error;
-      }
+  private onSyncReady: (() => void) | undefined;
+  private onSyncError: ((error: Error) => void) | undefined;
+
+  constructor({
+    scheduler = timeoutSchedular(10),
+    sync,
+    slices,
+    storeName,
+    dispatchTx = defaultDispatchTx,
+    debug,
+    onSyncError,
+    onSyncReady,
+  }: StoreConfig<SbOther> & {
+    sync: SyncReplicaConfig<SbSync>;
+  }) {
+    const {
+      state: internalState,
+      syncSliceKeys,
+      syncSlices,
+    } = createSyncState({
+      syncSlices: sync.slices,
+      otherSlices: slices,
+      type: 'replica',
     });
 
-  const localDispatch: DispatchTx<Transaction<any, any>> = (store, tx) => {
-    if (!syncSliceKeys.has(tx.targetSliceKey)) {
-      dispatchTx(store, tx);
+    sync.validate?.({ syncSlices: syncSlices as AnySlice[] });
+
+    this.localDispatch = dispatchTx;
+    this.mainStoreName = sync.mainStore;
+    this.onSyncReady = onSyncReady;
+    this.onSyncError = onSyncError;
+    this.sendMessage = sync.sendMessage;
+    this.storeInfo = {
+      storeName,
+      syncSliceKeys: [...syncSliceKeys],
+      mainStoreName: sync.mainStore,
+    };
+    this.storeName = storeName;
+    this.syncSliceKeys = syncSliceKeys;
+    this.syncSlices = syncSlices;
+
+    // keep this as the last thing ALWAYS to avoid
+    this.store = new Store(
+      internalState as InternalStoreState,
+      storeName,
+      this.syncedDispatch,
+      scheduler,
+      false,
+      debug,
+    );
+
+    abortableSetTimeout(
+      () => {
+        this.sendMessage({
+          type: 'replica-info',
+          body: this.storeInfo,
+          from: this.storeName,
+          to: this.mainStoreName,
+        });
+      },
+      this.store.destroySignal,
+      0,
+    );
+
+    abortableSetTimeout(
+      () => {
+        if (!this.isReady) {
+          onSyncError?.(
+            new Error(`Replica store "${this.storeName}" timed out`),
+          );
+        }
+      },
+      this.store.destroySignal,
+      500,
+    );
+  }
+
+  private syncedDispatch: DispatchTx<Transaction<any, any>> = (store, tx) => {
+    if (!this.syncSliceKeys.has(tx.targetSliceKey)) {
+      this.localDispatch(store, tx);
       return;
     }
 
-    if (!mainReady) {
-      queuedTx.push(tx);
+    if (!this.isReady) {
+      this.queuedTx.push(tx);
       return;
     }
 
-    if (mainSyncError) {
+    if (this.mainSyncError) {
       console.warn(
-        `Replica store "${storeName}" was not able to sync with main store. Transaction "${tx.uid}" was not sent to main store.`,
+        `Replica store "${this.storeName}" was not able to sync with main store. Transaction "${tx.uid}" was not sent to main store.`,
       );
       return;
     }
 
     // send it to the main store
-    // and wait on the main store to send it back to 'receiveTx'
-    sync.channel.sendTxToMain(tx);
+    // and wait on the main store to send it back via `receiveMessage`
+    this.sendMessage({
+      type: 'tx',
+      body: tx,
+      from: this.storeName,
+      to: this.mainStoreName,
+    });
   };
-  const store = new Store(
-    internalState as InternalStoreState,
-    storeName,
-    localDispatch,
-    scheduler,
-    false,
-    debug,
-  );
 
-  sync.channel.receiveTx((tx) => {
-    const targetSliceKey = tx.targetSliceKey;
-    // it is possible replica is only focusing on a subset of slices
-    if (!syncSliceKeys.has(targetSliceKey)) {
-      console.debug(
-        `Replica store "${storeName}" received a transaction targeting a slice which was not found in the sync slices.`,
-      );
+  public receiveMessage(m: SyncMessage) {
+    const type = m.type;
+    switch (type) {
+      case 'tx': {
+        const tx = m.body;
+        const targetSliceKey = tx.targetSliceKey;
+        // it is possible replica is only focusing on a subset of slices
+        if (!this.syncSliceKeys.has(targetSliceKey)) {
+          console.debug(
+            `Replica store "${this.storeName}" received a transaction targeting a slice which was not found in the sync slices.`,
+          );
+          return;
+        }
+        // tx is coming from main store directly apply it to the local store
+        this.localDispatch(this.store, tx);
+        break;
+      }
+
+      case 'replica-info':
+      case 'replica-ready': {
+        throw new Error(
+          'Replica store should not receive replica-info/replica-ready message',
+        );
+        break;
+      }
+
+      case 'main-info': {
+        try {
+          validateMainInfo(m.body, this.storeInfo);
+        } catch (error) {
+          if (error instanceof Error) {
+            this.mainSyncError = true;
+            this.sendMessage({
+              type: 'handshake-error',
+              from: this.storeName,
+              to: this.mainStoreName,
+            });
+            this.onSyncError?.(error);
+          }
+          break;
+        }
+
+        this.mainInfo = m.body;
+
+        this.sendMessage({
+          type: 'replica-ready',
+          from: this.storeName,
+          to: this.mainStoreName,
+        });
+        this.onReady();
+        break;
+      }
+
+      case 'handshake-error': {
+        this.mainSyncError = true;
+        this.onSyncError?.(new Error('Handshake error'));
+        break;
+      }
+
+      default: {
+        let _exhaustiveCheck: never = type;
+        throw new Error(`Unknown message type "${_exhaustiveCheck}"`);
+      }
+    }
+  }
+
+  private onReady() {
+    if (!this.mainInfo || this.isReady) {
       return;
     }
-    // tx is coming from main store directly apply it to the local store
-    dispatchTx(store, tx);
-  });
 
-  sync.channel.provideReplicaStoreInfo(() => {
-    return {
-      storeName,
-      syncSliceKeys: [...syncSliceKeys],
-      mainStoreName: sync.mainStore,
-    };
-  });
+    this.isReady = true;
 
-  return store;
+    for (const tx of this.queuedTx) {
+      this.syncedDispatch(this.store, tx);
+    }
+
+    this.queuedTx = [];
+    this.onSyncReady?.();
+  }
 }
 
 function validateReplicaInfo(
   replicaInfo: ReplicaStoreInfo,
-  mainStoreConfig: {
-    storeName: string;
-    syncSliceKeys: Set<string>;
-  },
+  mainStoreConfig: MainStoreInfo,
 ) {
   if (replicaInfo.mainStoreName !== mainStoreConfig.storeName) {
     throw new Error(
@@ -394,7 +603,7 @@ function validateReplicaInfo(
   }
 
   for (const sliceKey of replicaInfo.syncSliceKeys) {
-    if (!mainStoreConfig.syncSliceKeys.has(sliceKey)) {
+    if (!mainStoreConfig.syncSliceKeys.includes(sliceKey)) {
       throw new Error(
         `Invalid Sync setup. Slice "${sliceKey}" is defined in replica store "${replicaInfo.storeName}" but not in main store "${mainStoreConfig.storeName}".`,
       );
@@ -404,11 +613,7 @@ function validateReplicaInfo(
 
 function validateMainInfo(
   mainStoreInfo: MainStoreInfo,
-  replicaConfig: {
-    storeName: string;
-    mainStoreName: string;
-    syncSliceKeys: Set<string>;
-  },
+  replicaConfig: ReplicaStoreInfo,
 ) {
   if (!mainStoreInfo.replicaStoreNames.includes(replicaConfig.storeName)) {
     throw new Error(

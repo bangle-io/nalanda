@@ -1,6 +1,8 @@
+export { getSliceByKey } from './helpers';
+
 export { createDispatchSpy } from '../test-helpers';
 
-export { timeoutSchedular } from './effect';
+export { timeoutSchedular, idleCallbackScheduler } from './effect';
 
 export { createSlice } from './create';
 export { Slice } from './slice';
