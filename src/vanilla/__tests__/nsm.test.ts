@@ -2,7 +2,7 @@ import { waitUntil } from '../../test-helpers';
 import { createKey, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 import { expectType } from '../internal-types';
-import { Action } from '../public-types';
+import { ActionBuilder } from '../public-types';
 import { Store } from '../store';
 
 function sleep(t = 20): Promise<void> {
@@ -535,7 +535,7 @@ describe('sync effects', () => {
 });
 
 describe('effects', () => {
-  const actions: { increment: Action<any[], any, any> } = {
+  const actions: { increment: ActionBuilder<any[], any, any> } = {
     increment: () => (state) => {
       return { ...state, num: state.num + 2 };
     },

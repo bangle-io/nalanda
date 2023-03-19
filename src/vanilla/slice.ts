@@ -13,7 +13,7 @@ import {
 import {
   Effect,
   SelectorFn,
-  Action,
+  ActionBuilder,
   AnySlice,
   TxCreator,
 } from './public-types';
@@ -41,7 +41,7 @@ export type PickOpts = {
 function actionsToTxCreators(
   sliceKey: SliceKey,
   sliceName: SliceNameOpaque,
-  actions: Record<string, Action<any[], any, any>>,
+  actions: Record<string, ActionBuilder<any[], any, any>>,
 ) {
   return mapObjectValues(actions, (action, actionId): TxCreator => {
     return (...params) => {
@@ -88,7 +88,7 @@ export interface SliceSpec<
   N extends string,
   SS,
   DS extends AnySlice,
-  A extends Record<string, Action<any[], SS, DS>>,
+  A extends Record<string, ActionBuilder<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
   name: N;
@@ -106,7 +106,7 @@ export class Slice<
   N extends string,
   SS,
   DS extends AnySlice,
-  A extends Record<string, Action<any[], SS, DS>>,
+  A extends Record<string, ActionBuilder<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > implements BareSlice<N, SS>
 {
@@ -122,7 +122,7 @@ export class Slice<
     return this.actions;
   }
 
-  get actions(): ActionsToTxCreator<N, A> {
+  get actions(): ActionBuilderToTxCreator<N, A> {
     return this.txCreators as any;
   }
 
@@ -289,9 +289,9 @@ export class Slice<
   }
 }
 
-export type ActionsToTxCreator<
+export type ActionBuilderToTxCreator<
   N extends string,
-  A extends Record<string, Action<any[], any, any>>,
+  A extends Record<string, ActionBuilder<any[], any, any>>,
 > = {
   [KK in keyof A]: A[KK] extends (...param: infer P) => any
     ? TxCreator<N, P>

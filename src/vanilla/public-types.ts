@@ -11,7 +11,7 @@ export type TxCreator<K extends string = any, P extends unknown[] = any> = (
   ...payload: P
 ) => Transaction<K, P>;
 
-export type Action<P extends any[], SS, DS extends BareSlice> = {
+export type ActionBuilder<P extends any[], SS, DS extends BareSlice> = {
   (...payload: P): (sliceState: SS, storeState: StoreState<DS>) => SS;
   metadata?: Record<string | symbol, any>;
 };

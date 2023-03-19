@@ -1,5 +1,5 @@
 import { SliceKey } from './internal-types';
-import { Action, AnySlice, BareStore } from './public-types';
+import { AnySlice, BareStore } from './public-types';
 import { BareSlice } from './slice';
 import { Store } from './store';
 
@@ -35,16 +35,6 @@ export function findDuplications<T>(arr: T[]): T[] {
   }
 
   return [...dupes];
-}
-
-export function createAction<P extends any[], SS, DS extends BareSlice>(
-  dependencies: DS[],
-  opts: {
-    initState: SS;
-    action: Action<P, SS, DS>;
-  },
-): Action<P, SS, DS> {
-  return opts.action;
 }
 
 export function weakCache<T extends object, R>(
