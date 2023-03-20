@@ -295,7 +295,11 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
       case 'tx': {
         const tx = m.body;
         const targetSliceKey = tx.targetSliceKey;
-
+        if (!(tx instanceof Transaction)) {
+          throw new Error(
+            `SyncStoreMain received a message with a body that was not a Transaction.`,
+          );
+        }
         if (!this.syncSliceKeys.has(targetSliceKey)) {
           throw new Error(
             `Slice "${targetSliceKey}" not found. Main store "${this.storeName}" received transaction targeting a slice which was not found in the sync slices.`,

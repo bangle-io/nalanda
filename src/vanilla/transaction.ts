@@ -22,7 +22,7 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly actionId: string;
   public readonly uid = 'txn_' + uuid();
 
-  toJSONObj(payloadSerializer: (payload: P) => unknown) {
+  toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
     return {
       sourceSliceKey: this.sourceSliceKey,
       targetSliceKey: this.targetSliceKey,
@@ -37,7 +37,7 @@ export class Transaction<N extends string, P extends unknown[]> {
 
   static fromJSONObj(
     obj: ReturnType<Transaction<any, any>['toJSONObj']>,
-    payloadParser: (payload: any) => any,
+    payloadParser: (payload: string) => unknown[],
     info?: string,
   ) {
     let tx = new Transaction({

@@ -3,7 +3,11 @@ import { mergeSlices } from '..';
 import { createDispatchSpy } from '../../test-helpers';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
-import { createSliceNameOpaque } from '../../vanilla/internal-types';
+import { getActionBuilderByKey } from '../../vanilla/helpers';
+import {
+  createSliceKey,
+  createSliceNameOpaque,
+} from '../../vanilla/internal-types';
 import { AnySlice } from '../../vanilla/public-types';
 import { Slice } from '../../vanilla/slice';
 import { Store } from '../../vanilla/store';
@@ -251,6 +255,21 @@ describe('merging', () => {
           ],
         ]
       `);
+    });
+
+    test('getActionBuilderByKey works on merged slices', () => {
+      const store = Store.create({
+        storeName: 'test-store',
+        state: [g1, z0],
+      });
+
+      expect(
+        getActionBuilderByKey(
+          store,
+          createSliceKey('key_z0:x0:t3'),
+          'updateT3State',
+        ),
+      ).toBe(t3.spec.actions.updateT3State);
     });
 
     test('static slices are never modified', () => {
@@ -687,3 +706,5 @@ describe('merging', () => {
     });
   });
 });
+
+describe('getActionBuilderByKey', () => {});

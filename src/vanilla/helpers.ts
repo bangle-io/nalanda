@@ -1,7 +1,12 @@
-import { SliceKey } from './internal-types';
-import { AnySlice, BareStore } from './public-types';
-import { BareSlice } from './slice';
-import { Store } from './store';
+import type { SliceKey } from './internal-types';
+import type {
+  ActionBuilder,
+  AnySlice,
+  BareStore,
+  EmptySlice,
+} from './public-types';
+import type { BareSlice, Slice } from './slice';
+import type { Store } from './store';
 
 const contextId = uuid(4);
 let counter = 0;
@@ -135,6 +140,27 @@ export function changeBareSlice<SL extends BareSlice>(
   return cb(slice as unknown as AnySlice) as unknown as SL;
 }
 
-export function getSliceByKey(store: BareStore<any>, key: SliceKey): AnySlice {
-  return (store as Store).state.sliceLookupByKey[key] as AnySlice;
+export function getSliceByKey(
+  store: BareStore<any> | Store,
+  key: SliceKey,
+): EmptySlice | undefined {
+  return (store as Store).state.sliceLookupByKey[key] as EmptySlice;
+}
+
+export function getActionBuilderByKey(
+  store: BareStore<any> | Store,
+  key: SliceKey,
+  actionId: string,
+): undefined | ActionBuilder<any[], any, any> {
+  const slice:
+    | undefined
+    | Slice<
+        string,
+        any,
+        AnySlice,
+        Record<string, ActionBuilder<any[], any, any>>,
+        {}
+      > = getSliceByKey(store, key);
+
+  return slice?.spec.actions[actionId];
 }

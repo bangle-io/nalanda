@@ -1,4 +1,4 @@
-export { getSliceByKey } from './helpers';
+export { getSliceByKey, getActionBuilderByKey } from './helpers';
 
 export { createDispatchSpy } from '../test-helpers';
 
