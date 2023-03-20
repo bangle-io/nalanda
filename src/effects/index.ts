@@ -1,10 +1,5 @@
 import { ExtractReturnTypes } from '../vanilla/internal-types';
-import {
-  AnySlice,
-  BareStore,
-  Effect,
-  EmptySlice,
-} from '../vanilla/public-types';
+import { AnySlice, BareStore, Effect } from '../vanilla/public-types';
 import { PickOpts, Slice } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
 import type { ReducedStore } from '../vanilla/store';

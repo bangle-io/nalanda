@@ -111,9 +111,6 @@ const createBasicPair = ({
         if (key === 'uid') {
           return '<<UID>>';
         }
-        if (key === 'store-tx-id') {
-          return '<<STORE_TX_ID>>';
-        }
         return value;
       }),
     );

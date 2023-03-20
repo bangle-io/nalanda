@@ -1,15 +1,10 @@
-import { incrementalId } from './helpers';
 import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 
 import type { BareSlice } from './slice';
 import { InternalStoreState, StoreState } from './state';
 import { DebugFunc, Transaction, txLog } from './transaction';
-import {
-  TX_META_DISPATCH_SOURCE,
-  TX_META_STORE_NAME,
-  TX_META_STORE_TX_ID,
-} from './transaction';
+import { TX_META_DISPATCH_SOURCE, TX_META_STORE_NAME } from './transaction';
 import { BareStore } from './public-types';
 import { SliceContext } from './internal-types';
 import { expandSlices } from './slices-helpers';
@@ -71,7 +66,6 @@ export class Store implements BareStore<any> {
     }
     // TODO add a check to make sure tx is actually allowed
     // based on the slice dependencies
-    tx.metadata.setMetadata(TX_META_STORE_TX_ID, incrementalId());
     tx.metadata.setMetadata(TX_META_STORE_NAME, this.storeName);
 
     if (debugDispatch) {

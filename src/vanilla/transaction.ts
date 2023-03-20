@@ -5,8 +5,14 @@ import {
   SliceNameOpaque,
 } from './internal-types';
 
+const contextId = uuid(4);
+let counter = 0;
+
+function incrementalId() {
+  return `tx_${contextId}-${counter++}`;
+}
+
 export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
-export const TX_META_STORE_TX_ID = 'store-tx-id';
 export const TX_META_STORE_NAME = 'store-name';
 export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
 export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
@@ -20,7 +26,7 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly targetSliceName: SliceNameOpaque;
   public readonly payload: P;
   public readonly actionId: string;
-  public readonly uid = 'tx_' + uuid();
+  public readonly uid = incrementalId();
 
   toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
     return {
@@ -161,7 +167,7 @@ export function txLog(tx: Transaction<any, any>): TransactionLog {
     actionId: tx.config.actionId,
     dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
     store: tx.metadata.getMetadata(TX_META_STORE_NAME),
-    txId: tx.metadata.getMetadata(TX_META_STORE_TX_ID),
+    txId: tx.uid,
     payload: tx.payload,
   };
 }
