@@ -20,7 +20,7 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly targetSliceName: SliceNameOpaque;
   public readonly payload: P;
   public readonly actionId: string;
-  public readonly uid = 'txn_' + uuid();
+  public readonly uid = 'tx_' + uuid();
 
   toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
     return {
@@ -59,7 +59,13 @@ export class Transaction<N extends string, P extends unknown[]> {
   }
 
   constructor(
+    // source and target slice key are the same by default
+    // 'source' means the slice that created the transaction
+    /// for ex slice1.actions.foo() -> slice1 is the source
+    //  most of the time, the source and target are the same
+    // but sometimes in merging, the source and target are different
     public readonly config: {
+      // TODO: remove sourceSliceKey ? See store.ts reduced store TODO
       sourceSliceKey: SliceKey;
       sourceSliceName: N;
       targetSliceKey?: SliceKey;

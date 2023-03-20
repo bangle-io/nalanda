@@ -335,16 +335,16 @@ export function resolveSliceInContext(
   sliceLookupByKey: Record<SliceKey, BareSlice>,
   context?: SliceContext,
 ): BareSlice {
-  const sourceSliceKey = context?.sliceKey;
+  const sliceKey = context?.sliceKey;
 
-  if (!sourceSliceKey || sourceSliceKey === currentSlice.key) {
+  if (!sliceKey || sliceKey === currentSlice.key) {
     return currentSlice;
   }
 
-  const sourceSlice = sliceLookupByKey[sourceSliceKey];
+  const sourceSlice = sliceLookupByKey[sliceKey];
 
   if (!sourceSlice) {
-    throw new Error(`Slice "${sourceSliceKey}" not found in store state`);
+    throw new Error(`Slice "${sliceKey}" not found in store state`);
   }
   const resolvedKey = sourceSlice.keyMap.resolve(currentSlice.nameOpaque);
   const mappedSlice = resolvedKey

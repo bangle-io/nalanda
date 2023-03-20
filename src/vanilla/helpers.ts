@@ -10,6 +10,7 @@ import type { Store } from './store';
 
 const contextId = uuid(4);
 let counter = 0;
+
 export function incrementalId() {
   return `${contextId}-${counter++}`;
 }

@@ -94,7 +94,7 @@ describe('Single slice', () => {
     `);
 
     await waitForExpect(() => {
-      expect(dispatchSpy.getDebugLogItems()).toHaveLength(5);
+      expect(dispatchSpy.getDebugLogItems()).toHaveLength(4);
     });
 
     expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
@@ -142,20 +142,6 @@ describe('Single slice', () => {
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
-        },
-        {
-          "name": "testEffect",
-          "source": [
-            {
-              "actionId": "testAction",
-              "sliceKey": "key_test",
-            },
-            {
-              "actionId": "testAction",
-              "sliceKey": "key_test",
-            },
-          ],
-          "type": "UPDATE_EFFECT",
         },
       ]
     `);

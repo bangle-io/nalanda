@@ -187,10 +187,16 @@ export class ReducedStore<SB extends BareSlice> {
         this.internalStoreState.sliceLookupByKey[sliceContext.sliceKey];
 
       if (matchingSlice) {
-        const newKey = matchingSlice?.keyMap.resolve(tx.targetSliceName);
-        if (newKey) {
-          tx = tx.changeTargetSlice(newKey);
+        const newTargetSliceKey = matchingSlice?.keyMap.resolve(
+          tx.targetSliceName,
+        );
+        if (newTargetSliceKey) {
+          tx = tx.changeTargetSlice(newTargetSliceKey);
         }
+        // TODO: we also have a source slice key field and that will currently be wrong
+        // and will need resolution similar to target slice key
+        // this is because source is set when calling something slice1.actions.foo()
+        // this will set source key from slice1, which might not be the correct source.
       }
     }
 

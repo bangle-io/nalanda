@@ -405,7 +405,7 @@ describe('basic test', () => {
         },
         {
           "actionId": "increment",
-          "dispatcher": undefined,
+          "dispatcher": "watch-in-main(changeEffect)",
           "payload": [],
           "sourceSliceKey": "key_testSlice1",
           "store": "test-main",

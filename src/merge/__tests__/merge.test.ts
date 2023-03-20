@@ -467,7 +467,7 @@ describe('merging', () => {
         expect(
           dispatchSpy
             .getDebugLogItems()
-            .find((d) => d.type === 'UPDATE_EFFECT'),
+            .find((d) => d.type === 'SYNC_UPDATE_EFFECT'),
         ).toBeDefined();
       });
 
@@ -642,64 +642,6 @@ describe('merging', () => {
               },
             ],
             "type": "SYNC_UPDATE_EFFECT",
-          },
-          {
-            "name": "t1Effect",
-            "source": [
-              {
-                "actionId": "updateG1State",
-                "sliceKey": "key_g1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-            ],
-            "type": "UPDATE_EFFECT",
-          },
-          {
-            "name": "t2Effect",
-            "source": [
-              {
-                "actionId": "updateG1State",
-                "sliceKey": "key_g1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-            ],
-            "type": "UPDATE_EFFECT",
-          },
-          {
-            "name": "t3Effect",
-            "source": [
-              {
-                "actionId": "updateG1State",
-                "sliceKey": "key_g1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-              {
-                "actionId": "updateT3State",
-                "sliceKey": "key_z0:x0:t3",
-              },
-            ],
-            "type": "UPDATE_EFFECT",
           },
         ]
       `);

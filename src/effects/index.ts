@@ -113,6 +113,7 @@ export const changeEffect = <
       {}
     >
   > = {
+    name: name + `(changeEffect)`,
     init(slice, store, ref: EffectRef) {
       ref.firstRun = true;
       ref.prevCleanup = undefined;
