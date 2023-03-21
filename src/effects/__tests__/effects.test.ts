@@ -1,4 +1,4 @@
-import { changeEffect, syncChangeEffect } from '../index';
+import { changeEffect, syncChangeEffect } from '../effects';
 import { createKey, slice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { Store } from '../../vanilla/store';
