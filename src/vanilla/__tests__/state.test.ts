@@ -469,3 +469,32 @@ describe('State creation', () => {
     expect(mySlice3.resolveSelectors(appState)).toEqual(result1);
   });
 });
+
+describe('Override init state', () => {
+  const mySlice1 = slice({
+    key: createKey('mySlice1', [], { num1: 0 }),
+    actions: {},
+  });
+  const mySlice2 = slice({
+    key: createKey('mySlice2', [], { num2: 0 }),
+    actions: {},
+  });
+  test('can override state', () => {
+    const appState = InternalStoreState.create([mySlice1, mySlice2], {
+      mySlice1: { num1: 5 },
+    });
+
+    expect(mySlice1.getState(appState).num1).toBe(5);
+  });
+
+  test('throws error if slice not found', () => {
+    expect(() =>
+      InternalStoreState.create([mySlice1, mySlice2], {
+        mySlice1: { num1: 5 },
+        xSlice: { num1: 5 },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Some slice names (xSlice) in initStateOverride were not found in the provided slices"`,
+    );
+  });
+});

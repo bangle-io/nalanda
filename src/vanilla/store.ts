@@ -32,6 +32,7 @@ export class Store implements BareStore<any> {
     state,
     storeName,
     debug,
+    initStateOverride,
   }: {
     disableSideEffects?: boolean;
     dispatchTx?: DispatchTx<Transaction<any, any>>;
@@ -39,12 +40,15 @@ export class Store implements BareStore<any> {
     state: StoreState<SB> | SB[];
     storeName: string;
     debug?: DebugFunc | undefined;
+    // A record of slice name and the override state for that slice.
+    // See InternalStoreState.create for more info.
+    initStateOverride?: Record<string, unknown>;
   }): BareStore<SB> {
     if (!(state instanceof InternalStoreState)) {
       if (Array.isArray(state)) {
         let slices: BareSlice[] = expandSlices(state);
 
-        state = InternalStoreState.create(slices);
+        state = InternalStoreState.create(slices, initStateOverride);
       }
     }
 

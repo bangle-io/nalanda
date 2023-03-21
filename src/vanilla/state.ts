@@ -43,14 +43,45 @@ export class InternalStoreState implements StoreState<any> {
 
   public readonly sliceLookupByKey: SliceLookupByKey;
 
-  static create<SL extends BareSlice>(slices: SL[]): StoreState<SL> {
+  /**
+   *
+   * @param slices - the slices to use to create the store state
+   * @param initStateOverride - optional state to override the initial state of the slices
+   *                          Note! that this is a record of slice name and not slice key.
+   *                          If there are multiple slices with the same name, all of them will be overridden.
+   * @returns
+   */
+  static create<SL extends BareSlice>(
+    slices: SL[],
+    initStateOverride?: Record<string, unknown>,
+  ): StoreState<SL> {
     validateSlices(slices);
 
     const instance = new InternalStoreState(slices);
 
-    // initialize state
     for (const slice of slices) {
       instance.slicesCurrentState[slice.key] = slice.initState;
+    }
+
+    if (initStateOverride) {
+      const overriddenSlices = new Set<string>(Object.keys(initStateOverride));
+      for (const slice of slices) {
+        if (
+          Object.prototype.hasOwnProperty.call(initStateOverride, slice.name)
+        ) {
+          instance.slicesCurrentState[slice.key] =
+            initStateOverride[slice.name];
+
+          overriddenSlices.delete(slice.name);
+        }
+      }
+      if (overriddenSlices.size > 0) {
+        throw new Error(
+          `Some slice names (${[...overriddenSlices].join(
+            ',',
+          )}) in initStateOverride were not found in the provided slices`,
+        );
+      }
     }
 
     return instance;
