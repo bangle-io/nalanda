@@ -1,13 +1,22 @@
+import { uuid } from './helpers';
 import {
   createSliceNameOpaque,
   SliceKey,
   SliceNameOpaque,
 } from './internal-types';
 
+const contextId = uuid(4);
+let counter = 0;
+
+function incrementalId() {
+  return `tx_${contextId}-${counter++}`;
+}
+
 export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
-export const TX_META_STORE_TX_ID = 'store-tx-id';
 export const TX_META_STORE_NAME = 'store-name';
 export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
+export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
+export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
 
 export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
@@ -17,9 +26,52 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly targetSliceName: SliceNameOpaque;
   public readonly payload: P;
   public readonly actionId: string;
+  public readonly uid = incrementalId();
+
+  toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
+    return {
+      sourceSliceKey: this.sourceSliceKey,
+      targetSliceKey: this.targetSliceKey,
+      targetSliceName: this.targetSliceName,
+      sourceSliceName: this.config.sourceSliceName,
+      payload: payloadSerializer(this.payload),
+      actionId: this.actionId,
+      uid: this.uid,
+      metadata: this.metadata.toJSONObj(),
+    };
+  }
+
+  static fromJSONObj(
+    obj: ReturnType<Transaction<any, any>['toJSONObj']>,
+    payloadParser: (payload: string) => unknown[],
+    info?: string,
+  ) {
+    let tx = new Transaction({
+      sourceSliceKey: obj.sourceSliceKey,
+      targetSliceKey: obj.targetSliceKey,
+      targetSliceName: obj.targetSliceName,
+      sourceSliceName: obj.sourceSliceName,
+      payload: payloadParser(obj.payload),
+      actionId: obj.actionId,
+    });
+    tx.metadata = Metadata.fromJSONObj(obj.metadata);
+    tx.metadata.appendMetadata(TX_META_DESERIALIZED_FROM, obj.uid);
+
+    if (info) {
+      tx.metadata.appendMetadata(TX_META_DESERIALIZED_META, info);
+    }
+
+    return tx;
+  }
 
   constructor(
+    // source and target slice key are the same by default
+    // 'source' means the slice that created the transaction
+    /// for ex slice1.actions.foo() -> slice1 is the source
+    //  most of the time, the source and target are the same
+    // but sometimes in merging, the source and target are different
     public readonly config: {
+      // TODO: remove sourceSliceKey ? See store.ts reduced store TODO
       sourceSliceKey: SliceKey;
       sourceSliceName: N;
       targetSliceKey?: SliceKey;
@@ -59,6 +111,16 @@ export class Transaction<N extends string, P extends unknown[]> {
 
 export class Metadata {
   private _metadata: Record<string, string> = Object.create(null);
+
+  static fromJSONObj(obj: Record<string, string>) {
+    let meta = new Metadata();
+    meta._metadata = { ...obj };
+    return meta;
+  }
+
+  toJSONObj() {
+    return { ...this._metadata };
+  }
 
   appendMetadata(key: string, val: string) {
     let existing = this.getMetadata(key);
@@ -105,7 +167,7 @@ export function txLog(tx: Transaction<any, any>): TransactionLog {
     actionId: tx.config.actionId,
     dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
     store: tx.metadata.getMetadata(TX_META_STORE_NAME),
-    txId: tx.metadata.getMetadata(TX_META_STORE_TX_ID),
+    txId: tx.uid,
     payload: tx.payload,
   };
 }

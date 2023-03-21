@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { AnyFn } from '../vanilla/internal-types';
-import { Action, SelectorFn } from '../vanilla/public-types';
+import { ActionBuilder, SelectorFn } from '../vanilla/public-types';
 
 import type { Slice } from '../vanilla/slice';
 import { zodFindUnsafeTypes } from './zod';
@@ -25,12 +25,12 @@ export function serialAction<
   DS extends AnyActionSlice,
 >(
   schema: T,
-  cb: Action<[z.infer<T>], SS, DS>,
+  cb: ActionBuilder<[z.infer<T>], SS, DS>,
   opts?: {
     parse?: (schema: T, data: unknown) => [z.infer<T>];
     serialize?: (schema: T, payload: [z.infer<T>]) => unknown;
   },
-): Action<[z.infer<T>], SS, DS> {
+): ActionBuilder<[z.infer<T>], SS, DS> {
   let unsafeTypes = zodFindUnsafeTypes(schema);
 
   if (unsafeTypes.length > 0) {
@@ -63,14 +63,16 @@ export class ActionSerializer<
   N extends string,
   SS extends object,
   DS extends AnyActionSlice,
-  A extends Record<string, Action<any[], SS, DS>>,
+  A extends Record<string, ActionBuilder<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
   static create<SL extends AnyActionSlice>(slice: SL) {
     return new ActionSerializer(slice);
   }
 
-  getRawAction = (actionId: string): Action<any, any, any> | undefined => {
+  getRawAction = (
+    actionId: string,
+  ): ActionBuilder<any, any, any> | undefined => {
     const action = this.slice.spec.actions[actionId];
 
     if (!action) {
@@ -84,7 +86,7 @@ export class ActionSerializer<
 
   getRawSerializedAction(actionId: string):
     | {
-        action: Action<any, any, any>;
+        action: ActionBuilder<any, any, any>;
         serialData: ActionSerialData<any>;
       }
     | undefined {

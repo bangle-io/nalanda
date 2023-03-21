@@ -1,8 +1,16 @@
-import { Action } from './public-types';
-import { BareSlice } from './slice';
+import type { SliceKey } from './internal-types';
+import type {
+  ActionBuilder,
+  AnySlice,
+  BareStore,
+  EmptySlice,
+} from './public-types';
+import type { BareSlice, Slice } from './slice';
+import type { Store } from './store';
 
 const contextId = uuid(4);
 let counter = 0;
+
 export function incrementalId() {
   return `${contextId}-${counter++}`;
 }
@@ -33,16 +41,6 @@ export function findDuplications<T>(arr: T[]): T[] {
   }
 
   return [...dupes];
-}
-
-export function createAction<P extends any[], SS, DS extends BareSlice>(
-  dependencies: DS[],
-  opts: {
-    initState: SS;
-    action: Action<P, SS, DS>;
-  },
-): Action<P, SS, DS> {
-  return opts.action;
 }
 
 export function weakCache<T extends object, R>(
@@ -133,4 +131,37 @@ export function calcReverseDependencies(
   }
 
   return reverseDependencies;
+}
+
+// internal method for changing the type and accessing some methods
+export function changeBareSlice<SL extends BareSlice>(
+  slice: SL,
+  cb: (sl: AnySlice) => AnySlice,
+): SL {
+  return cb(slice as unknown as AnySlice) as unknown as SL;
+}
+
+export function getSliceByKey(
+  store: BareStore<any> | Store,
+  key: SliceKey,
+): EmptySlice | undefined {
+  return (store as Store).state.sliceLookupByKey[key] as EmptySlice;
+}
+
+export function getActionBuilderByKey(
+  store: BareStore<any> | Store,
+  key: SliceKey,
+  actionId: string,
+): undefined | ActionBuilder<any[], any, any> {
+  const slice:
+    | undefined
+    | Slice<
+        string,
+        any,
+        AnySlice,
+        Record<string, ActionBuilder<any[], any, any>>,
+        {}
+      > = getSliceByKey(store, key);
+
+  return slice?.spec.actions[actionId];
 }

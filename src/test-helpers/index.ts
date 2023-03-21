@@ -1,7 +1,6 @@
-import { CORE_SLICE_READY } from '../vanilla/core-effects';
 import { createSliceKey } from '../vanilla/internal-types';
 import type {
-  Action,
+  ActionBuilder,
   AnySlice,
   BareStore,
   Effect,
@@ -30,7 +29,7 @@ export function testOverrideSlice<SL extends AnySlice>(
     dependencies?: AnySlice[];
     initState?: SL['initState'];
     effects?: Effect<any>[];
-    actions?: Record<string, Action<any[], any, any>>;
+    actions?: Record<string, ActionBuilder<any[], any, any>>;
     selectors?: Record<string, any>;
   },
 ): SL {
@@ -93,23 +92,14 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
     getTransactions() {
       return txs;
     },
-    getSimplifiedTransactions(
-      {
-        hideInternal,
-        filterBySource,
-      }: {
-        hideInternal?: boolean;
-        filterBySource?: AnySlice | AnySlice[];
-      } = {
-        hideInternal: true,
-      },
-    ) {
+    getSimplifiedTransactions({
+      filterBySource,
+    }: {
+      hideInternal?: boolean;
+      filterBySource?: AnySlice | AnySlice[];
+    } = {}) {
       return txs
-        .filter((r) => {
-          return !hideInternal
-            ? true
-            : r.sourceSliceKey !== createSliceKey(CORE_SLICE_READY);
-        })
+
         .filter((r) => {
           return !filterBySource
             ? true

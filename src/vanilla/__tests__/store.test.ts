@@ -1,14 +1,9 @@
 import { waitUntil } from '../../test-helpers';
-import { coreReadySlice } from '../core-effects';
 import { createKey, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 import { InternalStoreState } from '../state';
 import { ReducedStore, Store } from '../store';
-import {
-  TX_META_DISPATCH_SOURCE,
-  TX_META_STORE_NAME,
-  TX_META_STORE_TX_ID,
-} from '../transaction';
+import { TX_META_DISPATCH_SOURCE, TX_META_STORE_NAME } from '../transaction';
 
 const testSlice1 = slice({
   key: createKey('test-1', [], { num: 4 }),
@@ -71,9 +66,7 @@ describe('store', () => {
 
     myStore.dispatch(tx, 'test-location');
 
-    expect(tx.metadata.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-0')).toBe(
-      true,
-    );
+    expect(tx.uid?.endsWith('-0')).toBe(true);
     expect(tx.metadata.getMetadata(TX_META_STORE_NAME)).toBe('myStore');
     expect(tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE)).toBe(
       'test-location',
@@ -83,9 +76,7 @@ describe('store', () => {
 
     myStore.dispatch(tx2);
 
-    expect(tx2.metadata.getMetadata(TX_META_STORE_TX_ID)?.endsWith('-1')).toBe(
-      true,
-    );
+    expect(tx2.uid?.endsWith('-1')).toBe(true);
   });
 
   test('logs', async () => {
@@ -103,7 +94,7 @@ describe('store', () => {
 
     expect(
       log.map((r) => {
-        return { ...r, txId: 'rand' + r.txId.slice(4) };
+        return { ...r, txId: '<<TX_ID>>' };
       }),
     ).toMatchInlineSnapshot(`
       [
@@ -118,7 +109,7 @@ describe('store', () => {
           "sourceSliceKey": "key_test-1",
           "store": "myStore",
           "targetSliceKey": "key_test-1",
-          "txId": "rand-3",
+          "txId": "<<TX_ID>>",
           "type": "TX",
         },
       ]
@@ -139,16 +130,7 @@ describe('store', () => {
         txId: expect.any(String),
         type: 'TX',
       },
-      {
-        actionId: 'ready',
-        dispatcher: undefined,
-        payload: [],
-        sourceSliceKey: coreReadySlice.key,
-        targetSliceKey: coreReadySlice.key,
-        store: 'myStore',
-        txId: expect.any(String),
-        type: 'TX',
-      },
+
       {
         name: 'to-lowercase',
         source: [
@@ -168,16 +150,6 @@ describe('store', () => {
         store: 'myStore',
         txId: expect.any(String),
         type: 'TX',
-      },
-      {
-        name: '<unknownEffect>',
-        source: [
-          {
-            actionId: 'ready',
-            sliceKey: coreReadySlice.key,
-          },
-        ],
-        type: 'SYNC_UPDATE_EFFECT',
       },
       {
         name: 'to-lowercase',

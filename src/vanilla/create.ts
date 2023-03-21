@@ -1,4 +1,4 @@
-import { Action, AnySlice, Effect, SelectorFn } from './public-types';
+import { ActionBuilder, AnySlice, Effect, SelectorFn } from './public-types';
 import { Slice } from './slice';
 
 class SliceKey<
@@ -46,7 +46,7 @@ export function slice<
   SK extends SliceKey<any, any, any, any>,
   A extends Record<
     string,
-    Action<any[], InferInitState<SK>, InferDependencies<SK>>
+    ActionBuilder<any[], InferInitState<SK>, InferDependencies<SK>>
   >,
 >({
   key,
@@ -87,7 +87,7 @@ export function createSlice<
   K extends string,
   SS extends object,
   DS extends AnySlice,
-  A extends Record<string, Action<any[], SS, DS>>,
+  A extends Record<string, ActionBuilder<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 >(
   dependencies: DS[],

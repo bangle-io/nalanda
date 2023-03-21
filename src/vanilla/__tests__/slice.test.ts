@@ -181,14 +181,15 @@ describe('actions', () => {
       testSlice2.actions.prefix,
     );
 
-    expect(testSlice2.actions.prefix('me')).toEqual(
-      new Transaction({
+    expect(testSlice2.actions.prefix('me')).toMatchObject({
+      config: {
         sourceSliceName: 'test-2',
-        sourceSliceKey: createSliceKey('test-2'),
-        payload: ['me'],
-        actionId: 'prefix',
-      }),
-    );
+      },
+      sourceSliceKey: createSliceKey('test-2'),
+      payload: ['me'],
+      actionId: 'prefix',
+      uid: expect.any(String),
+    });
 
     expectType<
       (p: number, p2: string) => Transaction<'test-2', Array<string | number>>
@@ -201,24 +202,26 @@ describe('actions', () => {
 
     expectType<Transaction<'test-2', Array<string | number>>>(tx);
 
-    expect(testSlice2.actions.padEnd(6, 'me')).toEqual(
-      new Transaction({
+    expect(testSlice2.actions.padEnd(6, 'me')).toMatchObject({
+      config: {
         sourceSliceName: 'test-2',
-        sourceSliceKey: createSliceKey('test-2'),
-        payload: [6, 'me'],
-        actionId: 'padEnd',
-      }),
-    );
+      },
+      sourceSliceKey: createSliceKey('test-2'),
+      payload: [6, 'me'],
+      actionId: 'padEnd',
+      uid: expect.any(String),
+    });
 
     expectType<() => Transaction<'test-2', []>>(testSlice2.actions.uppercase);
-    expect(testSlice2.actions.uppercase()).toEqual(
-      new Transaction({
+    expect(testSlice2.actions.uppercase()).toMatchObject({
+      config: {
         sourceSliceName: 'test-2',
-        sourceSliceKey: createSliceKey('test-2'),
-        payload: [],
-        actionId: 'uppercase',
-      }),
-    );
+      },
+      sourceSliceKey: createSliceKey('test-2'),
+      payload: [],
+      actionId: 'uppercase',
+      uid: expect.any(String),
+    });
   });
 
   test('parseRawActions works', () => {
@@ -254,8 +257,10 @@ describe('actions', () => {
 
     expectType<TxCreator<'my-slice-1', [number]>>(result);
 
-    expect(result(1)).toMatchInlineSnapshot(`
-      Transaction {
+    expect(result(1)).toMatchInlineSnapshot(
+      { uid: expect.any(String) },
+      `
+      {
         "actionId": "myAction",
         "config": {
           "actionId": "myAction",
@@ -274,8 +279,38 @@ describe('actions', () => {
         "sourceSliceKey": "key_my-slice-1",
         "targetSliceKey": "key_my-slice-1",
         "targetSliceName": "my-slice-1",
+        "uid": Any<String>,
       }
-    `);
+    `,
+    );
+  });
+
+  test('throws error if depending on terminal slice', () => {
+    let terminalSlice = new Slice({
+      name: 'my-terminal-slice-1',
+      initState: {
+        num: 3,
+      },
+      actions: {},
+      dependencies: [],
+      terminal: true,
+      selectors: {},
+    });
+
+    expect(
+      () =>
+        new Slice({
+          name: 'my-slice-1',
+          initState: {
+            num: 3,
+          },
+          actions: {},
+          dependencies: [testSlice1, testSlice2, terminalSlice],
+          selectors: {},
+        }),
+    ).toThrowError(
+      'A slice cannot have a dependency on a terminal slice. Remove "my-terminal-slice-1" from the dependencies of "my-slice-1".',
+    );
   });
 });
 

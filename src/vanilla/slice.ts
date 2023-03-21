@@ -13,7 +13,7 @@ import {
 import {
   Effect,
   SelectorFn,
-  Action,
+  ActionBuilder,
   AnySlice,
   TxCreator,
 } from './public-types';
@@ -41,7 +41,7 @@ export type PickOpts = {
 function actionsToTxCreators(
   sliceKey: SliceKey,
   sliceName: SliceNameOpaque,
-  actions: Record<string, Action<any[], any, any>>,
+  actions: Record<string, ActionBuilder<any[], any, any>>,
 ) {
   return mapObjectValues(actions, (action, actionId): TxCreator => {
     return (...params) => {
@@ -88,7 +88,7 @@ export interface SliceSpec<
   N extends string,
   SS,
   DS extends AnySlice,
-  A extends Record<string, Action<any[], SS, DS>>,
+  A extends Record<string, ActionBuilder<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
   name: N;
@@ -96,6 +96,7 @@ export interface SliceSpec<
   initState: SS;
   actions: A;
   selectors: SE;
+  terminal?: boolean;
   effects?: Effect<Slice<N, SS, DS, A, SE>, DS | Slice<N, SS, DS, A, SE>>[];
   // used internally by mergeSlices
   _additionalSlices?: AnySlice[];
@@ -105,7 +106,7 @@ export class Slice<
   N extends string,
   SS,
   DS extends AnySlice,
-  A extends Record<string, Action<any[], SS, DS>>,
+  A extends Record<string, ActionBuilder<any[], SS, DS>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > implements BareSlice<N, SS>
 {
@@ -121,7 +122,7 @@ export class Slice<
     return this.actions;
   }
 
-  get actions(): ActionsToTxCreator<N, A> {
+  get actions(): ActionBuilderToTxCreator<N, A> {
     return this.txCreators as any;
   }
 
@@ -143,6 +144,14 @@ export class Slice<
     if (config.originalSpec === spec && isSliceKey(spec.name)) {
       throw new Error(
         `Slice name cannot start with "${KEY_PREFIX}". Please use a different name for slice "${spec.name}"`,
+      );
+    }
+
+    if (spec.dependencies.some((dep) => dep.spec.terminal)) {
+      throw new Error(
+        `A slice cannot have a dependency on a terminal slice. Remove "${
+          spec.dependencies.find((dep) => dep.spec.terminal)?.spec.name
+        }" from the dependencies of "${spec.name}".`,
       );
     }
 
@@ -272,11 +281,17 @@ export class Slice<
 
     return newSlice;
   }
+
+  withoutEffects() {
+    return this._fork({
+      effects: [],
+    });
+  }
 }
 
-export type ActionsToTxCreator<
+export type ActionBuilderToTxCreator<
   N extends string,
-  A extends Record<string, Action<any[], any, any>>,
+  A extends Record<string, ActionBuilder<any[], any, any>>,
 > = {
   [KK in keyof A]: A[KK] extends (...param: infer P) => any
     ? TxCreator<N, P>
@@ -320,16 +335,16 @@ export function resolveSliceInContext(
   sliceLookupByKey: Record<SliceKey, BareSlice>,
   context?: SliceContext,
 ): BareSlice {
-  const sourceSliceKey = context?.sliceKey;
+  const sliceKey = context?.sliceKey;
 
-  if (!sourceSliceKey || sourceSliceKey === currentSlice.key) {
+  if (!sliceKey || sliceKey === currentSlice.key) {
     return currentSlice;
   }
 
-  const sourceSlice = sliceLookupByKey[sourceSliceKey];
+  const sourceSlice = sliceLookupByKey[sliceKey];
 
   if (!sourceSlice) {
-    throw new Error(`Slice "${sourceSliceKey}" not found in store state`);
+    throw new Error(`Slice "${sliceKey}" not found in store state`);
   }
   const resolvedKey = sourceSlice.keyMap.resolve(currentSlice.nameOpaque);
   const mappedSlice = resolvedKey

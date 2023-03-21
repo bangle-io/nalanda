@@ -67,15 +67,10 @@ describe('Single slice', () => {
     });
 
     await waitForExpect(() => {
-      expect(
-        dispatchSpy.getSimplifiedTransactions({
-          hideInternal: false,
-        }),
-      ).toHaveLength(3);
+      expect(dispatchSpy.getSimplifiedTransactions({})).toHaveLength(2);
     });
 
-    expect(dispatchSpy.getSimplifiedTransactions({ hideInternal: false }))
-      .toMatchInlineSnapshot(`
+    expect(dispatchSpy.getSimplifiedTransactions({})).toMatchInlineSnapshot(`
       [
         {
           "actionId": "testAction",
@@ -85,13 +80,6 @@ describe('Single slice', () => {
           ],
           "sourceSliceKey": "key_test",
           "targetSliceKey": "key_test",
-        },
-        {
-          "actionId": "ready",
-          "dispatchSource": undefined,
-          "payload": [],
-          "sourceSliceKey": "key_$nalanda/CORE_SLICE_READY",
-          "targetSliceKey": "key_$nalanda/CORE_SLICE_READY",
         },
         {
           "actionId": "testAction",
@@ -106,7 +94,7 @@ describe('Single slice', () => {
     `);
 
     await waitForExpect(() => {
-      expect(dispatchSpy.getDebugLogItems()).toHaveLength(8);
+      expect(dispatchSpy.getDebugLogItems()).toHaveLength(4);
     });
 
     expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
@@ -120,16 +108,6 @@ describe('Single slice', () => {
           "sourceSliceKey": "key_test",
           "store": "test-store",
           "targetSliceKey": "key_test",
-          "txId": "<txId>",
-          "type": "TX",
-        },
-        {
-          "actionId": "ready",
-          "dispatcher": undefined,
-          "payload": [],
-          "sourceSliceKey": "key_$nalanda/CORE_SLICE_READY",
-          "store": "test-store",
-          "targetSliceKey": "key_$nalanda/CORE_SLICE_READY",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -156,16 +134,6 @@ describe('Single slice', () => {
           "type": "TX",
         },
         {
-          "name": "<unknownEffect>",
-          "source": [
-            {
-              "actionId": "ready",
-              "sliceKey": "key_$nalanda/CORE_SLICE_READY",
-            },
-          ],
-          "type": "SYNC_UPDATE_EFFECT",
-        },
-        {
           "name": "testEffect",
           "source": [
             {
@@ -174,30 +142,6 @@ describe('Single slice', () => {
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
-        },
-        {
-          "name": "testEffect",
-          "source": [
-            {
-              "actionId": "testAction",
-              "sliceKey": "key_test",
-            },
-            {
-              "actionId": "testAction",
-              "sliceKey": "key_test",
-            },
-          ],
-          "type": "UPDATE_EFFECT",
-        },
-        {
-          "name": "<unknownEffect>",
-          "source": [
-            {
-              "actionId": "ready",
-              "sliceKey": "key_$nalanda/CORE_SLICE_READY",
-            },
-          ],
-          "type": "UPDATE_EFFECT",
         },
       ]
     `);

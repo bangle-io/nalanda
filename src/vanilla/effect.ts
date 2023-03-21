@@ -311,29 +311,33 @@ export class EffectHandler {
     // Here we are saving the store.state before calling update, because an update can dispatch an action and
     // causing another run of of effects, and giving a stale previouslySeen to those effect update calls.
     this._syncPrevState = store.state;
-    this._sendDebugInfo('sync');
+    if (this.effect.updateSync) {
+      this._sendDebugInfo('sync');
 
-    // TODO error handling
-    this.effect.updateSync?.(
-      this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._sliceContext),
-      previouslySeenState._withContext(this._sliceContext),
-      this._ref,
-    );
+      // TODO error handling
+      this.effect.updateSync(
+        this._slice as AnySlice,
+        store.getReducedStore(this.effect.name, this._sliceContext),
+        previouslySeenState._withContext(this._sliceContext),
+        this._ref,
+      );
+    }
   }
 
   runDeferredUpdate(store: Store) {
     const previouslySeenState = this._deferredPrevState;
     this._deferredPrevState = store.state;
 
-    this._sendDebugInfo('deferred');
+    if (this.effect.update) {
+      this._sendDebugInfo('deferred');
 
-    // TODO error handling
-    this.effect.update?.(
-      this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, this._sliceContext),
-      previouslySeenState._withContext(this._sliceContext),
-      this._ref,
-    );
+      // TODO error handling
+      this.effect.update(
+        this._slice as AnySlice,
+        store.getReducedStore(this.effect.name, this._sliceContext),
+        previouslySeenState._withContext(this._sliceContext),
+        this._ref,
+      );
+    }
   }
 }

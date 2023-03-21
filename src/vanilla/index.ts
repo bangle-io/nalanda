@@ -1,8 +1,8 @@
+export { getSliceByKey, getActionBuilderByKey } from './helpers';
+
 export { createDispatchSpy } from '../test-helpers';
 
-export { timeoutSchedular } from './effect';
-
-export { coreReadySlice } from './core-effects';
+export { timeoutSchedular, idleCallbackScheduler } from './effect';
 
 export { createSlice } from './create';
 export { Slice } from './slice';
