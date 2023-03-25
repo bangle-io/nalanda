@@ -58,10 +58,8 @@ export function mergeSlices<N extends string, SL extends AnySlice>({
     initState: {},
     actions: {},
     selectors: {},
+    reducer: (state) => state,
   });
-  // setMetadata(mergedSlice, {
-  //   isMerge: true,
-  // });
 
   return mergedSlice._fork({
     _additionalSlices: newChildren,

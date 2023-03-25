@@ -107,6 +107,25 @@ export class Transaction<N extends string, P extends unknown[]> {
 
     return tx;
   }
+
+  changeSourceSlice(key: SliceKey): Transaction<N, P> {
+    if (this.sourceSliceKey === key) {
+      return this;
+    }
+
+    const originalSource = this.sourceSliceKey;
+    const tx = new Transaction({
+      ...this.config,
+      sourceSliceKey: key,
+    });
+    tx.metadata = this.metadata.fork();
+    tx.metadata.appendMetadata(
+      TX_META_CHANGE_KEY,
+      `changeSourceKey(${originalSource} -> ${key})`,
+    );
+
+    return tx;
+  }
 }
 
 export class Metadata {

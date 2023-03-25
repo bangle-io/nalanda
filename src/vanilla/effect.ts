@@ -1,6 +1,6 @@
 import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
 import { SliceContext, SliceKey } from './internal-types';
-import { AnySlice, Effect } from './public-types';
+import { AnyEffect, AnySlice, Effect } from './public-types';
 import type { BareSlice } from './slice';
 import type { InternalStoreState } from './state';
 import type { Store } from './store';
@@ -240,7 +240,7 @@ export class EffectHandler {
   private _sliceContext: SliceContext;
 
   constructor(
-    public effect: Effect<any>,
+    public effect: AnyEffect,
     public readonly initStoreState: InternalStoreState,
     protected _slice: BareSlice,
     private _debug?: DebugFunc,
@@ -299,7 +299,7 @@ export class EffectHandler {
   }
 
   destroy(state: InternalStoreState) {
-    this.effect.destroy?.(this._slice, state, this._ref);
+    this.effect.destroy?.(this._slice as AnySlice, state, this._ref);
     this._ref = {};
   }
 

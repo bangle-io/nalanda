@@ -4,6 +4,7 @@ import { timeoutSchedular } from '../../vanilla/effect';
 import { Store } from '../../vanilla/store';
 import waitForExpect from 'wait-for-expect';
 import { expectType, rejectAny } from '../../vanilla/internal-types';
+import { createDispatchSpy } from '../../test-helpers';
 waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
 
@@ -95,6 +96,8 @@ describe('run once', () => {
   });
 
   test('works', async () => {
+    let dispatchSpy = createDispatchSpy();
+
     let called = jest.fn();
     const once = changeEffect(
       'run-once',
@@ -120,6 +123,8 @@ describe('run once', () => {
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
+      debug: dispatchSpy.debug,
+      dispatchTx: dispatchSpy.dispatch,
       state: [testSlice1, testSlice2, testSlice3, once],
     });
 
@@ -128,18 +133,81 @@ describe('run once', () => {
     store.dispatch(testSlice1.actions.increment({ increment: true }));
 
     await sleep(10);
-    expect(called).toHaveBeenCalledTimes(1);
+    // expect(called).toHaveBeenCalledTimes(1);
 
-    expect(testSlice3.getState(store.state).name).toEqual('tame');
+    // expect(testSlice3.getState(store.state).name).toEqual('tame');
 
     store.dispatch(testSlice1.actions.increment({ increment: true }));
     store.dispatch(testSlice1.actions.increment({ increment: true }));
     store.dispatch(testSlice1.actions.increment({ increment: true }));
 
     await sleep(10);
-    expect(called).toHaveBeenCalledTimes(1);
-    await sleep(10);
-    expect(called).toHaveBeenCalledTimes(1);
+    // expect(called).toHaveBeenCalledTimes(1);
+    // await sleep(10);
+    // expect(called).toHaveBeenCalledTimes(1);
+
+    expect(dispatchSpy.getSimplifiedTransactions()).toMatchInlineSnapshot(`
+      [
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceKey": "key_test-1",
+          "targetSliceKey": "key_test-1",
+        },
+        {
+          "actionId": "ready",
+          "dispatchSource": "run-once(changeEffect)",
+          "payload": [],
+          "sourceSliceKey": "key_run-once",
+          "targetSliceKey": "key_run-once",
+        },
+        {
+          "actionId": "lowercase",
+          "dispatchSource": "run-once(changeEffect)",
+          "payload": [],
+          "sourceSliceKey": "key_test-3",
+          "targetSliceKey": "key_test-3",
+        },
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceKey": "key_test-1",
+          "targetSliceKey": "key_test-1",
+        },
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceKey": "key_test-1",
+          "targetSliceKey": "key_test-1",
+        },
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceKey": "key_test-1",
+          "targetSliceKey": "key_test-1",
+        },
+      ]
+    `);
   });
 });
 

@@ -318,6 +318,7 @@ describe('basic test', () => {
       actions: {},
       dependencies: [],
       selectors: {},
+      reducer: (s) => s,
       _additionalSlices: [testSlice1],
     });
 
@@ -802,6 +803,7 @@ describe('createSyncState', () => {
           actions: {},
           dependencies: [],
           selectors: {},
+          reducer: (s) => s,
           _additionalSlices: [testSlice1],
         }),
       ],
@@ -812,6 +814,7 @@ describe('createSyncState', () => {
           actions: {},
           dependencies: [],
           selectors: {},
+          reducer: (s) => s,
           _additionalSlices: [testSlice2],
         }),
       ],
@@ -844,6 +847,7 @@ describe('createSyncState', () => {
           actions: {},
           dependencies: [],
           selectors: {},
+          reducer: (s) => s,
         }),
         changeEffect('test-effect-1', {}, () => {}),
       ],

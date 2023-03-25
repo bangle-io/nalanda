@@ -1,3 +1,4 @@
+import { createSlice } from '../create';
 import { expectType, rejectAny } from '../internal-types';
 import { Slice } from '../slice';
 import { InternalStoreState } from '../state';
@@ -12,6 +13,7 @@ const testSlice0 = new Slice({
   actions: {},
   selectors: {},
   dependencies: [],
+  reducer: (state) => state,
 });
 
 const testSlice1 = new Slice({
@@ -22,9 +24,10 @@ const testSlice1 = new Slice({
   actions: {},
   selectors: {},
   dependencies: [],
+  reducer: (state) => state,
 });
 
-const testSlice2 = new Slice({
+const testSlice2 = createSlice([], {
   name: 'testSlice2',
   initState: {
     football: true,
@@ -33,10 +36,9 @@ const testSlice2 = new Slice({
     kick: (now: boolean) => (state) => state,
   },
   selectors: {},
-  dependencies: [],
 });
 
-const testSlice3 = new Slice({
+const testSlice3 = createSlice([testSlice1, testSlice2], {
   name: 'testSlice3',
   initState: {
     name: 'raja',
@@ -71,63 +73,60 @@ const testSlice3 = new Slice({
     },
   },
   selectors: {},
-  dependencies: [testSlice1, testSlice2],
 });
 
-const testSlice4 = new Slice({
+const testSlice4 = createSlice([testSlice3], {
   name: 'testSlice4',
   initState: {
     basket: 'fine',
   },
   actions: {},
   selectors: {},
-  dependencies: [testSlice3],
+}).addEffect([
+  {
+    name: 'testEffect1',
+    update: (slice, store, prevStoreState) => {
+      let state = slice.getState(store.state);
+      let prevState = slice.getState(prevStoreState);
 
-  effects: [
-    {
-      name: 'testEffect1',
-      update: (slice, store, prevStoreState) => {
-        let state = slice.getState(store.state);
-        let prevState = slice.getState(prevStoreState);
+      store.dispatch(testSlice3.actions.prefix('Mr. '));
+      // @ts-expect-error - since not registered
+      store.dispatch(testSlice2.actions.kick(true));
 
-        store.dispatch(testSlice3.actions.prefix('Mr. '));
-        // @ts-expect-error - since not registered
-        store.dispatch(testSlice2.actions.kick(true));
-
-        expectType<{ basket: string }>(state);
-        expectType<{ basket: string }>(prevState);
-      },
+      expectType<{ basket: string }>(state);
+      expectType<{ basket: string }>(prevState);
     },
+  },
 
-    {
-      name: 'testEffect2',
-      update: (slice, store, prevStoreState) => {
-        let state = slice.getState(store.state);
-        let prevState = slice.getState(prevStoreState);
+  {
+    name: 'testEffect2',
+    update: (slice, store, prevStoreState) => {
+      let state = slice.getState(store.state);
+      let prevState = slice.getState(prevStoreState);
 
-        // @ts-expect-error - since not registered
-        let t0State = testSlice0.getState(store.state);
-        // @ts-expect-error - since not registered
-        let t0StatePrev = testSlice0.getState(prevStoreState);
-        expectType<never>(t0State);
+      // @ts-expect-error - since not registered
+      let t0State = testSlice0.getState(store.state);
+      // @ts-expect-error - since not registered
+      let t0StatePrev = testSlice0.getState(prevStoreState);
+      expectType<never>(t0State);
 
-        expectType<{ basket: string }>(state);
-        expectType<{ basket: string }>(prevState);
-      },
+      expectType<{ basket: string }>(state);
+      expectType<{ basket: string }>(prevState);
     },
-  ],
-});
+  },
+]);
 
 describe('types', () => {
   test('Create slice', () => {
-    const mySlice = new Slice({
+    const mySlice = createSlice([], {
       name: 'mySlice',
-      initState: 0,
+      initState: {
+        val: 0,
+      },
       actions: {},
       selectors: {
-        majin: (state) => state + 1,
+        majin: (state) => state.val + 1,
       },
-      dependencies: [],
     });
     const storeState = InternalStoreState.create([
       testSlice0,
@@ -137,7 +136,7 @@ describe('types', () => {
 
     let result = mySlice.getState(storeState);
 
-    expectType<number>(result);
+    expectType<number>(result.val);
 
     let res2 = testSlice1.getState(storeState);
     let res2Reverse = storeState.getSliceState(testSlice1);

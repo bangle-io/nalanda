@@ -109,14 +109,13 @@ describe('merging', () => {
       selectors: {},
     });
 
-    const t1 = new Slice({
+    const t1 = createSlice([g1], {
       name: 't1',
       initState: {
         t1State: '<unknown>',
         self: 0,
       },
       selectors: {},
-      dependencies: [g1],
       actions: {
         updateT1State: () => (state, storeState) => ({
           ...state,
@@ -129,22 +128,19 @@ describe('merging', () => {
             ')',
         }),
       },
-      effects: [
-        {
-          name: 't1Effect',
-          updateSync(slice, store, prevStoreState) {
-            if (
-              g1.getState(store.state).g1State === 1 &&
-              g1.getState(prevStoreState).g1State === 0
-            ) {
-              store.dispatch(slice.actions.updateT1State());
-            }
-          },
-        },
-      ],
+    }).addEffect({
+      name: 't1Effect',
+      updateSync(slice, store, prevStoreState) {
+        if (
+          g1.getState(store.state).g1State === 1 &&
+          g1.getState(prevStoreState).g1State === 0
+        ) {
+          store.dispatch(slice.actions.updateT1State());
+        }
+      },
     });
 
-    const t2 = new Slice({
+    const t2 = createSlice([t1], {
       name: 't2',
       initState: {
         t1State: '<unknown>',
@@ -160,24 +156,19 @@ describe('merging', () => {
           };
         },
       },
-      dependencies: [t1],
-      effects: [
-        {
-          name: 't2Effect',
-          updateSync(slice, store, prevStoreState) {
-            if (
-              t1.getState(store.state).self === 1 &&
-              t1.getState(prevStoreState).self === 0
-            ) {
-              store.dispatch(t1.actions.updateT1State());
-            }
-          },
-        },
-      ],
+    }).addEffect({
+      name: 't2Effect',
+      updateSync(slice, store, prevStoreState) {
+        if (
+          t1.getState(store.state).self === 1 &&
+          t1.getState(prevStoreState).self === 0
+        ) {
+          store.dispatch(t1.actions.updateT1State());
+        }
+      },
     });
 
-    const t3 = new Slice({
-      dependencies: [g1, t1],
+    const t3 = createSlice([g1, t1], {
       name: 't3',
       initState: {
         g1State: '<unknown>',
@@ -193,19 +184,16 @@ describe('merging', () => {
         }),
       },
       selectors: {},
-      effects: [
-        {
-          name: 't3Effect',
-          updateSync(slice, store, prevStoreState) {
-            if (
-              t1.getState(store.state).self === 2 &&
-              slice.getState(store.state).self === 0
-            ) {
-              store.dispatch(slice.actions.updateT3State());
-            }
-          },
-        },
-      ],
+    }).addEffect({
+      name: 't3Effect',
+      updateSync(slice, store, prevStoreState) {
+        if (
+          t1.getState(store.state).self === 2 &&
+          slice.getState(store.state).self === 0
+        ) {
+          store.dispatch(slice.actions.updateT3State());
+        }
+      },
     });
 
     const x0 = mergeSlices({
@@ -513,7 +501,7 @@ describe('merging', () => {
           actionId: 'updateT1State',
           dispatchSource: 't2Effect',
           payload: [],
-          sourceSliceKey: 'key_t1',
+          sourceSliceKey: 'key_z0:x0:t2',
           targetSliceKey: 'key_z0:x0:t1',
         },
         {
@@ -575,7 +563,7 @@ describe('merging', () => {
             "actionId": "updateT1State",
             "dispatcher": "t2Effect",
             "payload": [],
-            "sourceSliceKey": "key_t1",
+            "sourceSliceKey": "key_z0:x0:t2",
             "store": "test-store",
             "targetSliceKey": "key_z0:x0:t1",
             "txId": "<txId>",

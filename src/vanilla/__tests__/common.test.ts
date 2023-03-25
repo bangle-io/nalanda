@@ -33,6 +33,7 @@ describe('calcReverseDependencies', () => {
       }),
       actions: {},
       selectors: {},
+      reducer: (s) => s,
     });
   };
 

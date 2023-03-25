@@ -5,10 +5,10 @@ import {
   createSliceNameOpaque,
   isSliceKey,
   KEY_PREFIX,
+  NoInfer,
   SliceContext,
   SliceKey,
   SliceNameOpaque,
-  TxApplicator,
 } from './internal-types';
 import {
   Effect,
@@ -37,23 +37,6 @@ type IfSliceRegistered<
 export type PickOpts = {
   ignoreChanges?: boolean;
 };
-
-function actionsToTxCreators(
-  sliceKey: SliceKey,
-  sliceName: SliceNameOpaque,
-  actions: Record<string, ActionBuilder<any[], any, any>>,
-) {
-  return mapObjectValues(actions, (action, actionId): TxCreator => {
-    return (...params) => {
-      return new Transaction({
-        sourceSliceKey: sliceKey,
-        sourceSliceName: sliceName,
-        payload: params,
-        actionId,
-      });
-    };
-  });
-}
 
 export interface BareSlice<K extends string = string, SS = unknown> {
   readonly name: K;
@@ -88,16 +71,22 @@ export interface SliceSpec<
   N extends string,
   SS,
   DS extends AnySlice,
-  A extends Record<string, ActionBuilder<any[], SS, DS>>,
+  A extends Record<string, TxCreator<N, any[]>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > {
   name: N;
   dependencies: DS[];
   initState: SS;
   actions: A;
+  reducer: (
+    sliceState: NoInfer<SS>,
+    storeState: StoreState<NoInfer<DS>>,
+    // adding N breaks things
+    tx: Transaction<string, any[]>,
+  ) => NoInfer<SS>;
   selectors: SE;
   terminal?: boolean;
-  effects?: Effect<Slice<N, SS, DS, A, SE>, DS | Slice<N, SS, DS, A, SE>>[];
+  effects?: Effect<N, SS, DS, A, SE>[];
   // used internally by mergeSlices
   _additionalSlices?: AnySlice[];
 }
@@ -106,7 +95,7 @@ export class Slice<
   N extends string,
   SS,
   DS extends AnySlice,
-  A extends Record<string, ActionBuilder<any[], SS, DS>>,
+  A extends Record<string, TxCreator<N, any[]>>,
   SE extends Record<string, SelectorFn<SS, DS, any>>,
 > implements BareSlice<N, SS>
 {
@@ -118,20 +107,15 @@ export class Slice<
   public key: SliceKey;
   public _metadata: Record<string | symbol, any> = {};
 
+  actions: A;
+
   get a() {
     return this.actions;
-  }
-
-  get actions(): ActionBuilderToTxCreator<N, A> {
-    return this.txCreators as any;
   }
 
   get selectors(): SE {
     return this.spec.selectors;
   }
-
-  private txCreators: Record<string, TxCreator>;
-  private txApplicators: Record<string, TxApplicator<string, any>>;
 
   constructor(
     public readonly spec: SliceSpec<N, SS, DS, A, SE>,
@@ -173,19 +157,7 @@ export class Slice<
       spec.dependencies,
     );
 
-    this.txCreators = actionsToTxCreators(
-      this.key,
-      this.nameOpaque,
-      spec.actions,
-    );
-    this.txApplicators = mapObjectValues(
-      spec.actions,
-      (action, actionId): TxApplicator<string, any> => {
-        return (sliceState, storeState, tx) => {
-          return action(...tx.payload)(sliceState, storeState);
-        };
-      },
-    );
+    this.actions = spec.actions;
   }
 
   getState<SState extends StoreState<any>>(
@@ -195,7 +167,7 @@ export class Slice<
       storeState as unknown as InternalStoreState;
 
     const resolvedSlice: any = resolveSliceInContext(
-      this,
+      this as AnySlice,
       sliceLookupByKey,
       context,
     );
@@ -227,15 +199,15 @@ export class Slice<
     storeState: StoreState<any>,
     tx: Transaction<N, unknown[]>,
   ): SS {
-    const apply = this.txApplicators[tx.actionId];
+    return this.spec.reducer(sliceState, storeState, tx);
 
-    if (!apply) {
-      throw new Error(
-        `Action "${tx.actionId}" not found in Slice "${this.key}"`,
-      );
-    }
+    // if (!apply) {
+    //   throw new Error(
+    //     `Action "${tx.actionId}" not found in Slice "${this.key}"`,
+    //   );
+    // }
 
-    return apply(sliceState, storeState, tx);
+    // return apply(sliceState, storeState, tx);
   }
 
   /**
@@ -287,6 +259,15 @@ export class Slice<
       effects: [],
     });
   }
+
+  addEffect(effects: Effect<N, SS, DS, A, SE> | Effect<N, SS, DS, A, SE>[]) {
+    return this._fork({
+      effects: [
+        ...(this.spec.effects || []),
+        ...(Array.isArray(effects) ? effects : [effects]),
+      ],
+    });
+  }
 }
 
 export type ActionBuilderToTxCreator<
@@ -318,9 +299,9 @@ export class KeyMap {
     this.map[slice.sliceName] = slice.key;
   }
 
-  // resolves original key to current key
-  resolve(key: SliceNameOpaque): SliceKey | undefined {
-    return this.map[key];
+  // resolves original name to current key
+  resolve(name: SliceNameOpaque): SliceKey | undefined {
+    return this.map[name];
   }
 }
 

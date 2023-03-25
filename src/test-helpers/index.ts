@@ -1,6 +1,8 @@
+import { createSlice } from '../vanilla';
 import { createSliceKey } from '../vanilla/internal-types';
 import type {
   ActionBuilder,
+  AnyEffect,
   AnySlice,
   BareStore,
   Effect,
@@ -28,19 +30,17 @@ export function testOverrideSlice<SL extends AnySlice>(
     // since this is for testing, we can allow any slice
     dependencies?: AnySlice[];
     initState?: SL['initState'];
-    effects?: Effect<any>[];
+    effects?: AnyEffect[];
     actions?: Record<string, ActionBuilder<any[], any, any>>;
     selectors?: Record<string, any>;
   },
 ): SL {
-  return new Slice({
+  return createSlice(dependencies, {
     name: slice.name,
     initState,
     actions,
     selectors,
-    dependencies,
-    effects: effects || [],
-  }) as any;
+  }).addEffect(effects || []) as any;
 }
 
 export function waitUntil<B extends BareStore<any>>(

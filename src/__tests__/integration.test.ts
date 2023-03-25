@@ -1,13 +1,13 @@
 import waitForExpect from 'wait-for-expect';
 import { createDispatchSpy, waitUntil } from '../test-helpers';
+import { createSlice } from '../vanilla';
 import { timeoutSchedular } from '../vanilla/effect';
 import { Slice } from '../vanilla/slice';
 import { Store } from '../vanilla/store';
 
 describe('Single slice', () => {
-  const testSlice = new Slice({
+  const testSlice = createSlice([], {
     name: 'test',
-    dependencies: [],
     initState: {
       val: 'apple',
     },
@@ -22,20 +22,15 @@ describe('Single slice', () => {
     selectors: {
       testSelector: (state) => state.val.toLocaleUpperCase(),
     },
-    effects: [
-      {
-        name: 'testEffect',
-        updateSync(slice, store, prevStoreState) {
-          if (!slice.getState(store.state).val.endsWith('Effect')) {
-            store.dispatch(
-              slice.actions.testAction(
-                slice.getState(store.state).val + 'Effect',
-              ),
-            );
-          }
-        },
-      },
-    ],
+  }).addEffect({
+    name: 'testEffect',
+    updateSync(slice, store, prevStoreState) {
+      if (!slice.getState(store.state).val.endsWith('Effect')) {
+        store.dispatch(
+          slice.actions.testAction(slice.getState(store.state).val + 'Effect'),
+        );
+      }
+    },
   });
 
   test('works', async () => {

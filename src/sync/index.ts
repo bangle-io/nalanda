@@ -1,4 +1,3 @@
-export * from './action-serializer';
 export { createSyncStore } from './sync-store';
 
 export type {

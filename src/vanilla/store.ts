@@ -196,6 +196,8 @@ export class ReducedStore<SB extends BareSlice> {
         // this is because source is set when calling something slice1.actions.foo()
         // this will set source key from slice1, which might not be the correct source.
       }
+
+      // tx = tx.changeSourceSlice(sliceContext.sliceKey);
     }
 
     if (debugDispatch) {

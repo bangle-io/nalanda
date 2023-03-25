@@ -1,5 +1,15 @@
-import { ExtractReturnTypes } from '../vanilla/internal-types';
-import { AnySlice, BareStore, Effect } from '../vanilla/public-types';
+import { createSlice, Transaction } from '../vanilla';
+import {
+  createSliceKey,
+  createSliceNameOpaque,
+  ExtractReturnTypes,
+} from '../vanilla/internal-types';
+import {
+  AnySlice,
+  BareStore,
+  Effect,
+  TxCreator,
+} from '../vanilla/public-types';
 import { PickOpts, Slice } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
 import type { ReducedStore } from '../vanilla/store';
@@ -56,8 +66,28 @@ export const changeEffect = <
     userRef?: Record<string, any>;
   };
 
+  type SliceEffect = Effect<
+    N,
+    {
+      ready: boolean;
+    },
+    AnySlice,
+    {
+      ready: TxCreator<N, [void]>;
+    },
+    {}
+  >;
+
   const run = (
-    sl: Slice<N, unknown, any, any, any>,
+    sl: Slice<
+      N,
+      {
+        ready: boolean;
+      },
+      any,
+      {},
+      {}
+    >,
     store: BareStore<any>,
     prevStoreState: BareStore<any>['state'],
     ref: EffectRef,
@@ -96,17 +126,15 @@ export const changeEffect = <
   };
 
   const effect: Effect<
-    Slice<
-      N,
-      {
-        ready: boolean;
-      },
-      AnySlice,
-      {
-        ready: () => () => { ready: boolean };
-      },
-      {}
-    >
+    N,
+    {
+      ready: boolean;
+    },
+    AnySlice,
+    {
+      ready: () => any;
+    },
+    {}
   > = {
     name: name + `(changeEffect)`,
     init(slice, store, ref: EffectRef) {
@@ -130,19 +158,19 @@ export const changeEffect = <
     new Set(Object.values(effectSelectors).map((r) => r[0])),
   ) as any;
 
-  const slice = new Slice({
+  const slice = createSlice(deps, {
     name: name,
-    dependencies: deps,
     initState: {
       ready: false,
     },
     actions: {
-      ready: () => () => ({ ready: true }),
+      ready: () => () => ({
+        ready: false,
+      }),
     },
     selectors: {},
-    effects: [effect],
     terminal: true,
-  });
+  }).addEffect(effect);
 
   return slice as any;
 };

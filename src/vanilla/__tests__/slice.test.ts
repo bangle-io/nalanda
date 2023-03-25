@@ -3,7 +3,7 @@
 import { testOverrideSlice } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
 import { createSliceKey, expectType, rejectAny } from '../internal-types';
-import { AnySlice, Effect, TxCreator } from '../public-types';
+import { AnyEffect, AnySlice, Effect, TxCreator } from '../public-types';
 import { Slice } from '../slice';
 import { InternalStoreState, StoreState } from '../state';
 import { Transaction } from '../transaction';
@@ -227,7 +227,7 @@ describe('actions', () => {
   test('parseRawActions works', () => {
     type StateType = { num: number };
 
-    let mySlice = new Slice({
+    let mySlice = createSlice([testSlice1, testSlice2], {
       name: 'my-slice-1',
       initState: {
         num: 3,
@@ -249,7 +249,6 @@ describe('actions', () => {
           return state;
         },
       },
-      dependencies: [testSlice1, testSlice2],
       selectors: {},
     });
 
@@ -286,13 +285,12 @@ describe('actions', () => {
   });
 
   test('throws error if depending on terminal slice', () => {
-    let terminalSlice = new Slice({
+    let terminalSlice = createSlice([], {
       name: 'my-terminal-slice-1',
       initState: {
         num: 3,
       },
       actions: {},
-      dependencies: [],
       terminal: true,
       selectors: {},
     });
@@ -307,6 +305,7 @@ describe('actions', () => {
           actions: {},
           dependencies: [testSlice1, testSlice2, terminalSlice],
           selectors: {},
+          reducer: (s) => s,
         }),
     ).toThrowError(
       'A slice cannot have a dependency on a terminal slice. Remove "my-terminal-slice-1" from the dependencies of "my-slice-1".',
@@ -669,37 +668,38 @@ describe('effects', () => {
   });
 
   test('create effect without dependency', () => {
-    const mySlice = slice({
-      key: createKey('mySlice', [], { count: 3 }),
+    const mySlice = createSlice([], {
+      name: 'mySlice',
+      initState: { count: 3 },
       actions: {
         myAction: (num: number, foo: string) => (state) => {
           return { ...state, count: num + state.count };
         },
       },
-      effects: [
-        {
-          update: (sl, store) => {
-            let val = sl.getState(store.state);
-            let val2 = mySlice.getState(store.state);
+      selectors: {},
+    }).addEffect([
+      {
+        update: (sl, store) => {
+          let val = sl.getState(store.state);
+          let val2 = mySlice.getState(store.state);
 
-            expectType<{ count: number }>(val);
-            expectType<{ count: number }>(val2);
+          expectType<{ count: number }>(val);
+          expectType<{ count: number }>(val2);
 
-            // @ts-expect-error - should not allow access of unknown action
-            let testVal1 = sl.actions.xyzTest;
-            let act = sl.actions.myAction;
-            expectType<TxCreator<'mySlice', [number, string]>>(act);
+          // @ts-expect-error - should not allow access of unknown action
+          let testVal1 = sl.actions.xyzTest;
+          let act = sl.actions.myAction;
+          expectType<TxCreator<'mySlice', [number, string]>>(act);
 
-            // @ts-expect-error - should not allow access of unknown field in the state
-            let testVal = testSlice1.getState(store.state);
-          },
+          // @ts-expect-error - should not allow access of unknown field in the state
+          let testVal = testSlice1.getState(store.state);
         },
-      ],
-    });
+      },
+    ]);
 
     let effect = mySlice.spec.effects?.[0];
 
-    expectType<Effect<any>>(effect!);
+    expectType<AnyEffect>(effect!);
 
     expect(effect).toBeDefined();
   });
@@ -754,8 +754,10 @@ describe('creating with slice', () => {
 
   test('6. DS, SE', () => {
     const slice1State = { slice1Count: 3 };
-    const slice1 = slice({
-      key: createKey('slice1', dependencies, slice1State, {
+    const slice1 = createSlice(dependencies, {
+      name: 'slice1',
+      initState: slice1State,
+      selectors: {
         numSquared(state, storeState) {
           // @ts-expect-error - should error since testSlice2 is not a dependency
           testSlice2.getState(storeState);
@@ -763,32 +765,30 @@ describe('creating with slice', () => {
 
           return state.slice1Count * state.slice1Count;
         },
-      }),
+      },
       actions: {},
-      effects: [
-        {
-          update: (sl, store) => {
-            // @ts-expect-error - should error for unknown field
-            let testVal1 = store.state.xyzTest;
-            // @ts-expect-error - should error since testSlice2 is not a dependency
-            testSlice2.getState(store.state);
-            // should not error since testSlice1 is a dependency
-            testSlice1.getState(store.state);
+    }).addEffect([
+      {
+        update: (sl, store) => {
+          // @ts-expect-error - should error for unknown field
+          let testVal1 = store.state.xyzTest;
+          // @ts-expect-error - should error since testSlice2 is not a dependency
+          testSlice2.getState(store.state);
+          // should not error since testSlice1 is a dependency
+          testSlice1.getState(store.state);
 
-            // @ts-expect-error - should error since actions is not defined
-            let testVal0 = sl.actions.xyz;
-            let t1 = testSlice1.actions.decrement({ decrement: true });
-            let t2 = testSlice2.actions.uppercase();
+          // @ts-expect-error - should error since actions is not defined
+          let testVal0 = sl.actions.xyz;
+          let t1 = testSlice1.actions.decrement({ decrement: true });
+          let t2 = testSlice2.actions.uppercase();
 
-            store.dispatch(t1);
+          store.dispatch(t1);
 
-            // @ts-expect-error - should error since testSlice2 is not a dependency
-            store.dispatch(t2);
-          },
+          // @ts-expect-error - should error since testSlice2 is not a dependency
+          store.dispatch(t2);
         },
-      ],
-    });
-
+      },
+    ]);
     expectType<typeof dependencies>(slice1.spec.dependencies);
     expectType<{}>(slice1.actions);
 
