@@ -1,10 +1,12 @@
 import { mapObjectValues, uuid, weakCache } from './helpers';
 import {
   AnyFn,
+  createLineageId,
   createSliceKey,
   createSliceNameOpaque,
   isSliceKey,
   KEY_PREFIX,
+  LineageId,
   NoInfer,
   SliceContext,
   SliceKey,
@@ -41,7 +43,7 @@ export type PickOpts = {
 export interface BareSlice<K extends string = string, SS = unknown> {
   readonly name: K;
   readonly key: SliceKey;
-  readonly lineageId: string;
+  readonly lineageId: LineageId;
   //   Duplicated for ease of doing BareSlice['initState'] type
   readonly initState: SS;
 
@@ -63,7 +65,7 @@ export interface BareSlice<K extends string = string, SS = unknown> {
 }
 
 interface SliceConfig {
-  lineageId: string;
+  lineageId: LineageId;
   originalSpec: SliceSpec<any, any, any, any, any>;
 }
 
@@ -102,7 +104,7 @@ export class Slice<
   public readonly initState: SS;
   public readonly name: N;
   public readonly nameOpaque: SliceNameOpaque;
-  public readonly lineageId: string;
+  public readonly lineageId: LineageId;
   public readonly keyMap: KeyMap;
   public key: SliceKey;
   public _metadata: Record<string | symbol, any> = {};
@@ -121,7 +123,7 @@ export class Slice<
     public readonly spec: SliceSpec<N, SS, DS, A, SE>,
     public readonly config: SliceConfig = {
       originalSpec: spec,
-      lineageId: `${spec.name}-${fileUid}-${sliceUidCounter++}`,
+      lineageId: createLineageId(spec.name),
     },
   ) {
     // can only set slice key as a name when forking

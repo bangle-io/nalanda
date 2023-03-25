@@ -1,5 +1,5 @@
 import { weakCache } from './helpers';
-import { SliceContext, SliceKey } from './internal-types';
+import { LineageId, SliceContext, SliceKey } from './internal-types';
 import { BareSlice } from './slice';
 import { validateSlices } from './slices-helpers';
 import { Transaction } from './transaction';
@@ -31,10 +31,16 @@ interface StoreStateOptions {
 }
 
 export type SliceLookupByKey = Record<SliceKey, BareSlice>;
+export type SliceLookupByLineage = Record<LineageId, BareSlice>;
 
 const createSliceLookup = weakCache((slices: BareSlice[]) => {
   return Object.fromEntries(slices.map((s) => [s.key, s]));
 });
+const createSliceLineageLookup = weakCache(
+  (slices: BareSlice[]): SliceLookupByLineage => {
+    return Object.fromEntries(slices.map((s) => [s.lineageId, s]));
+  },
+);
 
 export class InternalStoreState implements StoreState<any> {
   public readonly context: SliceContext | undefined;
@@ -42,6 +48,7 @@ export class InternalStoreState implements StoreState<any> {
   protected slicesCurrentState: Record<SliceKey, unknown> = Object.create(null);
 
   public readonly sliceLookupByKey: SliceLookupByKey;
+  public readonly slicesLookupByLineage: SliceLookupByLineage;
 
   /**
    *
@@ -93,6 +100,7 @@ export class InternalStoreState implements StoreState<any> {
   ) {
     this.context = opts?.context;
     this.sliceLookupByKey = createSliceLookup(_slices);
+    this.slicesLookupByLineage = createSliceLineageLookup(_slices);
   }
 
   applyTransaction(tx: Transaction<string, unknown[]>): InternalStoreState {

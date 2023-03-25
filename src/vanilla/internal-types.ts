@@ -70,6 +70,7 @@ export declare const __brand: unique symbol;
 export type Brand<T, K> = T & { [__brand]: K };
 
 export type SliceKey = Brand<string, 'SliceKey'>;
+export type LineageId = Brand<string, 'LineageId'>;
 export type SliceNameOpaque = Brand<string, 'SliceName'>;
 
 export type SliceContext = {
@@ -84,6 +85,18 @@ export function createSliceKey(key: string): SliceKey {
     return key;
   }
   return (KEY_PREFIX + key) as SliceKey;
+}
+
+const lineages: Record<string, number> = Object.create(null);
+
+export function createLineageId(name: string): LineageId {
+  if (name in lineages) return `l_${name}$${++lineages[name]}` as LineageId;
+  lineages[name] = 0;
+  return `l_${name}$` as LineageId;
+}
+
+export function isLineageId(id: unknown): id is LineageId {
+  return typeof id === 'string' && id.startsWith('l_') && /\$\d*$/.test(id);
 }
 
 export function isSliceKey(key: unknown): key is SliceKey {

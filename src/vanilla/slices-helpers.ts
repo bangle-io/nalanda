@@ -9,19 +9,34 @@ export function expandSlices(slices: BareSlice[]) {
 
 export function validateSlices(slices: BareSlice[]) {
   checkUniqueKeys(slices);
+  checkUniqueLineage(slices);
   checkUniqDependency(slices);
   circularCheck(slices);
   checkDependencyOrder(slices);
 }
 
 export function checkUniqueKeys(slices: BareSlice[]) {
-  const keys = slices.map((s) => s.key);
-  const unique = new Set(keys);
-
-  if (keys.length !== unique.size) {
-    const dups = findDuplications(keys);
+  const dups = checkUnique(slices.map((s) => s.key));
+  if (dups) {
     throw new Error('Duplicate slice keys ' + dups.join(', '));
   }
+}
+
+export function checkUniqueLineage(slices: BareSlice[]) {
+  const dups = checkUnique(slices.map((s) => s.lineageId));
+  if (dups) {
+    throw new Error('Duplicate slice lineageIds ' + dups.join(', '));
+  }
+}
+
+function checkUnique<T>(entities: T[]): T[] | undefined {
+  const unique = new Set(entities);
+
+  if (entities.length !== unique.size) {
+    return findDuplications(entities);
+  }
+
+  return;
 }
 
 // TODO add test

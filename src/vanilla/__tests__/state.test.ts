@@ -1,6 +1,7 @@
 import { testOverrideSlice } from '../../test-helpers';
-import { createKey, slice } from '../create';
+import { createKey, createSlice, slice } from '../create';
 import { createSliceKey, expectType } from '../internal-types';
+import { checkUniqueLineage } from '../slices-helpers';
 import { InternalStoreState } from '../state';
 import { Transaction } from '../transaction';
 
@@ -195,6 +196,21 @@ describe('validations', () => {
       `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
     );
   });
+
+  test('throws error if duplicate lineage ids', () => {
+    const slice1 = createSlice([], {
+      name: 'slice1',
+      actions: {},
+      initState: { num: 1 },
+      selectors: {},
+    });
+
+    const slice2 = slice1.withoutEffects();
+
+    expect(() => checkUniqueLineage([slice1, slice2])).toThrowError(
+      /^Duplicate slice lineageIds l_slice1/,
+    );
+  });
 });
 
 describe('test override helper', () => {
@@ -269,6 +285,7 @@ describe('State creation', () => {
         _slices: expect.any(Array),
         slicesCurrentState: expect.any(Object),
         sliceLookupByKey: expect.any(Object),
+        slicesLookupByLineage: expect.any(Object),
       } as any,
       `
       {
@@ -277,6 +294,7 @@ describe('State creation', () => {
         "opts": undefined,
         "sliceLookupByKey": Any<Object>,
         "slicesCurrentState": Any<Object>,
+        "slicesLookupByLineage": Any<Object>,
       }
     `,
     );
@@ -295,6 +313,7 @@ describe('State creation', () => {
       _slices: expect.any(Array),
       opts: undefined,
       sliceLookupByKey: expect.any(Object),
+      slicesLookupByLineage: { [mySlice.lineageId]: expect.any(Object) },
       slicesCurrentState: {
         key_mySlice: {
           val: null,
@@ -320,7 +339,7 @@ describe('State creation', () => {
           actionId: 'updateNum',
         }),
       ),
-    ).toThrowError(`Action "updateNum" not found in Slice "key_mySlice"`);
+    ).toThrowError(`Action "updateNum" not found in Slice "mySlice"`);
   });
 
   test('applying action preserves states of those who donot have apply', () => {

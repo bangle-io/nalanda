@@ -5,7 +5,7 @@ import {
 } from '../vanilla/internal-types';
 import { AnySlice } from '../vanilla/public-types';
 import { Slice } from '../vanilla/slice';
-import { checkUniqueKeys } from '../vanilla/slices-helpers';
+import { checkUniqueKeys, checkUniqueLineage } from '../vanilla/slices-helpers';
 
 export function mergeSlices<N extends string, SL extends AnySlice>({
   name: parentName,
@@ -15,6 +15,7 @@ export function mergeSlices<N extends string, SL extends AnySlice>({
   children: SL[];
 }): Slice<N, object, any, any, any> {
   checkUniqueKeys(children);
+  checkUniqueLineage(children);
 
   let mappingRecord: Map<string, AnySlice> = new Map();
 
