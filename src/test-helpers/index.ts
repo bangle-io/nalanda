@@ -16,31 +16,21 @@ import {
 } from '../vanilla/transaction';
 
 /**
- * To be only used for testing scenarios. In production, slices should always have the same code
+ * To be only used for testing scenarios. In production, slices should never be able
+ * to override their dependencies.
  */
-export function testOverrideSlice<SL extends AnySlice>(
+export function testOverrideDependencies<SL extends AnySlice>(
   slice: SL,
   {
     dependencies = slice.spec.dependencies,
-    initState = slice.spec.initState,
-    effects = slice.spec.effects,
-    actions = slice.spec.actions,
-    selectors = slice.spec.selectors,
   }: {
     // since this is for testing, we can allow any slice
     dependencies?: AnySlice[];
-    initState?: SL['initState'];
-    effects?: AnyEffect[];
-    actions?: Record<string, ActionBuilder<any[], any, any>>;
-    selectors?: Record<string, any>;
   },
 ): SL {
-  return createSlice(dependencies, {
-    name: slice.name,
-    initState,
-    actions,
-    selectors,
-  }).addEffect(effects || []) as any;
+  return slice._fork({
+    dependencies,
+  }) as any;
 }
 
 export function waitUntil<B extends BareStore<any>>(

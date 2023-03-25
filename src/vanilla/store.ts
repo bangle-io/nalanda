@@ -6,7 +6,6 @@ import { InternalStoreState, StoreState } from './state';
 import { DebugFunc, Transaction, txLog } from './transaction';
 import { TX_META_DISPATCH_SOURCE, TX_META_STORE_NAME } from './transaction';
 import { BareStore } from './public-types';
-import { SliceContext } from './internal-types';
 import { expandSlices } from './slices-helpers';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
@@ -137,9 +136,8 @@ export class Store implements BareStore<any> {
    */
   getReducedStore<SB extends BareSlice>(
     debugDispatch?: string,
-    sliceContext?: SliceContext,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, debugDispatch, sliceContext);
+    return new ReducedStore(this, debugDispatch);
   }
 
   updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
@@ -178,26 +176,17 @@ export class ReducedStore<SB extends BareSlice> {
       );
     }
 
-    const sliceContext = this._sliceContext;
-
-    if (sliceContext) {
-      const matchingSlice =
-        this.internalStoreState.sliceLookupByKey[sliceContext.sliceKey];
+    if (tx.targetSliceLineage) {
+      let matchingSlice =
+        this.internalStoreState.slicesLookupByLineage[tx.targetSliceLineage];
 
       if (matchingSlice) {
-        const newTargetSliceKey = matchingSlice?.keyMap.resolve(
-          tx.targetSliceName,
+        tx = tx.changeTargetSlice(matchingSlice.key);
+      } else {
+        throw new Error(
+          `Slice lineage ${tx.targetSliceLineage} not found in store`,
         );
-        if (newTargetSliceKey) {
-          tx = tx.changeTargetSlice(newTargetSliceKey);
-        }
-        // TODO: we also have a source slice key field and that will currently be wrong
-        // and will need resolution similar to target slice key
-        // this is because source is set when calling something slice1.actions.foo()
-        // this will set source key from slice1, which might not be the correct source.
       }
-
-      // tx = tx.changeSourceSlice(sliceContext.sliceKey);
     }
 
     if (debugDispatch) {
@@ -210,7 +199,6 @@ export class ReducedStore<SB extends BareSlice> {
   constructor(
     private _store: Store | BareStore<any>,
     public _debugDispatchSrc?: string,
-    public readonly _sliceContext?: SliceContext,
   ) {}
 
   get destroyed() {
@@ -222,7 +210,7 @@ export class ReducedStore<SB extends BareSlice> {
   }
 
   get state(): StoreState<SB> {
-    return this.internalStoreState._withContext(this._sliceContext);
+    return this.internalStoreState;
   }
 
   destroy() {

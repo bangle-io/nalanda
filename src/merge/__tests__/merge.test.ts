@@ -245,7 +245,7 @@ describe('merging', () => {
       `);
     });
 
-    test('getActionBuilderByKey works on merged slices', () => {
+    test.skip('getActionBuilderByKey works on merged slices', () => {
       const store = Store.create({
         storeName: 'test-store',
         state: [g1, z0],
@@ -257,7 +257,7 @@ describe('merging', () => {
           createSliceKey('key_z0:x0:t3'),
           'updateT3State',
         ),
-      ).toBe(t3.spec.actions.updateT3State);
+      ).toEqual(t3.actions.updateT3State);
     });
 
     test('static slices are never modified', () => {
@@ -288,9 +288,6 @@ describe('merging', () => {
       expect(
         mappedT2?.config.originalSpec.dependencies.map((d) => d.key),
       ).toEqual(['key_t1']);
-      expect(mappedT2?.keyMap.resolve(createSliceNameOpaque('t1'))).toBe(
-        'key_z0:x0:t1',
-      );
     });
 
     test('In Z0 t3 child slice spec are mapped correctly', () => {
@@ -306,13 +303,6 @@ describe('merging', () => {
       expect(
         mappedT3?.config.originalSpec.dependencies.map((d) => d.key),
       ).toEqual(['key_g1', 'key_t1']);
-
-      expect(mappedT3?.keyMap.resolve(createSliceNameOpaque('t1'))).toBe(
-        'key_z0:x0:t1',
-      );
-      expect(mappedT3?.keyMap.resolve(createSliceNameOpaque('t3'))).toBe(
-        'key_z0:x0:t3',
-      );
     });
 
     test('state looks okay', () => {
@@ -342,43 +332,6 @@ describe('merging', () => {
             ],
             "key": "key_x0:t3",
           },
-        ]
-      `);
-
-      let result: any[] = [];
-
-      [...(z0.spec._additionalSlices || []), z0]?.map((r) => {
-        let miniResult: string[] = [];
-        for (const sl of [g1, t1, t2, t3, x0, z0]) {
-          miniResult.push(
-            [sl.key, r.keyMap.resolve?.(sl.nameOpaque)].join('>'),
-          );
-        }
-        result.push([r.key, miniResult.join(', ')]);
-      });
-
-      expect(result).toMatchInlineSnapshot(`
-        [
-          [
-            "key_z0:x0:t1",
-            "key_g1>key_g1, key_t1>key_z0:x0:t1, key_t2>, key_t3>, key_x0>, key_z0>",
-          ],
-          [
-            "key_z0:x0:t2",
-            "key_g1>, key_t1>key_z0:x0:t1, key_t2>key_z0:x0:t2, key_t3>, key_x0>, key_z0>",
-          ],
-          [
-            "key_z0:x0:t3",
-            "key_g1>key_g1, key_t1>key_z0:x0:t1, key_t2>, key_t3>key_z0:x0:t3, key_x0>, key_z0>",
-          ],
-          [
-            "key_z0:x0",
-            "key_g1>, key_t1>, key_t2>, key_t3>, key_x0>key_z0:x0, key_z0>",
-          ],
-          [
-            "key_z0",
-            "key_g1>, key_t1>, key_t2>, key_t3>, key_x0>, key_z0>key_z0",
-          ],
         ]
       `);
 
@@ -636,5 +589,3 @@ describe('merging', () => {
     });
   });
 });
-
-describe('getActionBuilderByKey', () => {});

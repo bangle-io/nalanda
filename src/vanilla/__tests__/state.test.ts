@@ -1,4 +1,4 @@
-import { testOverrideSlice } from '../../test-helpers';
+import { testOverrideDependencies } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
 import { createSliceKey, expectType } from '../internal-types';
 import { checkUniqueLineage } from '../slices-helpers';
@@ -225,18 +225,17 @@ describe('test override helper', () => {
       actions: {},
     });
 
-    let newState1 = InternalStoreState.create([
-      slice1,
-      testOverrideSlice(slice2, { initState: { num: 99 } }),
-    ]);
+    let newState1 = InternalStoreState.create([slice1, slice2], {
+      test2: { num: 99 },
+    });
 
     expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
     expect(newState1.getSliceState(slice2)).toEqual({ num: 99 });
 
-    let newState2 = InternalStoreState.create([
-      testOverrideSlice(slice1, { initState: { num: -1 } }),
-      slice2,
-    ]);
+    let newState2 = InternalStoreState.create([slice1, slice2], {
+      test1: { num: -1 },
+    });
+
     expect(newState2.getSliceState(slice1)).toEqual({ num: -1 });
     expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
   });
@@ -252,13 +251,9 @@ describe('test override helper', () => {
           },
         },
       ],
-    });
+    }).withoutEffects();
 
-    expect(
-      testOverrideSlice(slice1, { effects: [] }).spec.effects,
-    ).toHaveLength(0);
-    // should not affect initial slice
-    expect(slice1.spec.effects).toHaveLength(1);
+    expect(slice1.spec.effects).toHaveLength(0);
   });
 
   test('overriding dependencies', () => {
@@ -268,7 +263,7 @@ describe('test override helper', () => {
     });
 
     expect(
-      testOverrideSlice(slice1, { dependencies: [testSlice1] }).spec
+      testOverrideDependencies(slice1, { dependencies: [testSlice1] }).spec
         .dependencies.length,
     ).toBe(1);
 
@@ -290,7 +285,6 @@ describe('State creation', () => {
       `
       {
         "_slices": Any<Array>,
-        "context": undefined,
         "opts": undefined,
         "sliceLookupByKey": Any<Object>,
         "slicesCurrentState": Any<Object>,
@@ -335,6 +329,7 @@ describe('State creation', () => {
         new Transaction({
           sourceSliceName: 'mySlice',
           sourceSliceKey: createSliceKey('mySlice'),
+          targetSliceLineage: mySlice.lineageId,
           payload: [5],
           actionId: 'updateNum',
         }),

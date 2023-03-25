@@ -1,4 +1,4 @@
-import { mapObjectValues, uuid, weakCache } from './helpers';
+import { mapObjectValues, weakCache } from './helpers';
 import {
   AnyFn,
   createLineageId,
@@ -8,7 +8,6 @@ import {
   KEY_PREFIX,
   LineageId,
   NoInfer,
-  SliceContext,
   SliceKey,
   SliceNameOpaque,
 } from './internal-types';
@@ -19,12 +18,9 @@ import {
   AnySlice,
   TxCreator,
 } from './public-types';
-import { InternalStoreState, StoreState } from './state';
+import { StoreState } from './state';
 import { Transaction } from './transaction';
 import type { Simplify } from 'type-fest';
-
-let sliceUidCounter = 0;
-let fileUid = uuid(4);
 
 type IfSliceRegistered<
   SState extends StoreState<any>,
@@ -79,7 +75,7 @@ export interface SliceSpec<
   name: N;
   dependencies: DS[];
   initState: SS;
-  actions: A;
+  actions: A | ((obj: { lineageId: LineageId }) => A);
   reducer: (
     sliceState: NoInfer<SS>,
     storeState: StoreState<NoInfer<DS>>,
@@ -151,30 +147,17 @@ export class Slice<
     this.initState = spec.initState;
 
     this.lineageId = this.config.lineageId;
-    this.keyMap = new KeyMap(
-      {
-        key: this.key,
-        sliceName: this.nameOpaque,
-      },
-      spec.dependencies,
-    );
 
-    this.actions = spec.actions;
+    this.actions =
+      typeof spec.actions === 'function'
+        ? spec.actions({ lineageId: this.lineageId })
+        : spec.actions;
   }
 
   getState<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, N, SState>,
   ): IfSliceRegistered<SState, N, SS> {
-    const { context, sliceLookupByKey } =
-      storeState as unknown as InternalStoreState;
-
-    const resolvedSlice: any = resolveSliceInContext(
-      this as AnySlice,
-      sliceLookupByKey,
-      context,
-    );
-
-    return storeState.getSliceState(resolvedSlice);
+    return storeState.getSliceState(this as AnySlice);
   }
 
   resolveSelectors<SState extends StoreState<any>>(
@@ -202,14 +185,6 @@ export class Slice<
     tx: Transaction<N, unknown[]>,
   ): SS {
     return this.spec.reducer(sliceState, storeState, tx);
-
-    // if (!apply) {
-    //   throw new Error(
-    //     `Action "${tx.actionId}" not found in Slice "${this.key}"`,
-    //   );
-    // }
-
-    // return apply(sliceState, storeState, tx);
   }
 
   /**
@@ -284,59 +259,3 @@ export type ActionBuilderToTxCreator<
 type ResolvedSelectors<SE extends Record<string, SelectorFn<any, any, any>>> = {
   [K in keyof SE]: SE[K] extends AnyFn ? ReturnType<SE[K]> : never;
 };
-
-export class KeyMap {
-  public readonly sliceKey: string;
-  private map: Record<SliceNameOpaque, SliceKey>;
-
-  constructor(
-    slice: { key: SliceKey; sliceName: SliceNameOpaque },
-    dependencies: AnySlice[],
-  ) {
-    this.sliceKey = slice.key;
-
-    this.map = Object.fromEntries(
-      dependencies.map((dep) => [dep.name, dep.key]),
-    );
-    this.map[slice.sliceName] = slice.key;
-  }
-
-  // resolves original name to current key
-  resolve(name: SliceNameOpaque): SliceKey | undefined {
-    return this.map[name];
-  }
-}
-
-// if this was called from
-// sliceA.getState(storeState)
-// we need to first find the possible context this was executed in
-// by looking at storeContext
-// next we need find how to resolve the current sliceA in this context.
-// TODO add tests
-export function resolveSliceInContext(
-  currentSlice: AnySlice,
-  sliceLookupByKey: Record<SliceKey, BareSlice>,
-  context?: SliceContext,
-): BareSlice {
-  const sliceKey = context?.sliceKey;
-
-  if (!sliceKey || sliceKey === currentSlice.key) {
-    return currentSlice;
-  }
-
-  const sourceSlice = sliceLookupByKey[sliceKey];
-
-  if (!sourceSlice) {
-    throw new Error(`Slice "${sliceKey}" not found in store state`);
-  }
-  const resolvedKey = sourceSlice.keyMap.resolve(currentSlice.nameOpaque);
-  const mappedSlice = resolvedKey
-    ? sliceLookupByKey[resolvedKey]
-    : currentSlice;
-
-  if (!mappedSlice) {
-    throw new Error(`Mapped slice "${resolvedKey}" not found in store state`);
-  }
-
-  return mappedSlice;
-}

@@ -1,6 +1,7 @@
 import { uuid } from './helpers';
 import {
   createSliceNameOpaque,
+  LineageId,
   SliceKey,
   SliceNameOpaque,
 } from './internal-types';
@@ -14,9 +15,9 @@ function incrementalId() {
 
 export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
 export const TX_META_STORE_NAME = 'store-name';
-export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
 export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
 export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
+export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
 
 export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
@@ -24,6 +25,7 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly sourceSliceKey: SliceKey;
   public readonly targetSliceKey: SliceKey;
   public readonly targetSliceName: SliceNameOpaque;
+  public readonly targetSliceLineage: LineageId;
   public readonly payload: P;
   public readonly actionId: string;
   public readonly uid = incrementalId();
@@ -33,6 +35,7 @@ export class Transaction<N extends string, P extends unknown[]> {
       sourceSliceKey: this.sourceSliceKey,
       targetSliceKey: this.targetSliceKey,
       targetSliceName: this.targetSliceName,
+      targetSliceLineage: this.targetSliceLineage,
       sourceSliceName: this.config.sourceSliceName,
       payload: payloadSerializer(this.payload),
       actionId: this.actionId,
@@ -50,6 +53,7 @@ export class Transaction<N extends string, P extends unknown[]> {
       sourceSliceKey: obj.sourceSliceKey,
       targetSliceKey: obj.targetSliceKey,
       targetSliceName: obj.targetSliceName,
+      targetSliceLineage: obj.targetSliceLineage,
       sourceSliceName: obj.sourceSliceName,
       payload: payloadParser(obj.payload),
       actionId: obj.actionId,
@@ -74,6 +78,7 @@ export class Transaction<N extends string, P extends unknown[]> {
       // TODO: remove sourceSliceKey ? See store.ts reduced store TODO
       sourceSliceKey: SliceKey;
       sourceSliceName: N;
+      targetSliceLineage: LineageId;
       targetSliceKey?: SliceKey;
       targetSliceName?: SliceNameOpaque;
       payload: P;
@@ -84,6 +89,8 @@ export class Transaction<N extends string, P extends unknown[]> {
     this.targetSliceKey = config.targetSliceKey ?? config.sourceSliceKey;
     this.targetSliceName =
       config.targetSliceName ?? createSliceNameOpaque(config.sourceSliceName);
+
+    this.targetSliceLineage = config.targetSliceLineage;
 
     this.payload = config.payload;
     this.actionId = config.actionId;
@@ -103,25 +110,6 @@ export class Transaction<N extends string, P extends unknown[]> {
     tx.metadata.appendMetadata(
       TX_META_CHANGE_KEY,
       `changeTargetKey(${originalTarget} -> ${key})`,
-    );
-
-    return tx;
-  }
-
-  changeSourceSlice(key: SliceKey): Transaction<N, P> {
-    if (this.sourceSliceKey === key) {
-      return this;
-    }
-
-    const originalSource = this.sourceSliceKey;
-    const tx = new Transaction({
-      ...this.config,
-      sourceSliceKey: key,
-    });
-    tx.metadata = this.metadata.fork();
-    tx.metadata.appendMetadata(
-      TX_META_CHANGE_KEY,
-      `changeSourceKey(${originalSource} -> ${key})`,
     );
 
     return tx;

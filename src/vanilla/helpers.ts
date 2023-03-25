@@ -1,14 +1,7 @@
-import type { SliceKey, SliceNameOpaque } from './internal-types';
-import type {
-  ActionBuilder,
-  AnySlice,
-  BareStore,
-  EmptySlice,
-  TxCreator,
-} from './public-types';
+import type { SliceKey } from './internal-types';
+import type { ActionBuilder, AnySlice, BareStore } from './public-types';
 import type { BareSlice, Slice } from './slice';
 import type { Store } from './store';
-import { Transaction } from './transaction';
 
 const contextId = uuid(4);
 let counter = 0;
@@ -160,5 +153,5 @@ export function getActionBuilderByKey(
     key,
   );
 
-  return slice?.spec.actions?.[actionId];
+  return slice?.a?.[actionId];
 }

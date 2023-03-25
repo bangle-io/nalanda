@@ -173,9 +173,7 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     });
-    const reducedStore = new ReducedStore(myStore, '', {
-      sliceKey: testSlice1.key,
-    });
+    const reducedStore = new ReducedStore(myStore, '');
 
     reducedStore.dispatch(testSlice1.actions.increment({ increment: true }));
 
@@ -202,9 +200,7 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     }) as Store;
-    const reducedStore = myStore.getReducedStore('debug', {
-      sliceKey: testSlice1.key,
-    });
+    const reducedStore = myStore.getReducedStore('debug');
 
     reducedStore.destroy();
 
@@ -236,20 +232,13 @@ describe('ReducedStore', () => {
       state: [testSlice1, testSlice2, testSlice3, mySlice],
     });
 
-    const redStore = (myStore as Store).getReducedStore('', {
-      sliceKey: testSlice1.key,
-    });
+    const redStore = (myStore as Store).getReducedStore('');
 
     redStore.dispatch(mySlice.actions.addOne());
 
-    await waitUntil(
-      (myStore as Store).getReducedStore('', {
-        sliceKey: testSlice1.key,
-      }),
-      (state) => {
-        return mySlice.getState(state).num === 5;
-      },
-    );
+    await waitUntil((myStore as Store).getReducedStore(''), (state) => {
+      return mySlice.getState(state).num === 5;
+    });
 
     // expect(providedStore.state).toEqual(myStore.state);
     expect(providedPrevState).toBeInstanceOf(InternalStoreState);

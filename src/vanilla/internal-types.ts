@@ -73,10 +73,6 @@ export type SliceKey = Brand<string, 'SliceKey'>;
 export type LineageId = Brand<string, 'LineageId'>;
 export type SliceNameOpaque = Brand<string, 'SliceName'>;
 
-export type SliceContext = {
-  sliceKey: SliceKey;
-};
-
 export const KEY_PREFIX = 'key_';
 
 // TODO make this create key from name

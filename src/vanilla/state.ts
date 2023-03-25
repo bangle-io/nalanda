@@ -1,5 +1,5 @@
 import { weakCache } from './helpers';
-import { LineageId, SliceContext, SliceKey } from './internal-types';
+import { LineageId, SliceKey } from './internal-types';
 import { BareSlice } from './slice';
 import { validateSlices } from './slices-helpers';
 import { Transaction } from './transaction';
@@ -21,13 +21,10 @@ export interface StoreState<RegSlices extends BareSlice> {
   applyTransaction(
     tx: Transaction<RegSlices['name'], unknown[]>,
   ): StoreState<RegSlices>;
-
-  context: SliceContext | undefined;
 }
 
 interface StoreStateOptions {
   debug?: boolean;
-  context?: SliceContext;
 }
 
 export type SliceLookupByKey = Record<SliceKey, BareSlice>;
@@ -43,8 +40,6 @@ const createSliceLineageLookup = weakCache(
 );
 
 export class InternalStoreState implements StoreState<any> {
-  public readonly context: SliceContext | undefined;
-
   protected slicesCurrentState: Record<SliceKey, unknown> = Object.create(null);
 
   public readonly sliceLookupByKey: SliceLookupByKey;
@@ -60,6 +55,7 @@ export class InternalStoreState implements StoreState<any> {
    */
   static create<SL extends BareSlice>(
     slices: SL[],
+    // TODO make this more precise by using lineageId or key
     initStateOverride?: Record<string, unknown>,
   ): StoreState<SL> {
     validateSlices(slices);
@@ -98,7 +94,6 @@ export class InternalStoreState implements StoreState<any> {
     public readonly _slices: BareSlice[],
     public opts?: StoreStateOptions,
   ) {
-    this.context = opts?.context;
     this.sliceLookupByKey = createSliceLookup(_slices);
     this.slicesLookupByLineage = createSliceLineageLookup(_slices);
   }
@@ -121,13 +116,9 @@ export class InternalStoreState implements StoreState<any> {
           );
         }
 
-        const scopedStoreState = newStoreState._withContext({
-          sliceKey: slice.key,
-        });
-
         newState[slice.key] = slice.applyTx(
           sliceState.value,
-          scopedStoreState,
+          newStoreState,
           tx,
         );
       }
@@ -141,7 +132,13 @@ export class InternalStoreState implements StoreState<any> {
   }
 
   // TODO make sure this works with mapping keys
-  getSliceState(sl: BareSlice): unknown {
+  getSliceState(_sl: BareSlice): unknown {
+    const sl = this.slicesLookupByLineage[_sl.lineageId];
+
+    if (!sl) {
+      throw new Error(`Slice "${_sl.key}" not found in store`);
+    }
+
     let result = this._getDirectSliceState(sl.key);
     if (!result.found) {
       throw new Error(`Slice "${sl.key}" not found in store`);
@@ -158,14 +155,6 @@ export class InternalStoreState implements StoreState<any> {
     }
 
     return { found: false, value: undefined };
-  }
-
-  _withContext(context?: SliceContext) {
-    if (context) {
-      return this._fork(this.slicesCurrentState, { context });
-    }
-
-    return this;
   }
 
   private _fork(

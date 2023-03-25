@@ -1,6 +1,6 @@
 // import { actionToActionSnapshot, Slice, SliceKey } from '../slice';
 
-import { testOverrideSlice } from '../../test-helpers';
+import { testOverrideDependencies } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
 import { createSliceKey, expectType, rejectAny } from '../internal-types';
 import { AnyEffect, AnySlice, Effect, TxCreator } from '../public-types';
@@ -137,7 +137,7 @@ describe('dependencies', () => {
 
       expect(() =>
         InternalStoreState.create([
-          testOverrideSlice(testSlice1, {
+          testOverrideDependencies(testSlice1, {
             dependencies: [mySlice2],
           }),
           depOnTestSlice1Slice,
@@ -268,6 +268,7 @@ describe('actions', () => {
           ],
           "sourceSliceKey": "key_my-slice-1",
           "sourceSliceName": "my-slice-1",
+          "targetSliceLineage": "l_my-slice-1$1",
         },
         "metadata": Metadata {
           "_metadata": {},
@@ -277,6 +278,7 @@ describe('actions', () => {
         ],
         "sourceSliceKey": "key_my-slice-1",
         "targetSliceKey": "key_my-slice-1",
+        "targetSliceLineage": "l_my-slice-1$1",
         "targetSliceName": "my-slice-1",
         "uid": Any<String>,
       }

@@ -1,5 +1,5 @@
 import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
-import { SliceContext, SliceKey } from './internal-types';
+import { SliceKey } from './internal-types';
 import { AnyEffect, AnySlice, Effect } from './public-types';
 import type { BareSlice } from './slice';
 import type { InternalStoreState } from './state';
@@ -237,7 +237,6 @@ export class EffectHandler {
   public debugSyncLastRanBy: { sliceKey: string; actionId: string }[] = [];
   public debugDeferredLastRanBy: { sliceKey: string; actionId: string }[] = [];
   private _ref = {};
-  private _sliceContext: SliceContext;
 
   constructor(
     public effect: AnyEffect,
@@ -247,9 +246,6 @@ export class EffectHandler {
   ) {
     this._deferredPrevState = this.initStoreState;
     this._syncPrevState = this.initStoreState;
-    this._sliceContext = {
-      sliceKey: this._slice.key,
-    };
   }
 
   public addDebugInfo(payload: { sliceKey: string; actionId: string }) {
@@ -291,9 +287,7 @@ export class EffectHandler {
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, {
-        sliceKey: this._slice.key,
-      }),
+      store.getReducedStore(this.effect.name),
       this._ref,
     );
   }
@@ -317,8 +311,8 @@ export class EffectHandler {
       // TODO error handling
       this.effect.updateSync(
         this._slice as AnySlice,
-        store.getReducedStore(this.effect.name, this._sliceContext),
-        previouslySeenState._withContext(this._sliceContext),
+        store.getReducedStore(this.effect.name),
+        previouslySeenState,
         this._ref,
       );
     }
@@ -334,8 +328,8 @@ export class EffectHandler {
       // TODO error handling
       this.effect.update(
         this._slice as AnySlice,
-        store.getReducedStore(this.effect.name, this._sliceContext),
-        previouslySeenState._withContext(this._sliceContext),
+        store.getReducedStore(this.effect.name),
+        previouslySeenState,
         this._ref,
       );
     }

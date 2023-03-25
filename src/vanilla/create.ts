@@ -2,7 +2,7 @@ import { mapObjectValues } from './helpers';
 import {
   createSliceKey,
   createSliceNameOpaque,
-  NoInfer,
+  LineageId,
 } from './internal-types';
 import {
   ActionBuilder,
@@ -11,8 +11,7 @@ import {
   SelectorFn,
   TxCreator,
 } from './public-types';
-import { Slice, SliceSpec } from './slice';
-import { StoreState } from './state';
+import { Slice } from './slice';
 import { Transaction } from './transaction';
 
 class SliceKey<
@@ -92,7 +91,8 @@ export function slice<
   InferSelectors<SK>
 > {
   const slice = new Slice({
-    actions: expandActionBuilders(key.name, actions),
+    actions: ({ lineageId }) =>
+      expandActionBuilders(key.name, actions, lineageId),
     reducer: (sliceState, storeState, tx) => {
       const apply = actions[tx.actionId];
 
@@ -138,10 +138,9 @@ export function createSlice<
     terminal?: boolean;
   },
 ): Slice<N, SS, DS, ActionBuilderRecordConvert<N, A>, SE> {
-  const actions = expandActionBuilders(arg.name, arg.actions);
-
   const slice = new Slice({
-    actions,
+    actions: ({ lineageId }) =>
+      expandActionBuilders(arg.name, arg.actions, lineageId),
     dependencies,
     effects: [],
     initState: arg.initState,
@@ -167,7 +166,7 @@ export function createSlice<
 function expandActionBuilders<
   N extends string,
   A extends Record<string, ActionBuilder<any[], any, any>>,
->(name: N, actions: A): ActionBuilderRecordConvert<N, A> {
+>(name: N, actions: A, lineageId: LineageId): ActionBuilderRecordConvert<N, A> {
   let sliceKey = createSliceKey(name);
   let sliceName = createSliceNameOpaque(name);
   const result: Record<string, TxCreator> = mapObjectValues(
@@ -177,6 +176,7 @@ function expandActionBuilders<
         return new Transaction({
           sourceSliceKey: sliceKey,
           sourceSliceName: sliceName,
+          targetSliceLineage: lineageId,
           payload: params,
           actionId,
         });
