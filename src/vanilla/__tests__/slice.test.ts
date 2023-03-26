@@ -277,7 +277,6 @@ describe('actions', () => {
           1,
         ],
         "sourceSliceKey": "key_my-slice-1",
-        "targetSliceKey": "key_my-slice-1",
         "targetSliceLineage": "l_my-slice-1$1",
         "targetSliceName": "my-slice-1",
         "uid": Any<String>,

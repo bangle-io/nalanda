@@ -56,8 +56,6 @@ export interface BareSlice<K extends string = string, SS = unknown> {
     storeState: StoreState<any>,
     tx: Transaction<K, unknown[]>,
   ): SS;
-
-  readonly keyMap: KeyMap;
 }
 
 interface SliceConfig {
@@ -101,7 +99,6 @@ export class Slice<
   public readonly name: N;
   public readonly nameOpaque: SliceNameOpaque;
   public readonly lineageId: LineageId;
-  public readonly keyMap: KeyMap;
   public key: SliceKey;
   public _metadata: Record<string | symbol, any> = {};
 

@@ -157,21 +157,21 @@ describe('run once', () => {
             },
           ],
           "sourceSliceKey": "key_test-1",
-          "targetSliceKey": "key_test-1",
+          "targetSliceLineage": "l_test-1$",
         },
         {
           "actionId": "ready",
           "dispatchSource": "run-once(changeEffect)",
           "payload": [],
           "sourceSliceKey": "key_run-once",
-          "targetSliceKey": "key_run-once",
+          "targetSliceLineage": "l_run-once$1",
         },
         {
           "actionId": "lowercase",
           "dispatchSource": "run-once(changeEffect)",
           "payload": [],
           "sourceSliceKey": "key_test-3",
-          "targetSliceKey": "key_test-3",
+          "targetSliceLineage": "l_test-3$",
         },
         {
           "actionId": "increment",
@@ -182,7 +182,7 @@ describe('run once', () => {
             },
           ],
           "sourceSliceKey": "key_test-1",
-          "targetSliceKey": "key_test-1",
+          "targetSliceLineage": "l_test-1$",
         },
         {
           "actionId": "increment",
@@ -193,7 +193,7 @@ describe('run once', () => {
             },
           ],
           "sourceSliceKey": "key_test-1",
-          "targetSliceKey": "key_test-1",
+          "targetSliceLineage": "l_test-1$",
         },
         {
           "actionId": "increment",
@@ -204,7 +204,7 @@ describe('run once', () => {
             },
           ],
           "sourceSliceKey": "key_test-1",
-          "targetSliceKey": "key_test-1",
+          "targetSliceLineage": "l_test-1$",
         },
       ]
     `);

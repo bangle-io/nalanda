@@ -74,7 +74,7 @@ describe('Single slice', () => {
             "banana",
           ],
           "sourceSliceKey": "key_test",
-          "targetSliceKey": "key_test",
+          "targetSliceLineage": "l_test$",
         },
         {
           "actionId": "testAction",
@@ -83,7 +83,7 @@ describe('Single slice', () => {
             "bananaEffect",
           ],
           "sourceSliceKey": "key_test",
-          "targetSliceKey": "key_test",
+          "targetSliceLineage": "l_test$",
         },
       ]
     `);
@@ -102,7 +102,6 @@ describe('Single slice', () => {
           ],
           "sourceSliceKey": "key_test",
           "store": "test-store",
-          "targetSliceKey": "key_test",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -111,7 +110,7 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "testAction",
-              "sliceKey": "key_test",
+              "lineageId": "l_test$",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
@@ -124,7 +123,6 @@ describe('Single slice', () => {
           ],
           "sourceSliceKey": "key_test",
           "store": "test-store",
-          "targetSliceKey": "key_test",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -133,7 +131,7 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "testAction",
-              "sliceKey": "key_test",
+              "lineageId": "l_test$",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",

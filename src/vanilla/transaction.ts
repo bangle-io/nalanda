@@ -23,7 +23,6 @@ export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
 
   public readonly sourceSliceKey: SliceKey;
-  public readonly targetSliceKey: SliceKey;
   public readonly targetSliceName: SliceNameOpaque;
   public readonly targetSliceLineage: LineageId;
   public readonly payload: P;
@@ -33,7 +32,6 @@ export class Transaction<N extends string, P extends unknown[]> {
   toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
     return {
       sourceSliceKey: this.sourceSliceKey,
-      targetSliceKey: this.targetSliceKey,
       targetSliceName: this.targetSliceName,
       targetSliceLineage: this.targetSliceLineage,
       sourceSliceName: this.config.sourceSliceName,
@@ -51,7 +49,6 @@ export class Transaction<N extends string, P extends unknown[]> {
   ) {
     let tx = new Transaction({
       sourceSliceKey: obj.sourceSliceKey,
-      targetSliceKey: obj.targetSliceKey,
       targetSliceName: obj.targetSliceName,
       targetSliceLineage: obj.targetSliceLineage,
       sourceSliceName: obj.sourceSliceName,
@@ -79,14 +76,12 @@ export class Transaction<N extends string, P extends unknown[]> {
       sourceSliceKey: SliceKey;
       sourceSliceName: N;
       targetSliceLineage: LineageId;
-      targetSliceKey?: SliceKey;
       targetSliceName?: SliceNameOpaque;
       payload: P;
       actionId: string;
     },
   ) {
     this.sourceSliceKey = config.sourceSliceKey;
-    this.targetSliceKey = config.targetSliceKey ?? config.sourceSliceKey;
     this.targetSliceName =
       config.targetSliceName ?? createSliceNameOpaque(config.sourceSliceName);
 
@@ -94,25 +89,6 @@ export class Transaction<N extends string, P extends unknown[]> {
 
     this.payload = config.payload;
     this.actionId = config.actionId;
-  }
-
-  changeTargetSlice(key: SliceKey): Transaction<N, P> {
-    if (this.targetSliceKey === key) {
-      return this;
-    }
-
-    const originalTarget = this.targetSliceKey;
-    const tx = new Transaction({
-      ...this.config,
-      targetSliceKey: key,
-    });
-    tx.metadata = this.metadata.fork();
-    tx.metadata.appendMetadata(
-      TX_META_CHANGE_KEY,
-      `changeTargetKey(${originalTarget} -> ${key})`,
-    );
-
-    return tx;
   }
 }
 
@@ -152,13 +128,12 @@ export class Metadata {
 export interface EffectLog {
   type: 'SYNC_UPDATE_EFFECT' | 'UPDATE_EFFECT';
   name: string;
-  source: Array<{ sliceKey: string; actionId: string }>;
+  source: Array<{ lineageId: LineageId; actionId: string }>;
 }
 
 export interface TransactionLog {
   type: 'TX';
   sourceSliceKey: SliceKey;
-  targetSliceKey: SliceKey;
   actionId: string;
   dispatcher: string | undefined;
   store: string | undefined;
@@ -170,7 +145,6 @@ export function txLog(tx: Transaction<any, any>): TransactionLog {
   return {
     type: 'TX',
     sourceSliceKey: tx.sourceSliceKey,
-    targetSliceKey: tx.targetSliceKey,
     actionId: tx.config.actionId,
     dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
     store: tx.metadata.getMetadata(TX_META_STORE_NAME),

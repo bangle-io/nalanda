@@ -1,4 +1,4 @@
-import type { SliceKey } from './internal-types';
+import { LineageId, SliceKey } from './internal-types';
 import type { ActionBuilder, AnySlice, BareStore } from './public-types';
 import type { BareSlice, Slice } from './slice';
 import type { Store } from './store';
@@ -62,28 +62,28 @@ export function uuid(len = 10) {
 
 export function calcDependencies(
   slices: BareSlice[],
-): Record<string, Set<string>> {
+): Record<LineageId, Set<LineageId>> {
   return Object.fromEntries(
     slices.map((slice) => [
-      slice.key,
-      new Set(slice.spec.dependencies.map((dep) => dep.key)),
+      slice.lineageId,
+      new Set(slice.spec.dependencies.map((dep) => dep.lineageId)),
     ]),
   );
 }
 
 export function flattenReverseDependencies(
-  reverseDep: Record<string, Set<string>>,
+  reverseDep: Record<LineageId, Set<LineageId>>,
 ) {
-  const result: Record<string, Set<string>> = {};
+  const result: Record<LineageId, Set<LineageId>> = {};
 
-  const recurse = (key: string) => {
+  const recurse = (key: LineageId) => {
     let vals = result[key];
 
     if (vals) {
       return vals;
     }
 
-    vals = new Set<string>();
+    vals = new Set<LineageId>();
     result[key] = vals;
 
     const deps = reverseDep[key];
@@ -101,7 +101,7 @@ export function flattenReverseDependencies(
   };
 
   for (const key of Object.keys(reverseDep)) {
-    recurse(key);
+    recurse(key as LineageId);
   }
 
   return result;
@@ -109,19 +109,19 @@ export function flattenReverseDependencies(
 
 export function calcReverseDependencies(
   slices: BareSlice[],
-): Record<string, Set<string>> {
-  let reverseDependencies: Record<string, Set<string>> = {};
+): Record<LineageId, Set<LineageId>> {
+  let reverseDependencies: Record<LineageId, Set<LineageId>> = {};
 
   for (const slice of slices) {
     for (const dep of slice.spec.dependencies) {
-      let result = reverseDependencies[dep.key];
+      let result = reverseDependencies[dep.lineageId];
 
       if (!result) {
         result = new Set();
-        reverseDependencies[dep.key] = result;
+        reverseDependencies[dep.lineageId] = result;
       }
 
-      result.add(slice.key);
+      result.add(slice.lineageId);
     }
   }
 

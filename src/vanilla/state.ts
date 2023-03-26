@@ -105,14 +105,14 @@ export class InternalStoreState implements StoreState<any> {
     let found = false;
 
     for (const slice of this._slices) {
-      if (slice.key === tx.targetSliceKey) {
+      if (slice.lineageId === tx.targetSliceLineage) {
         found = true;
 
         const sliceState = newStoreState._getDirectSliceState(slice.key);
 
         if (!sliceState.found) {
           throw new Error(
-            `Slice "${slice.key}" or one of its dependencies not found in store`,
+            `Slice "${slice.lineageId}" or one of its dependencies not found in store`,
           );
         }
 

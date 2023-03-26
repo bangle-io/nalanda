@@ -109,7 +109,6 @@ describe('store', () => {
           ],
           "sourceSliceKey": "key_test-1",
           "store": "myStore",
-          "targetSliceKey": "key_test-1",
           "txId": "<<TX_ID>>",
           "type": "TX",
         },
@@ -126,7 +125,6 @@ describe('store', () => {
         dispatcher: undefined,
         payload: [],
         sourceSliceKey: 'key_test-3',
-        targetSliceKey: 'key_test-3',
         store: 'myStore',
         txId: expect.any(String),
         type: 'TX',
@@ -137,7 +135,7 @@ describe('store', () => {
         source: [
           {
             actionId: 'uppercase',
-            sliceKey: 'key_test-3',
+            lineageId: 'l_test-3$',
           },
         ],
         type: 'SYNC_UPDATE_EFFECT',
@@ -147,7 +145,6 @@ describe('store', () => {
         dispatcher: 'to-lowercase',
         payload: [],
         sourceSliceKey: 'key_test-3',
-        targetSliceKey: 'key_test-3',
         store: 'myStore',
         txId: expect.any(String),
         type: 'TX',
@@ -157,7 +154,7 @@ describe('store', () => {
         source: [
           {
             actionId: 'lowercase',
-            sliceKey: 'key_test-3',
+            lineageId: 'l_test-3$',
           },
         ],
         type: 'SYNC_UPDATE_EFFECT',

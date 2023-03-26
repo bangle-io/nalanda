@@ -435,36 +435,38 @@ describe('merging', () => {
         }
       `);
 
-      expect(dispatchSpy.getSimplifiedTransactions({})).toEqual([
-        {
-          actionId: 'updateG1State',
-          dispatchSource: undefined,
-          payload: [],
-          sourceSliceKey: 'key_g1',
-          targetSliceKey: 'key_g1',
-        },
-        {
-          actionId: 'updateT1State',
-          dispatchSource: 't1Effect',
-          payload: [],
-          sourceSliceKey: 'key_t1',
-          targetSliceKey: 'key_z0:x0:t1',
-        },
-        {
-          actionId: 'updateT1State',
-          dispatchSource: 't2Effect',
-          payload: [],
-          sourceSliceKey: 'key_t1',
-          targetSliceKey: 'key_z0:x0:t1',
-        },
-        {
-          actionId: 'updateT3State',
-          dispatchSource: 't3Effect',
-          payload: [],
-          sourceSliceKey: 'key_t3',
-          targetSliceKey: 'key_z0:x0:t3',
-        },
-      ]);
+      expect(dispatchSpy.getSimplifiedTransactions({})).toMatchInlineSnapshot(`
+        [
+          {
+            "actionId": "updateG1State",
+            "dispatchSource": undefined,
+            "payload": [],
+            "sourceSliceKey": "key_g1",
+            "targetSliceLineage": "l_g1$",
+          },
+          {
+            "actionId": "updateT1State",
+            "dispatchSource": "t1Effect",
+            "payload": [],
+            "sourceSliceKey": "key_t1",
+            "targetSliceLineage": "l_t1$",
+          },
+          {
+            "actionId": "updateT1State",
+            "dispatchSource": "t2Effect",
+            "payload": [],
+            "sourceSliceKey": "key_t1",
+            "targetSliceLineage": "l_t1$",
+          },
+          {
+            "actionId": "updateT3State",
+            "dispatchSource": "t3Effect",
+            "payload": [],
+            "sourceSliceKey": "key_t3",
+            "targetSliceLineage": "l_t3$",
+          },
+        ]
+      `);
 
       expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
         [
@@ -474,7 +476,6 @@ describe('merging', () => {
             "payload": [],
             "sourceSliceKey": "key_g1",
             "store": "test-store",
-            "targetSliceKey": "key_g1",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -483,7 +484,7 @@ describe('merging', () => {
             "source": [
               {
                 "actionId": "updateG1State",
-                "sliceKey": "key_g1",
+                "lineageId": "l_g1$",
               },
             ],
             "type": "SYNC_UPDATE_EFFECT",
@@ -494,7 +495,6 @@ describe('merging', () => {
             "payload": [],
             "sourceSliceKey": "key_t1",
             "store": "test-store",
-            "targetSliceKey": "key_z0:x0:t1",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -503,11 +503,11 @@ describe('merging', () => {
             "source": [
               {
                 "actionId": "updateG1State",
-                "sliceKey": "key_g1",
+                "lineageId": "l_g1$",
               },
               {
                 "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
+                "lineageId": "l_t1$",
               },
             ],
             "type": "SYNC_UPDATE_EFFECT",
@@ -518,7 +518,6 @@ describe('merging', () => {
             "payload": [],
             "sourceSliceKey": "key_t1",
             "store": "test-store",
-            "targetSliceKey": "key_z0:x0:t1",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -527,15 +526,15 @@ describe('merging', () => {
             "source": [
               {
                 "actionId": "updateG1State",
-                "sliceKey": "key_g1",
+                "lineageId": "l_g1$",
               },
               {
                 "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
+                "lineageId": "l_t1$",
               },
               {
                 "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
+                "lineageId": "l_t1$",
               },
             ],
             "type": "SYNC_UPDATE_EFFECT",
@@ -546,7 +545,6 @@ describe('merging', () => {
             "payload": [],
             "sourceSliceKey": "key_t3",
             "store": "test-store",
-            "targetSliceKey": "key_z0:x0:t3",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -555,11 +553,11 @@ describe('merging', () => {
             "source": [
               {
                 "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
+                "lineageId": "l_t1$",
               },
               {
                 "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
+                "lineageId": "l_t1$",
               },
             ],
             "type": "SYNC_UPDATE_EFFECT",
@@ -569,7 +567,7 @@ describe('merging', () => {
             "source": [
               {
                 "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
+                "lineageId": "l_t1$",
               },
             ],
             "type": "SYNC_UPDATE_EFFECT",
@@ -579,7 +577,7 @@ describe('merging', () => {
             "source": [
               {
                 "actionId": "updateT3State",
-                "sliceKey": "key_z0:x0:t3",
+                "lineageId": "l_t3$",
               },
             ],
             "type": "SYNC_UPDATE_EFFECT",

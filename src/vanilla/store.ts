@@ -20,7 +20,10 @@ export class Store implements BareStore<any> {
       let newState = store.state.applyTransaction(tx);
 
       if (newState === store.state) {
-        console.debug('No state change, skipping update', tx.targetSliceKey);
+        console.debug(
+          'No state change, skipping update to',
+          tx.targetSliceLineage,
+        );
 
         return;
       }
@@ -153,7 +156,7 @@ export class Store implements BareStore<any> {
 
     if (tx) {
       this._effectsManager?.queueSideEffectExecution(this, {
-        sliceKey: tx.targetSliceKey,
+        lineageId: tx.targetSliceLineage,
         actionId: tx.actionId,
       });
     }
@@ -162,7 +165,8 @@ export class Store implements BareStore<any> {
   // TODO: this will be removed once we have better way of adding dynamic slices
   _tempRegisterOnSyncChange(sl: BareSlice, cb: () => void) {
     return (
-      this._effectsManager?._tempRegisterOnSyncChange(sl.key, cb) || (() => {})
+      this._effectsManager?._tempRegisterOnSyncChange(sl.lineageId, cb) ||
+      (() => {})
     );
   }
 }
@@ -174,19 +178,6 @@ export class ReducedStore<SB extends BareSlice> {
         TX_META_DISPATCH_SOURCE,
         this._debugDispatchSrc,
       );
-    }
-
-    if (tx.targetSliceLineage) {
-      let matchingSlice =
-        this.internalStoreState.slicesLookupByLineage[tx.targetSliceLineage];
-
-      if (matchingSlice) {
-        tx = tx.changeTargetSlice(matchingSlice.key);
-      } else {
-        throw new Error(
-          `Slice lineage ${tx.targetSliceLineage} not found in store`,
-        );
-      }
     }
 
     if (debugDispatch) {

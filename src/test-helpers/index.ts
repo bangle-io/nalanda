@@ -98,12 +98,18 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
                 .some((s) => r.sourceSliceKey == createSliceKey(s.name));
         })
         .map(
-          ({ sourceSliceKey, targetSliceKey, metadata, payload, config }) => ({
+          ({
             sourceSliceKey,
-            targetSliceKey,
+            metadata,
+            payload,
+            config,
+            targetSliceLineage,
+          }) => ({
+            sourceSliceKey,
             actionId: config.actionId,
             payload,
             dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
+            targetSliceLineage,
           }),
         );
     },

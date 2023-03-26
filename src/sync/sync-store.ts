@@ -519,7 +519,8 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
     switch (type) {
       case 'tx': {
         const tx = m.body;
-        const targetSliceKey = tx.targetSliceKey;
+        const targetSliceKey = tx.targetSliceLineage;
+
         // it is possible replica is only focusing on a subset of slices
         if (!this.syncSliceKeys.has(targetSliceKey)) {
           console.debug(
