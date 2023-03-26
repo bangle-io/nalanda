@@ -12,3 +12,12 @@ export function abortableSetTimeout(
     { once: true },
   );
 }
+
+export function assertNotUndefined(
+  value: unknown,
+  message: string,
+): asserts value {
+  if (value === undefined) {
+    throw new Error(`assertion failed: ${message}`);
+  }
+}

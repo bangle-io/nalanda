@@ -1,13 +1,18 @@
 import { Store, Transaction } from '../vanilla';
 import { Scheduler, timeoutSchedular } from '../vanilla/effect';
 import { changeBareSlice, weakCache } from '../vanilla/helpers';
+import {
+  createLineageId,
+  LineageId,
+  SliceKey,
+} from '../vanilla/internal-types';
 import { AnySlice } from '../vanilla/public-types';
 import { BareSlice } from '../vanilla/slice';
 import { expandSlices } from '../vanilla/slices-helpers';
 import { InternalStoreState } from '../vanilla/state';
 import { DispatchTx } from '../vanilla/store';
 import { DebugFunc } from '../vanilla/transaction';
-import { abortableSetTimeout } from './helpers';
+import { abortableSetTimeout, assertNotUndefined } from './helpers';
 
 // replica sends replica info to main
 // then main sends main info to replica
@@ -29,7 +34,7 @@ export type SyncMessage =
       type: 'tx';
       from: string;
       to: string;
-      body: Transaction<any, any>;
+      body: { tx: Transaction<any, any>; targetSliceKey: SliceKey };
     }
   | {
       from: string;
@@ -132,8 +137,10 @@ export function createSyncState({
   }
 
   const syncSliceKeys = new Set(syncSlices.map((s) => s.key));
+  const syncLineageIds = new Set(syncSlices.map((s) => s.lineageId));
 
   return {
+    syncLineageIds,
     syncSliceKeys,
     syncSlices,
     state: InternalStoreState.create([
@@ -172,32 +179,36 @@ const defaultDispatchTx: DispatchTx<Transaction<any, any>> = (store, tx) => {
 };
 
 export const sendTxToReplicas = (
-  mainStoreName: string,
+  store: Store,
   replicaInfos: Record<string, ReplicaStoreInfo>,
   tx: Transaction<any, any>,
   send: (message: Extract<SyncMessage, { type: 'tx' }>) => void,
 ) => {
-  const storeNames =
-    sliceKeyToReplicaStoreLookup(replicaInfos)[tx.targetSliceKey];
+  const targetSliceKey = getSliceKey(store, tx.targetSliceLineage);
+
+  const storeNames = sliceKeyToReplicaStoreLookup(replicaInfos)[targetSliceKey];
 
   if (!storeNames) {
-    console.warn(`No replica store found for slice key ${tx.targetSliceKey}`);
+    console.warn(`No replica store found for slice key ${targetSliceKey}`);
     return;
   }
 
   for (const replicaStoreName of storeNames) {
     send({
       type: 'tx',
-      body: tx,
-      from: mainStoreName,
+      body: {
+        tx: tx.change({
+          // lineage id are not guaranteed the same across the stores,
+          // slice key is stable and should be used to get the correct
+          // lineage id in the replica store.
+          targetSliceLineage: createLineageId('<PURGED>'),
+        }),
+        targetSliceKey,
+      },
+      from: store.storeName,
       to: replicaStoreName,
     });
   }
-};
-
-type Channel = {
-  send?: (message: SyncMessage) => void;
-  readonly receive: (message: SyncMessage) => void;
 };
 
 class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
@@ -217,6 +228,7 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
   private providedReplicatedStoreNames: string[];
 
   private readonly syncSliceKeys: Set<string>;
+  private readonly syncLineageIds: Set<LineageId>;
   private readonly syncSlices: BareSlice[];
 
   private storeInfo: MainStoreInfo;
@@ -224,7 +236,7 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
   private dispatchTx = (store: Store, tx: Transaction<any, any>) => {
     this.providedDispatchTx(store, tx);
 
-    if (!this.syncSliceKeys.has(tx.targetSliceKey)) {
+    if (!this.syncLineageIds.has(tx.targetSliceLineage)) {
       return;
     }
 
@@ -238,7 +250,7 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
       this.queuedTx.push(tx);
     } else {
       // send it to all the replica stores
-      sendTxToReplicas(this.storeName, this.replicaInfos, tx, this.sendMessage);
+      sendTxToReplicas(store, this.replicaInfos, tx, this.sendMessage);
     }
   };
 
@@ -261,6 +273,7 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
       state: internalState,
       syncSliceKeys,
       syncSlices,
+      syncLineageIds,
     } = createSyncState({
       syncSlices: config.sync.slices,
       otherSlices: config.slices,
@@ -269,6 +282,7 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
 
     this.syncSliceKeys = syncSliceKeys;
     this.syncSlices = syncSlices;
+    this.syncLineageIds = syncLineageIds;
 
     config.sync.validate?.({ syncSlices: syncSlices as AnySlice[] });
 
@@ -293,13 +307,21 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
     const type = m.type;
     switch (type) {
       case 'tx': {
-        const tx = m.body;
-        const targetSliceKey = tx.targetSliceKey;
+        let { tx, targetSliceKey } = m.body;
         if (!(tx instanceof Transaction)) {
           throw new Error(
             `SyncStoreMain received a message with a body that was not a Transaction.`,
           );
         }
+
+        let targetSliceLineage = getLineageId(this.store, targetSliceKey);
+
+        // cannot use the lineageKey from the transaction because it is not
+        // guaranteed to be the same as the one in the main store, it is dependent on the environment
+        tx = tx.change({
+          targetSliceLineage,
+        });
+
         if (!this.syncSliceKeys.has(targetSliceKey)) {
           throw new Error(
             `Slice "${targetSliceKey}" not found. Main store "${this.storeName}" received transaction targeting a slice which was not found in the sync slices.`,
@@ -384,7 +406,7 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
     }
 
     for (const tx of this.queuedTx) {
-      sendTxToReplicas(this.storeName, this.replicaInfos, tx, this.sendMessage);
+      sendTxToReplicas(this.store, this.replicaInfos, tx, this.sendMessage);
     }
 
     this.isReady = true;
@@ -403,6 +425,7 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
   private mainSyncError = false;
   private queuedTx: Transaction<any, any>[] = [];
   private readonly syncSliceKeys: Set<string>;
+  private readonly syncLineageIds: Set<LineageId>;
   private readonly syncSlices: BareSlice[];
   private storeInfo: ReplicaStoreInfo;
   private storeName: string;
@@ -428,6 +451,7 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
       state: internalState,
       syncSliceKeys,
       syncSlices,
+      syncLineageIds,
     } = createSyncState({
       syncSlices: sync.slices,
       otherSlices: slices,
@@ -449,6 +473,7 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
     this.storeName = storeName;
     this.syncSliceKeys = syncSliceKeys;
     this.syncSlices = syncSlices;
+    this.syncLineageIds = syncLineageIds;
 
     // keep this as the last thing ALWAYS to avoid
     this.store = new Store(
@@ -487,7 +512,7 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
   }
 
   private syncedDispatch: DispatchTx<Transaction<any, any>> = (store, tx) => {
-    if (!this.syncSliceKeys.has(tx.targetSliceKey)) {
+    if (!this.syncLineageIds.has(tx.targetSliceLineage)) {
       this.localDispatch(store, tx);
       return;
     }
@@ -508,7 +533,7 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
     // and wait on the main store to send it back via `receiveMessage`
     this.sendMessage({
       type: 'tx',
-      body: tx,
+      body: { tx, targetSliceKey: getSliceKey(store, tx.targetSliceLineage) },
       from: this.storeName,
       to: this.mainStoreName,
     });
@@ -518,8 +543,7 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
     const type = m.type;
     switch (type) {
       case 'tx': {
-        const tx = m.body;
-        const targetSliceKey = tx.targetSliceLineage;
+        let { tx, targetSliceKey } = m.body;
 
         // it is possible replica is only focusing on a subset of slices
         if (!this.syncSliceKeys.has(targetSliceKey)) {
@@ -528,6 +552,13 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
           );
           return;
         }
+
+        let targetSliceLineage = getLineageId(this.store, targetSliceKey);
+
+        tx = tx.change({
+          targetSliceLineage,
+        });
+
         // tx is coming from main store directly apply it to the local store
         this.localDispatch(this.store, tx);
         break;
@@ -639,4 +670,20 @@ function validateMainInfo(
       );
     }
   }
+}
+
+function getSliceKey(store: Store, lineageId: LineageId): SliceKey {
+  let key = store.state.slicesLookupByLineage[lineageId]?.key;
+
+  assertNotUndefined(key, `Slice with lineage "${lineageId}" not found`);
+
+  return key;
+}
+
+function getLineageId(store: Store, sliceKey: SliceKey): LineageId {
+  let lineageId = store.state.sliceLookupByKey[sliceKey]?.lineageId;
+
+  assertNotUndefined(lineageId, `Slice with key "${sliceKey}" not found`);
+
+  return lineageId;
 }

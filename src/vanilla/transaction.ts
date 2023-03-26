@@ -17,7 +17,6 @@ export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
 export const TX_META_STORE_NAME = 'store-name';
 export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
 export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
-export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
 
 export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
@@ -89,6 +88,20 @@ export class Transaction<N extends string, P extends unknown[]> {
 
     this.payload = config.payload;
     this.actionId = config.actionId;
+  }
+
+  change({
+    targetSliceLineage,
+  }: {
+    targetSliceLineage: LineageId;
+  }): Transaction<N, P> {
+    const tx = new Transaction({
+      ...this.config,
+      targetSliceLineage,
+    });
+    tx.metadata = this.metadata.fork();
+
+    return tx;
   }
 }
 

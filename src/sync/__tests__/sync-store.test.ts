@@ -225,7 +225,7 @@ const createBasicPair = ({
   };
 };
 
-describe.skip('basic test', () => {
+describe('basic test', () => {
   test('erroring - sync slice missing in main', async () => {
     const result = createBasicPair({
       main: {
@@ -392,7 +392,6 @@ describe.skip('basic test', () => {
           "payload": [],
           "sourceSliceKey": "key_testSlice1",
           "store": "test-main",
-          "targetSliceKey": "key_testSlice1",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -402,7 +401,6 @@ describe.skip('basic test', () => {
           "payload": [],
           "sourceSliceKey": "key_testSlice1",
           "store": "test-main",
-          "targetSliceKey": "key_testSlice1",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -455,7 +453,7 @@ describe.skip('basic test', () => {
   });
 });
 
-describe.skip('sync queuing', () => {
+describe('sync queuing', () => {
   test('with a setup delay in replica', async () => {
     const replicaEffectCalled = jest.fn();
     const watcherSlice = changeEffect(
@@ -659,9 +657,12 @@ describe.skip('sync queuing', () => {
     });
 
     expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
-      body: expect.objectContaining({
-        actionId: 'increment',
-      }),
+      body: {
+        targetSliceKey: 'key_testSlice1',
+        tx: expect.objectContaining({
+          actionId: 'increment',
+        }),
+      },
       from: 'test-replica-store-1',
       to: 'test-main',
       type: 'tx',
@@ -755,9 +756,12 @@ describe.skip('sync queuing', () => {
     });
     // first should be main
     expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
-      body: expect.objectContaining({
-        actionId: 'increment',
-      }),
+      body: {
+        tx: expect.objectContaining({
+          actionId: 'increment',
+        }),
+        targetSliceKey: 'key_testSlice1',
+      },
       from: 'test-main',
       to: 'test-replica-store-1',
       type: 'tx',
@@ -765,7 +769,7 @@ describe.skip('sync queuing', () => {
   });
 });
 
-describe.skip('createSyncState', () => {
+describe('createSyncState', () => {
   test('works', () => {
     const result = createSyncState({
       type: 'main',
@@ -776,6 +780,11 @@ describe.skip('createSyncState', () => {
     expect(result.syncSliceKeys).toMatchInlineSnapshot(`
       Set {
         "key_testSlice1",
+      }
+    `);
+    expect(result.syncLineageIds).toMatchInlineSnapshot(`
+      Set {
+        "l_testSlice1$",
       }
     `);
 
@@ -819,6 +828,12 @@ describe.skip('createSyncState', () => {
       Set {
         "key_testSlice1",
         "key_mySlice1",
+      }
+    `);
+    expect(result.syncLineageIds).toMatchInlineSnapshot(`
+      Set {
+        "l_testSlice1$",
+        "l_mySlice1$",
       }
     `);
     expect((result.state as InternalStoreState)._slices.map((r) => r.key))
@@ -872,7 +887,7 @@ describe.skip('createSyncState', () => {
   });
 });
 
-describe.skip('sliceKeyToReplicaStoreLookup', () => {
+describe('sliceKeyToReplicaStoreLookup', () => {
   test('works', () => {
     expect(
       sliceKeyToReplicaStoreLookup({
