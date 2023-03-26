@@ -22,7 +22,6 @@ export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
 
   public readonly sourceSliceKey: SliceKey;
-  public readonly targetSliceName: SliceNameOpaque;
   public readonly targetSliceLineage: LineageId;
   public readonly payload: P;
   public readonly actionId: string;
@@ -31,7 +30,6 @@ export class Transaction<N extends string, P extends unknown[]> {
   toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
     return {
       sourceSliceKey: this.sourceSliceKey,
-      targetSliceName: this.targetSliceName,
       targetSliceLineage: this.targetSliceLineage,
       sourceSliceName: this.config.sourceSliceName,
       payload: payloadSerializer(this.payload),
@@ -48,7 +46,6 @@ export class Transaction<N extends string, P extends unknown[]> {
   ) {
     let tx = new Transaction({
       sourceSliceKey: obj.sourceSliceKey,
-      targetSliceName: obj.targetSliceName,
       targetSliceLineage: obj.targetSliceLineage,
       sourceSliceName: obj.sourceSliceName,
       payload: payloadParser(obj.payload),
@@ -65,27 +62,16 @@ export class Transaction<N extends string, P extends unknown[]> {
   }
 
   constructor(
-    // source and target slice key are the same by default
-    // 'source' means the slice that created the transaction
-    /// for ex slice1.actions.foo() -> slice1 is the source
-    //  most of the time, the source and target are the same
-    // but sometimes in merging, the source and target are different
     public readonly config: {
-      // TODO: remove sourceSliceKey ? See store.ts reduced store TODO
       sourceSliceKey: SliceKey;
       sourceSliceName: N;
       targetSliceLineage: LineageId;
-      targetSliceName?: SliceNameOpaque;
       payload: P;
       actionId: string;
     },
   ) {
     this.sourceSliceKey = config.sourceSliceKey;
-    this.targetSliceName =
-      config.targetSliceName ?? createSliceNameOpaque(config.sourceSliceName);
-
     this.targetSliceLineage = config.targetSliceLineage;
-
     this.payload = config.payload;
     this.actionId = config.actionId;
   }
