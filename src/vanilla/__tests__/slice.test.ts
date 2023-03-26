@@ -98,14 +98,14 @@ describe('dependencies', () => {
         // @ts-expect-error - slice is not registered should always error
         unknownSlice.getState(state),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Slice "key_unknown-test" not found in store"`,
+        `"Slice "unknown-test" not found in store"`,
       );
 
       expect(() =>
         // @ts-expect-error - slice does not exist should always error
         state.getSliceState(unknownSlice),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Slice "key_unknown-test" not found in store"`,
+        `"Slice "unknown-test" not found in store"`,
       );
     });
   });

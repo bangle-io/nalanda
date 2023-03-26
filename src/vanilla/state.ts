@@ -25,6 +25,7 @@ export interface StoreState<RegSlices extends BareSlice> {
 
 interface StoreStateOptions {
   debug?: boolean;
+  scoped?: LineageId;
 }
 
 export type SliceLookupByKey = Record<SliceKey, BareSlice>;
@@ -36,6 +37,12 @@ const createSliceLookup = weakCache((slices: BareSlice[]) => {
 const createSliceLineageLookup = weakCache(
   (slices: BareSlice[]): SliceLookupByLineage => {
     return Object.fromEntries(slices.map((s) => [s.lineageId, s]));
+  },
+);
+
+export const sliceDepLineageLookup = weakCache(
+  (slice: BareSlice): Set<LineageId> => {
+    return new Set(slice.spec.dependencies.map((sl) => sl.lineageId));
   },
 );
 
@@ -136,7 +143,21 @@ export class InternalStoreState implements StoreState<any> {
     const sl = this.slicesLookupByLineage[_sl.lineageId];
 
     if (!sl) {
-      throw new Error(`Slice "${_sl.key}" not found in store`);
+      throw new Error(`Slice "${_sl.name}" not found in store`);
+    }
+
+    const scopeId = this.opts?.scoped;
+    if (scopeId && scopeId !== _sl.lineageId) {
+      const scopedSlice = this.slicesLookupByLineage[scopeId];
+
+      if (
+        !scopedSlice ||
+        !sliceDepLineageLookup(scopedSlice).has(_sl.lineageId)
+      ) {
+        throw new Error(
+          `Slice "${sl.name}" is not included in the dependencies of the scoped slice "${scopedSlice?.name}"`,
+        );
+      }
     }
 
     let result = this._getDirectSliceState(sl.key);
@@ -171,5 +192,12 @@ export class InternalStoreState implements StoreState<any> {
     const newInstance = new InternalStoreState(this._slices, newOpts);
     newInstance.slicesCurrentState = slicesState;
     return newInstance;
+  }
+
+  scoped(lineageId: LineageId): InternalStoreState {
+    return this._fork(this.slicesCurrentState, {
+      ...this.opts,
+      scoped: lineageId,
+    });
   }
 }

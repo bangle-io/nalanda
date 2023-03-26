@@ -2,7 +2,7 @@ import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 
 import type { BareSlice } from './slice';
-import { InternalStoreState, StoreState } from './state';
+import { InternalStoreState, sliceDepLineageLookup, StoreState } from './state';
 import {
   DebugFunc,
   Transaction,
@@ -179,6 +179,17 @@ export class Store implements BareStore<any> {
 export class ReducedStore<SB extends BareSlice> {
   dispatch = (tx: Transaction<SB['name'], any>, debugDispatch?: string) => {
     if (this.dispatcherSlice) {
+      if (
+        tx.sourceSliceLineage !== this.dispatcherSlice.lineageId &&
+        !sliceDepLineageLookup(this.dispatcherSlice).has(tx.sourceSliceLineage)
+      ) {
+        const sourceSlice =
+          this.internalStoreState.slicesLookupByLineage[tx.sourceSliceLineage];
+        throw new Error(
+          `Dispatch not allowed! Slice "${this.dispatcherSlice.name}" does not include "${sourceSlice?.name}" in its dependency.`,
+        );
+      }
+
       tx.metadata.appendMetadata(
         TX_META_DISPATCHER,
         this.dispatcherSlice.lineageId,
@@ -194,7 +205,7 @@ export class ReducedStore<SB extends BareSlice> {
 
   constructor(
     private _store: Store | BareStore<any>,
-    public dispatcherSlice?: BareSlice,
+    private dispatcherSlice?: BareSlice,
   ) {}
 
   get destroyed() {
@@ -206,6 +217,10 @@ export class ReducedStore<SB extends BareSlice> {
   }
 
   get state(): StoreState<SB> {
+    if (this.dispatcherSlice) {
+      return this.internalStoreState.scoped(this.dispatcherSlice.lineageId);
+    }
+
     return this.internalStoreState;
   }
 

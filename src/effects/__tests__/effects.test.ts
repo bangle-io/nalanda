@@ -318,7 +318,7 @@ describe('changeEffect', () => {
 
   test('works', async () => {
     let call = jest.fn();
-
+    let caughtError: any;
     const myEffect = changeEffect(
       'myEffect',
       {
@@ -338,8 +338,12 @@ describe('changeEffect', () => {
         expectType<number>(result.sl1Square);
 
         let wrongAction = testSlice3.actions.lowercase();
-        // @ts-expect-error - should not allow dispatching action from non dep slice
-        dispatch(wrongAction);
+        try {
+          // @ts-expect-error - should not allow dispatching action from non dep slice
+          dispatch(wrongAction);
+        } catch (error) {
+          caughtError = error;
+        }
 
         if (result.sl1Square % 2 === 0) {
           dispatch(testSlice1.actions.increment({ increment: true }));
@@ -356,6 +360,10 @@ describe('changeEffect', () => {
     await sleep(30);
 
     expect(call).toHaveBeenCalledTimes(2);
+
+    expect(caughtError).toMatchInlineSnapshot(
+      `[Error: Dispatch not allowed! Slice "myEffect" does not include "test-3" in its dependency.]`,
+    );
   });
 
   test('cleanup is called', async () => {

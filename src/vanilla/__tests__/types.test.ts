@@ -147,14 +147,14 @@ describe('types', () => {
       // @ts-expect-error - since not registered
       let result2 = testSlice2.getState(storeState);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "key_testSlice2" not found in store"`,
+      `"Slice "testSlice2" not found in store"`,
     );
 
     expect(() => {
       // @ts-expect-error - since not registered
       let result2Reverse = storeState.getSliceState(testSlice2);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "key_testSlice2" not found in store"`,
+      `"Slice "testSlice2" not found in store"`,
     );
 
     let mySliceSelectors = mySlice.resolveSelectors(storeState);

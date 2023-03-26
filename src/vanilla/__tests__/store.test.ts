@@ -171,23 +171,33 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     });
-    const reducedStore = new ReducedStore(myStore, testSlice1);
+    const reducedStore1 = new ReducedStore(myStore, testSlice1);
 
-    reducedStore.dispatch(testSlice1.actions.increment({ increment: true }));
+    reducedStore1.dispatch(testSlice1.actions.increment({ increment: true }));
 
     myStore.dispatch(testSlice2.actions.uppercase());
 
     myStore.dispatch(testSlice3.actions.lowercase());
 
-    expect(testSlice3.getState(reducedStore.state)).toEqual(
-      testSlice3.getState(myStore.state),
+    expect(() =>
+      testSlice3.getState(reducedStore1.state),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Slice "test-3" is not included in the dependencies of the scoped slice "test-1""`,
     );
 
-    expect(testSlice1.getState(reducedStore.state)).toEqual(
+    expect(() =>
+      reducedStore1.dispatch(testSlice3.actions.uppercase()),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Dispatch not allowed! Slice "test-1" does not include "test-3" in its dependency."`,
+    );
+
+    expect(testSlice1.getState(reducedStore1.state)).toEqual(
       testSlice1.getState(myStore.state),
     );
 
-    expect(testSlice2.getState(reducedStore.state)).toEqual(
+    const reducedStore2 = new ReducedStore(myStore, testSlice2);
+
+    expect(testSlice2.getState(reducedStore2.state)).toEqual(
       testSlice2.getState(myStore.state),
     );
   });
@@ -230,15 +240,14 @@ describe('ReducedStore', () => {
       state: [testSlice1, testSlice2, testSlice3, mySlice],
     });
 
-    const redStore = (myStore as Store).getReducedStore(testSlice1);
+    const redStore = (myStore as Store).getReducedStore(mySlice);
 
     redStore.dispatch(mySlice.actions.addOne());
 
-    await waitUntil((myStore as Store).getReducedStore(testSlice1), (state) => {
+    await waitUntil((myStore as Store).getReducedStore(mySlice), (state) => {
       return mySlice.getState(state).num === 5;
     });
 
-    // expect(providedStore.state).toEqual(myStore.state);
     expect(providedPrevState).toBeInstanceOf(InternalStoreState);
     expect(mySlice.getState(providedPrevState!)).toMatchInlineSnapshot(`
       {
