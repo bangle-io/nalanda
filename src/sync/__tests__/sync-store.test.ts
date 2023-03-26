@@ -388,7 +388,6 @@ describe('basic test', () => {
       [
         {
           "actionId": "increment",
-          "dispatcher": undefined,
           "payload": [],
           "sourceSliceLineage": "l_testSlice1$",
           "store": "test-main",
@@ -398,7 +397,7 @@ describe('basic test', () => {
         },
         {
           "actionId": "increment",
-          "dispatcher": "watch-in-main(changeEffect)",
+          "dispatcher": "l_watch-in-main$",
           "payload": [],
           "sourceSliceLineage": "l_testSlice1$",
           "store": "test-main",

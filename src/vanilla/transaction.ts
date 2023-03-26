@@ -1,15 +1,16 @@
 import { uuid } from './helpers';
 import { LineageId } from './internal-types';
 
-const contextId = uuid(4);
+const contextId = uuid(5);
 let counter = 0;
 
 function incrementalId() {
   return `tx_${contextId}-${counter++}`;
 }
 
-export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
-export const TX_META_STORE_NAME = 'store-name';
+export const TX_META_DISPATCHER = 'TX_META_DISPATCHER';
+export const TX_META_DISPATCH_INFO = 'TX_META_DISPATCH_INFO';
+export const TX_META_STORE_NAME = 'TX_META_STORE_NAME';
 export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
 export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
 export const TX_META_CHANGE_LINEAGE = 'TX_META_CHANGE_LINEAGE';
@@ -38,7 +39,7 @@ export class Transaction<N extends string, P extends unknown[]> {
   static fromJSONObj(
     obj: ReturnType<Transaction<any, any>['toJSONObj']>,
     payloadParser: (payload: string) => unknown[],
-    info?: string,
+    debugInfo?: string,
   ) {
     let tx = new Transaction({
       sourceSliceLineage: obj.sourceSliceLineage,
@@ -50,8 +51,8 @@ export class Transaction<N extends string, P extends unknown[]> {
     tx.metadata = Metadata.fromJSONObj(obj.metadata);
     tx.metadata.appendMetadata(TX_META_DESERIALIZED_FROM, obj.uid);
 
-    if (info) {
-      tx.metadata.appendMetadata(TX_META_DESERIALIZED_META, info);
+    if (debugInfo) {
+      tx.metadata.appendMetadata(TX_META_DESERIALIZED_META, debugInfo);
     }
 
     return tx;
@@ -143,23 +144,27 @@ export interface TransactionLog {
   sourceSliceLineage: LineageId;
   targetSliceLineage: LineageId;
   actionId: string;
-  dispatcher: string | undefined;
-  store: string | undefined;
-  txId: string | undefined;
+  dispatcher?: string;
+  dispatchInfo?: string;
+  store?: string;
+  txId: string;
   payload: unknown[];
 }
 
 export function txLog(tx: Transaction<any, any>): TransactionLog {
-  return {
-    type: 'TX',
-    sourceSliceLineage: tx.sourceSliceLineage,
-    targetSliceLineage: tx.targetSliceLineage,
-    actionId: tx.config.actionId,
-    dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
-    store: tx.metadata.getMetadata(TX_META_STORE_NAME),
-    txId: tx.uid,
-    payload: tx.payload,
-  };
+  return Object.fromEntries(
+    Object.entries({
+      type: 'TX',
+      sourceSliceLineage: tx.sourceSliceLineage,
+      targetSliceLineage: tx.targetSliceLineage,
+      actionId: tx.config.actionId,
+      dispatcher: tx.metadata.getMetadata(TX_META_DISPATCHER),
+      dispatchInfo: tx.metadata.getMetadata(TX_META_DISPATCH_INFO),
+      store: tx.metadata.getMetadata(TX_META_STORE_NAME),
+      txId: tx.uid,
+      payload: tx.payload,
+    }).filter((r) => r[1] !== undefined),
+  ) as any;
 }
 
 export type LogItem = EffectLog | TransactionLog;

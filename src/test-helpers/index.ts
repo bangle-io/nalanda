@@ -3,7 +3,7 @@ import { DispatchTx } from '../vanilla/store';
 import {
   LogItem,
   Transaction,
-  TX_META_DISPATCH_SOURCE,
+  TX_META_DISPATCHER,
 } from '../vanilla/transaction';
 
 /**
@@ -99,7 +99,7 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
             sourceSliceLineage,
             actionId: config.actionId,
             payload,
-            dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
+            dispatchSource: metadata.getMetadata(TX_META_DISPATCHER),
             targetSliceLineage,
           }),
         );

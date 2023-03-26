@@ -443,21 +443,21 @@ describe('merging', () => {
           },
           {
             "actionId": "updateT1State",
-            "dispatchSource": "t1Effect",
+            "dispatchSource": "l_t1$",
             "payload": [],
             "sourceSliceLineage": "l_t1$",
             "targetSliceLineage": "l_t1$",
           },
           {
             "actionId": "updateT1State",
-            "dispatchSource": "t2Effect",
+            "dispatchSource": "l_t2$",
             "payload": [],
             "sourceSliceLineage": "l_t1$",
             "targetSliceLineage": "l_t1$",
           },
           {
             "actionId": "updateT3State",
-            "dispatchSource": "t3Effect",
+            "dispatchSource": "l_t3$",
             "payload": [],
             "sourceSliceLineage": "l_t3$",
             "targetSliceLineage": "l_t3$",
@@ -469,7 +469,6 @@ describe('merging', () => {
         [
           {
             "actionId": "updateG1State",
-            "dispatcher": undefined,
             "payload": [],
             "sourceSliceLineage": "l_g1$",
             "store": "test-store",
@@ -489,7 +488,7 @@ describe('merging', () => {
           },
           {
             "actionId": "updateT1State",
-            "dispatcher": "t1Effect",
+            "dispatcher": "l_t1$",
             "payload": [],
             "sourceSliceLineage": "l_t1$",
             "store": "test-store",
@@ -513,7 +512,7 @@ describe('merging', () => {
           },
           {
             "actionId": "updateT1State",
-            "dispatcher": "t2Effect",
+            "dispatcher": "l_t2$",
             "payload": [],
             "sourceSliceLineage": "l_t1$",
             "store": "test-store",
@@ -541,7 +540,7 @@ describe('merging', () => {
           },
           {
             "actionId": "updateT3State",
-            "dispatcher": "t3Effect",
+            "dispatcher": "l_t3$",
             "payload": [],
             "sourceSliceLineage": "l_t3$",
             "store": "test-store",

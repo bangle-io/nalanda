@@ -3,8 +3,13 @@ import { SideEffectsManager } from './effect';
 
 import type { BareSlice } from './slice';
 import { InternalStoreState, StoreState } from './state';
-import { DebugFunc, Transaction, txLog } from './transaction';
-import { TX_META_DISPATCH_SOURCE, TX_META_STORE_NAME } from './transaction';
+import {
+  DebugFunc,
+  Transaction,
+  txLog,
+  TX_META_DISPATCH_INFO,
+} from './transaction';
+import { TX_META_DISPATCHER, TX_META_STORE_NAME } from './transaction';
 import { BareStore } from './public-types';
 import { expandSlices } from './slices-helpers';
 
@@ -66,7 +71,7 @@ export class Store implements BareStore<any> {
     return store;
   }
 
-  dispatch = (tx: Transaction<string, any>, debugDispatch?: string) => {
+  dispatch = (tx: Transaction<string, any>, dispatchInfo?: string) => {
     if (this._destroyed) {
       return;
     }
@@ -74,8 +79,8 @@ export class Store implements BareStore<any> {
     // based on the slice dependencies
     tx.metadata.setMetadata(TX_META_STORE_NAME, this.storeName);
 
-    if (debugDispatch) {
-      tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
+    if (dispatchInfo) {
+      tx.metadata.appendMetadata(TX_META_DISPATCH_INFO, dispatchInfo);
     }
 
     this._dispatchTx(this, tx);
@@ -138,9 +143,9 @@ export class Store implements BareStore<any> {
    * @returns
    */
   getReducedStore<SB extends BareSlice>(
-    debugDispatch?: string,
+    dispatcherSlice?: BareSlice,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, debugDispatch);
+    return new ReducedStore(this, dispatcherSlice);
   }
 
   updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
@@ -173,15 +178,15 @@ export class Store implements BareStore<any> {
 
 export class ReducedStore<SB extends BareSlice> {
   dispatch = (tx: Transaction<SB['name'], any>, debugDispatch?: string) => {
-    if (this._debugDispatchSrc) {
+    if (this.dispatcherSlice) {
       tx.metadata.appendMetadata(
-        TX_META_DISPATCH_SOURCE,
-        this._debugDispatchSrc,
+        TX_META_DISPATCHER,
+        this.dispatcherSlice.lineageId,
       );
     }
 
     if (debugDispatch) {
-      tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
+      tx.metadata.appendMetadata(TX_META_DISPATCH_INFO, debugDispatch);
     }
     // TODO add a developer check to make sure tx slice is actually allowed
     this._store.dispatch(tx);
@@ -189,7 +194,7 @@ export class ReducedStore<SB extends BareSlice> {
 
   constructor(
     private _store: Store | BareStore<any>,
-    public _debugDispatchSrc?: string,
+    public dispatcherSlice?: BareSlice,
   ) {}
 
   get destroyed() {

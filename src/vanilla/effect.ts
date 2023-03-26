@@ -288,7 +288,7 @@ export class EffectHandler {
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name),
+      store.getReducedStore(this._slice),
       this._ref,
     );
   }
@@ -312,7 +312,7 @@ export class EffectHandler {
       // TODO error handling
       this.effect.updateSync(
         this._slice as AnySlice,
-        store.getReducedStore(this.effect.name),
+        store.getReducedStore(this._slice),
         previouslySeenState,
         this._ref,
       );
@@ -329,7 +329,7 @@ export class EffectHandler {
       // TODO error handling
       this.effect.update(
         this._slice as AnySlice,
-        store.getReducedStore(this.effect.name),
+        store.getReducedStore(this._slice),
         previouslySeenState,
         this._ref,
       );

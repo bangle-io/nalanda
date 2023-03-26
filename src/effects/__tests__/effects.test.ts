@@ -161,14 +161,14 @@ describe('run once', () => {
         },
         {
           "actionId": "ready",
-          "dispatchSource": "run-once(changeEffect)",
+          "dispatchSource": "l_run-once$1",
           "payload": [],
           "sourceSliceLineage": "l_run-once$1",
           "targetSliceLineage": "l_run-once$1",
         },
         {
           "actionId": "lowercase",
-          "dispatchSource": "run-once(changeEffect)",
+          "dispatchSource": "l_run-once$1",
           "payload": [],
           "sourceSliceLineage": "l_test-3$",
           "targetSliceLineage": "l_test-3$",

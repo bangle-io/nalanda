@@ -78,7 +78,7 @@ describe('Single slice', () => {
         },
         {
           "actionId": "testAction",
-          "dispatchSource": "testEffect",
+          "dispatchSource": "l_test$",
           "payload": [
             "bananaEffect",
           ],
@@ -96,7 +96,6 @@ describe('Single slice', () => {
       [
         {
           "actionId": "testAction",
-          "dispatcher": undefined,
           "payload": [
             "banana",
           ],
@@ -118,7 +117,7 @@ describe('Single slice', () => {
         },
         {
           "actionId": "testAction",
-          "dispatcher": "testEffect",
+          "dispatcher": "l_test$",
           "payload": [
             "bananaEffect",
           ],

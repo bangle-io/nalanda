@@ -49,7 +49,7 @@ exports[`basic test additional slices work in main 1`] = `
         "metadata": {
           "_metadata": {
             "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$ source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$",
-            "store-name": "test-main",
+            "TX_META_STORE_NAME": "test-main",
           },
         },
         "payload": [],
@@ -103,7 +103,6 @@ exports[`basic test one slice sync - case 1 1`] = `
 [
   {
     "actionId": "increment",
-    "dispatcher": undefined,
     "payload": [],
     "sourceSliceLineage": "l_testSlice1$",
     "store": "test-main",
@@ -113,7 +112,7 @@ exports[`basic test one slice sync - case 1 1`] = `
   },
   {
     "actionId": "ready",
-    "dispatcher": "watch-in-main(changeEffect)",
+    "dispatcher": "l_watch-in-main$",
     "payload": [],
     "sourceSliceLineage": "l_watch-in-main$",
     "store": "test-main",
@@ -137,7 +136,7 @@ exports[`basic test one slice sync - case 1 1`] = `
   },
   {
     "actionId": "increment",
-    "dispatcher": "watch-in-main(changeEffect)",
+    "dispatcher": "l_watch-in-main$",
     "payload": [],
     "sourceSliceLineage": "l_testSlice1$",
     "store": "test-main",
@@ -206,7 +205,7 @@ exports[`basic test one slice sync - case 1 3`] = `
         "metadata": {
           "_metadata": {
             "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$1 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$1",
-            "store-name": "test-main",
+            "TX_META_STORE_NAME": "test-main",
           },
         },
         "payload": [],
@@ -233,9 +232,9 @@ exports[`basic test one slice sync - case 1 3`] = `
         },
         "metadata": {
           "_metadata": {
-            "DEBUG_DISPATCH_SOURCE": "watch-in-main(changeEffect)",
             "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$2 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$2",
-            "store-name": "test-main",
+            "TX_META_DISPATCHER": "l_watch-in-main$",
+            "TX_META_STORE_NAME": "test-main",
           },
         },
         "payload": [],
@@ -255,7 +254,7 @@ exports[`basic test one slice sync - case 2 - replica slice depends on sync slic
 [
   {
     "actionId": "ready",
-    "dispatcher": "watch-in-replica-store(changeEffect)",
+    "dispatcher": "l_watch-in-replica-store$",
     "payload": [],
     "sourceSliceLineage": "l_watch-in-replica-store$",
     "store": "test-replica-store-1",
@@ -265,7 +264,6 @@ exports[`basic test one slice sync - case 2 - replica slice depends on sync slic
   },
   {
     "actionId": "increment",
-    "dispatcher": undefined,
     "payload": [],
     "sourceSliceLineage": "l_testSlice1$",
     "store": "test-main",
@@ -289,7 +287,7 @@ exports[`basic test one slice sync - case 2 - replica slice depends on sync slic
   },
   {
     "actionId": "increment",
-    "dispatcher": "watch-in-replica-store(changeEffect)",
+    "dispatcher": "l_watch-in-replica-store$",
     "payload": [],
     "sourceSliceLineage": "l_testSlice1$",
     "store": "test-replica-store-1",
@@ -358,7 +356,7 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
         "metadata": {
           "_metadata": {
             "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$11 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$8",
-            "store-name": "test-main",
+            "TX_META_STORE_NAME": "test-main",
           },
         },
         "payload": [],
@@ -385,9 +383,9 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
         },
         "metadata": {
           "_metadata": {
-            "DEBUG_DISPATCH_SOURCE": "watch-in-main-store(changeEffect)",
             "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$12 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$9",
-            "store-name": "test-main",
+            "TX_META_DISPATCHER": "l_watch-in-main-store$",
+            "TX_META_STORE_NAME": "test-main",
           },
         },
         "payload": [],
@@ -414,9 +412,9 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
         },
         "metadata": {
           "_metadata": {
-            "DEBUG_DISPATCH_SOURCE": "watch-in-replica-store(changeEffect)",
             "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$13 source l_testSlice1$ -> l_<FOREIGN_STORE(test-replica-store-1)>$3",
-            "store-name": "test-replica-store-1",
+            "TX_META_DISPATCHER": "l_watch-in-replica-store$2",
+            "TX_META_STORE_NAME": "test-replica-store-1",
           },
         },
         "payload": [],
@@ -443,9 +441,9 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
         },
         "metadata": {
           "_metadata": {
-            "DEBUG_DISPATCH_SOURCE": "watch-in-replica-store(changeEffect)",
             "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$13 source l_testSlice1$ -> l_<FOREIGN_STORE(test-replica-store-1)>$3,target l_<PURGED>$13 -> l_testSlice1$,target l_testSlice1$ -> l_<PURGED>$14 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$10",
-            "store-name": "test-replica-store-1",
+            "TX_META_DISPATCHER": "l_watch-in-replica-store$2",
+            "TX_META_STORE_NAME": "test-replica-store-1",
           },
         },
         "payload": [],

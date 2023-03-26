@@ -4,7 +4,7 @@ import { timeoutSchedular } from '../effect';
 
 import { InternalStoreState } from '../state';
 import { ReducedStore, Store } from '../store';
-import { TX_META_DISPATCH_SOURCE, TX_META_STORE_NAME } from '../transaction';
+import { TX_META_DISPATCH_INFO, TX_META_STORE_NAME } from '../transaction';
 
 const testSlice1 = slice({
   key: createKey('test-1', [], { num: 4 }),
@@ -69,7 +69,7 @@ describe('store', () => {
 
     expect(tx.uid?.endsWith('-0')).toBe(true);
     expect(tx.metadata.getMetadata(TX_META_STORE_NAME)).toBe('myStore');
-    expect(tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE)).toBe(
+    expect(tx.metadata.getMetadata(TX_META_DISPATCH_INFO)).toBe(
       'test-location',
     );
 
@@ -101,7 +101,6 @@ describe('store', () => {
       [
         {
           "actionId": "increment",
-          "dispatcher": undefined,
           "payload": [
             {
               "increment": true,
@@ -123,7 +122,6 @@ describe('store', () => {
     expect(log.slice(1)).toEqual([
       {
         actionId: 'uppercase',
-        dispatcher: undefined,
         payload: [],
         sourceSliceLineage: 'l_test-3$',
         targetSliceLineage: 'l_test-3$',
@@ -144,7 +142,7 @@ describe('store', () => {
       },
       {
         actionId: 'lowercase',
-        dispatcher: 'to-lowercase',
+        dispatcher: 'l_test-3$',
         payload: [],
         sourceSliceLineage: 'l_test-3$',
         targetSliceLineage: 'l_test-3$',
@@ -173,7 +171,7 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     });
-    const reducedStore = new ReducedStore(myStore, '');
+    const reducedStore = new ReducedStore(myStore, testSlice1);
 
     reducedStore.dispatch(testSlice1.actions.increment({ increment: true }));
 
@@ -200,7 +198,7 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     }) as Store;
-    const reducedStore = myStore.getReducedStore('debug');
+    const reducedStore = myStore.getReducedStore(testSlice1);
 
     reducedStore.destroy();
 
@@ -232,11 +230,11 @@ describe('ReducedStore', () => {
       state: [testSlice1, testSlice2, testSlice3, mySlice],
     });
 
-    const redStore = (myStore as Store).getReducedStore('');
+    const redStore = (myStore as Store).getReducedStore(testSlice1);
 
     redStore.dispatch(mySlice.actions.addOne());
 
-    await waitUntil((myStore as Store).getReducedStore(''), (state) => {
+    await waitUntil((myStore as Store).getReducedStore(testSlice1), (state) => {
       return mySlice.getState(state).num === 5;
     });
 
