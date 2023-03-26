@@ -4,10 +4,7 @@ import { createDispatchSpy } from '../../test-helpers';
 import { createSlice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { getActionBuilderByKey } from '../../vanilla/helpers';
-import {
-  createSliceKey,
-  createSliceNameOpaque,
-} from '../../vanilla/internal-types';
+import { createSliceKey } from '../../vanilla/internal-types';
 import { AnySlice } from '../../vanilla/public-types';
 import { Slice } from '../../vanilla/slice';
 import { Store } from '../../vanilla/store';
@@ -441,28 +438,28 @@ describe('merging', () => {
             "actionId": "updateG1State",
             "dispatchSource": undefined,
             "payload": [],
-            "sourceSliceKey": "key_g1",
+            "sourceSliceLineage": "l_g1$",
             "targetSliceLineage": "l_g1$",
           },
           {
             "actionId": "updateT1State",
             "dispatchSource": "t1Effect",
             "payload": [],
-            "sourceSliceKey": "key_t1",
+            "sourceSliceLineage": "l_t1$",
             "targetSliceLineage": "l_t1$",
           },
           {
             "actionId": "updateT1State",
             "dispatchSource": "t2Effect",
             "payload": [],
-            "sourceSliceKey": "key_t1",
+            "sourceSliceLineage": "l_t1$",
             "targetSliceLineage": "l_t1$",
           },
           {
             "actionId": "updateT3State",
             "dispatchSource": "t3Effect",
             "payload": [],
-            "sourceSliceKey": "key_t3",
+            "sourceSliceLineage": "l_t3$",
             "targetSliceLineage": "l_t3$",
           },
         ]
@@ -474,8 +471,9 @@ describe('merging', () => {
             "actionId": "updateG1State",
             "dispatcher": undefined,
             "payload": [],
-            "sourceSliceKey": "key_g1",
+            "sourceSliceLineage": "l_g1$",
             "store": "test-store",
+            "targetSliceLineage": "l_g1$",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -493,8 +491,9 @@ describe('merging', () => {
             "actionId": "updateT1State",
             "dispatcher": "t1Effect",
             "payload": [],
-            "sourceSliceKey": "key_t1",
+            "sourceSliceLineage": "l_t1$",
             "store": "test-store",
+            "targetSliceLineage": "l_t1$",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -516,8 +515,9 @@ describe('merging', () => {
             "actionId": "updateT1State",
             "dispatcher": "t2Effect",
             "payload": [],
-            "sourceSliceKey": "key_t1",
+            "sourceSliceLineage": "l_t1$",
             "store": "test-store",
+            "targetSliceLineage": "l_t1$",
             "txId": "<txId>",
             "type": "TX",
           },
@@ -543,8 +543,9 @@ describe('merging', () => {
             "actionId": "updateT3State",
             "dispatcher": "t3Effect",
             "payload": [],
-            "sourceSliceKey": "key_t3",
+            "sourceSliceLineage": "l_t3$",
             "store": "test-store",
+            "targetSliceLineage": "l_t3$",
             "txId": "<txId>",
             "type": "TX",
           },

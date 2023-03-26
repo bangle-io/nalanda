@@ -202,6 +202,9 @@ export const sendTxToReplicas = (
           // slice key is stable and should be used to get the correct
           // lineage id in the replica store.
           targetSliceLineage: createLineageId('<PURGED>'),
+          sourceSliceLineage: createLineageId(
+            `<FOREIGN_STORE(${store.storeName})>`,
+          ),
         }),
         targetSliceKey,
       },
@@ -533,7 +536,16 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
     // and wait on the main store to send it back via `receiveMessage`
     this.sendMessage({
       type: 'tx',
-      body: { tx, targetSliceKey: getSliceKey(store, tx.targetSliceLineage) },
+      body: {
+        tx: tx.change({
+          // similar to main store remove the lineage id
+          targetSliceLineage: createLineageId('<PURGED>'),
+          sourceSliceLineage: createLineageId(
+            `<FOREIGN_STORE(${store.storeName})>`,
+          ),
+        }),
+        targetSliceKey: getSliceKey(store, tx.targetSliceLineage),
+      },
       from: this.storeName,
       to: this.mainStoreName,
     });

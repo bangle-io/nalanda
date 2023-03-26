@@ -1,9 +1,5 @@
-import { createSlice, Transaction } from '../vanilla';
-import {
-  createSliceKey,
-  createSliceNameOpaque,
-  ExtractReturnTypes,
-} from '../vanilla/internal-types';
+import { createSlice } from '../vanilla';
+import { ExtractReturnTypes } from '../vanilla/internal-types';
 import {
   AnySlice,
   BareStore,

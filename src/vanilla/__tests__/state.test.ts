@@ -328,7 +328,6 @@ describe('State creation', () => {
       appState.applyTransaction(
         new Transaction({
           sourceSliceName: 'mySlice',
-          sourceSliceKey: createSliceKey('mySlice'),
           targetSliceLineage: mySlice.lineageId,
           payload: [5],
           actionId: 'updateNum',

@@ -1,13 +1,4 @@
-import { createSlice } from '../vanilla';
-import { createSliceKey } from '../vanilla/internal-types';
-import type {
-  ActionBuilder,
-  AnyEffect,
-  AnySlice,
-  BareStore,
-  Effect,
-} from '../vanilla/public-types';
-import { Slice } from '../vanilla/slice';
+import type { AnySlice, BareStore } from '../vanilla/public-types';
 import { DispatchTx } from '../vanilla/store';
 import {
   LogItem,
@@ -95,17 +86,17 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
             ? true
             : [filterBySource]
                 .flatMap((s) => s)
-                .some((s) => r.sourceSliceKey == createSliceKey(s.name));
+                .some((s) => r.sourceSliceLineage == s.lineageId);
         })
         .map(
           ({
-            sourceSliceKey,
+            sourceSliceLineage,
             metadata,
             payload,
             config,
             targetSliceLineage,
           }) => ({
-            sourceSliceKey,
+            sourceSliceLineage,
             actionId: config.actionId,
             payload,
             dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),

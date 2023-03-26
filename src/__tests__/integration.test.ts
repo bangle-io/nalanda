@@ -73,7 +73,7 @@ describe('Single slice', () => {
           "payload": [
             "banana",
           ],
-          "sourceSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
           "targetSliceLineage": "l_test$",
         },
         {
@@ -82,7 +82,7 @@ describe('Single slice', () => {
           "payload": [
             "bananaEffect",
           ],
-          "sourceSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
           "targetSliceLineage": "l_test$",
         },
       ]
@@ -100,8 +100,9 @@ describe('Single slice', () => {
           "payload": [
             "banana",
           ],
-          "sourceSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
           "store": "test-store",
+          "targetSliceLineage": "l_test$",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -121,8 +122,9 @@ describe('Single slice', () => {
           "payload": [
             "bananaEffect",
           ],
-          "sourceSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
           "store": "test-store",
+          "targetSliceLineage": "l_test$",
           "txId": "<txId>",
           "type": "TX",
         },

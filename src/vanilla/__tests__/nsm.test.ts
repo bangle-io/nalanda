@@ -164,29 +164,32 @@ describe('sync effects', () => {
         let newState = store.state.applyTransaction(tx);
 
         if (newState === store.state) {
-          console.debug('No state change, skipping update', tx.sourceSliceKey);
+          console.debug(
+            'No state change, skipping update',
+            tx.sourceSliceLineage,
+          );
 
           return;
         }
 
         store.updateState(newState, tx);
 
-        callOrder.push(`afterUpdate[${tx.sourceSliceKey}]`);
+        callOrder.push(`afterUpdate[${tx.sourceSliceLineage}]`);
       },
     });
     store.dispatch(e1.actions.increment());
 
-    expect(callOrder).toEqual(['afterUpdate[key_e1]']);
+    expect(callOrder).toEqual(['afterUpdate[l_e1$]']);
 
     store.dispatch(e1.actions.increment());
 
-    expect(callOrder).toEqual(['afterUpdate[key_e1]', 'afterUpdate[key_e1]']);
+    expect(callOrder).toEqual(['afterUpdate[l_e1$]', 'afterUpdate[l_e1$]']);
 
     // effects should run after microtasks
     await Promise.resolve();
     expect(callOrder).toEqual([
-      'afterUpdate[key_e1]',
-      'afterUpdate[key_e1]',
+      'afterUpdate[l_e1$]',
+      'afterUpdate[l_e1$]',
       's1',
       's2',
     ]);
@@ -194,21 +197,21 @@ describe('sync effects', () => {
     store.dispatch(e2.actions.increment());
 
     expect(callOrder).toEqual([
-      'afterUpdate[key_e1]',
-      'afterUpdate[key_e1]',
+      'afterUpdate[l_e1$]',
+      'afterUpdate[l_e1$]',
       's1',
       's2',
-      'afterUpdate[key_e2]',
+      'afterUpdate[l_e2$]',
     ]);
 
     await Promise.resolve();
     // should run only e2 effects
     expect(callOrder).toEqual([
-      'afterUpdate[key_e1]',
-      'afterUpdate[key_e1]',
+      'afterUpdate[l_e1$]',
+      'afterUpdate[l_e1$]',
       's1',
       's2',
-      'afterUpdate[key_e2]',
+      'afterUpdate[l_e2$]',
       's2',
     ]);
   });
@@ -631,7 +634,7 @@ describe('effects', () => {
 
         store.updateState(newState, tx);
 
-        callOrder.push(`afterUpdate[${tx.sourceSliceKey}]`);
+        callOrder.push(`afterUpdate[${tx.sourceSliceLineage}]`);
       },
     });
 
@@ -644,24 +647,24 @@ describe('effects', () => {
 
     expect(callOrder.slice(0, 20)).toMatchInlineSnapshot(`
       [
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s1= 2,0",
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s2= 4,0",
         "s1= 4,2",
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s1= 6,4",
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s2= 8,4",
         "s1= 8,6",
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s1= 10,8",
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s2= 12,8",
         "s1= 12,10",
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s1= 14,12",
-        "afterUpdate[key_e1]",
+        "afterUpdate[l_e1$6]",
         "s2= 16,12",
         "s1= 16,14",
       ]

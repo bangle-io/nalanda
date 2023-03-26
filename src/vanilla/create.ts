@@ -174,7 +174,6 @@ function expandActionBuilders<
     (action, actionId): TxCreator => {
       return (...params) => {
         return new Transaction({
-          sourceSliceKey: sliceKey,
           sourceSliceName: sliceName,
           targetSliceLineage: lineageId,
           payload: params,

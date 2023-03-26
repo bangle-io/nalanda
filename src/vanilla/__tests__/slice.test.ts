@@ -185,7 +185,7 @@ describe('actions', () => {
       config: {
         sourceSliceName: 'test-2',
       },
-      sourceSliceKey: createSliceKey('test-2'),
+      targetSliceLineage: 'l_test-2$',
       payload: ['me'],
       actionId: 'prefix',
       uid: expect.any(String),
@@ -206,7 +206,6 @@ describe('actions', () => {
       config: {
         sourceSliceName: 'test-2',
       },
-      sourceSliceKey: createSliceKey('test-2'),
       payload: [6, 'me'],
       actionId: 'padEnd',
       uid: expect.any(String),
@@ -217,7 +216,6 @@ describe('actions', () => {
       config: {
         sourceSliceName: 'test-2',
       },
-      sourceSliceKey: createSliceKey('test-2'),
       payload: [],
       actionId: 'uppercase',
       uid: expect.any(String),
@@ -266,7 +264,6 @@ describe('actions', () => {
           "payload": [
             1,
           ],
-          "sourceSliceKey": "key_my-slice-1",
           "sourceSliceName": "my-slice-1",
           "targetSliceLineage": "l_my-slice-1$1",
         },
@@ -276,7 +273,7 @@ describe('actions', () => {
         "payload": [
           1,
         ],
-        "sourceSliceKey": "key_my-slice-1",
+        "sourceSliceLineage": "l_my-slice-1$1",
         "targetSliceLineage": "l_my-slice-1$1",
         "uid": Any<String>,
       }
