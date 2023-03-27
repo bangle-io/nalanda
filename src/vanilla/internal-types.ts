@@ -103,11 +103,3 @@ export function isSliceKey(key: unknown): key is SliceKey {
 export function createSliceNameOpaque(name: string): SliceNameOpaque {
   return name as SliceNameOpaque;
 }
-
-export function nestSliceKey(
-  key: SliceKey,
-  parentName: SliceNameOpaque,
-): SliceKey {
-  const rawKey = key.slice(KEY_PREFIX.length);
-  return createSliceKey(parentName + ':' + rawKey);
-}

@@ -1,12 +1,16 @@
-import { createKey, slice } from '../create';
+import { createKey, createSlice, slice } from '../create';
 import { EffectHandler, timeoutSchedular } from '../effect';
 import { Store } from '../store';
 import waitForExpect from 'wait-for-expect';
 waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
 
-const testSlice1 = slice({
-  key: createKey('test-1', [], { num: 4 }),
+const testSlice1 = createSlice([], {
+  initState: {
+    num: 4,
+  },
+  name: 'test-1',
+  selectors: {},
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -17,8 +21,12 @@ const testSlice1 = slice({
   },
 });
 
-const testSlice2 = slice({
-  key: createKey('test-2', [], { name: 'tame' }),
+const testSlice2 = createSlice([], {
+  name: 'test-2',
+  initState: {
+    name: 'tame',
+  },
+  selectors: {},
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -32,8 +40,12 @@ const testSlice2 = slice({
   },
 });
 
-const testSlice3 = slice({
-  key: createKey('test-3', [], { name: 'tame' }),
+const testSlice3 = createSlice([], {
+  name: 'test-3',
+  initState: {
+    name: 'tame',
+  },
+  selectors: {},
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };

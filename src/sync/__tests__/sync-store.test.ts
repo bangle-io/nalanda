@@ -237,7 +237,7 @@ describe('basic test', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.getReplicaStore().dispatch(testSlice1.actions.increment());
 
     await waitForExpect(() => {
       expect(result.mainOnSyncError).toHaveBeenCalledTimes(1);

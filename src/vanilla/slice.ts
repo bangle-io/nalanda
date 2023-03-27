@@ -82,8 +82,8 @@ export interface SliceSpec<
   ) => NoInfer<SS>;
   selectors: SE;
   terminal?: boolean;
+  forwardMap?: Record<string, LineageId>;
   effects?: Effect<N, SS, DS, A, SE>[];
-  // used internally by mergeSlices
   _additionalSlices?: AnySlice[];
 }
 
@@ -240,6 +240,28 @@ export class Slice<
         ...(this.spec.effects || []),
         ...(Array.isArray(effects) ? effects : [effects]),
       ],
+    });
+  }
+
+  /**
+   * Adds slices to the current slice which will be registered before it in the store.
+   * This is used to have a single point of registration for slices.
+   * @param _slices - slices to rollup to the current slice
+   * @returns
+   */
+  rollupSlices(_slices: AnySlice[]) {
+    let slices = _slices.flatMap((child) => {
+      const additional = child.spec._additionalSlices || [];
+      return [
+        ...additional,
+        child._fork({
+          _additionalSlices: [],
+        }),
+      ];
+    });
+
+    return this._fork({
+      _additionalSlices: [...(this.spec._additionalSlices || []), ...slices],
     });
   }
 }

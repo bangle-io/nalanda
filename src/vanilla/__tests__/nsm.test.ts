@@ -81,8 +81,12 @@ test('dispatching slices that are not registered', () => {
 
   store.dispatch(testSlice1.actions.decrement({ decrement: true }));
 
-  // @ts-expect-error testSlice2 is not in the store, so this should always fail
-  store.dispatch(testSlice2.actions.uppercase());
+  expect(() =>
+    // @ts-expect-error testSlice2 is not in the store, so this should always fail
+    store.dispatch(testSlice2.actions.uppercase()),
+  ).toThrowErrorMatchingInlineSnapshot(
+    `"Cannot dispatch transaction as slice "l_test-2$" is not registered in Store"`,
+  );
 });
 
 test('custom dispatch', () => {
@@ -111,10 +115,7 @@ test('custom dispatch', () => {
   store.dispatch(testSlice1.actions.decrement({ decrement: true }));
 
   // @ts-expect-error testSlice3 is not in the store, so this should always fail
-  store.dispatch(testSlice3.actions.lowercase());
-
-  // applyTransaction should be undefined for testSlice3 actions, since it doesn't exist in the store
-  expect(count).toBe(1);
+  () => store.dispatch(testSlice3.actions.lowercase());
 });
 
 describe('sync effects', () => {

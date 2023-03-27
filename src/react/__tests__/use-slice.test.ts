@@ -1,4 +1,4 @@
-import { createKey, slice } from '../../vanilla/create';
+import { createKey, createSlice, slice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { expectType } from '../../vanilla/internal-types';
 import { Store } from '../../vanilla/store';
@@ -7,8 +7,12 @@ import { createUseSliceHook } from '../use-slice';
 export type IsNeverAny<Type> = true extends false & Type ? never : Type;
 export const isNeverAny = <Type>(_: IsNeverAny<Type>) => {};
 
-const testSlice1 = slice({
-  key: createKey('test-1', [], { num: 4 }),
+const testSlice1 = createSlice([], {
+  initState: {
+    num: 4,
+  },
+  name: 'test-1',
+  selectors: {},
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };

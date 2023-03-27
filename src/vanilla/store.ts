@@ -75,6 +75,17 @@ export class Store implements BareStore<any> {
     if (this._destroyed) {
       return;
     }
+    if (!this.state.slicesLookupByLineage[tx.targetSliceLineage]) {
+      throw new Error(
+        `Cannot dispatch transaction as slice "${tx.targetSliceLineage}" is not registered in Store`,
+      );
+    }
+    if (!this.state.slicesLookupByLineage[tx.sourceSliceLineage]) {
+      throw new Error(
+        `Cannot dispatch transaction as slice "${tx.sourceSliceLineage}" is not registered in Store`,
+      );
+    }
+
     // TODO add a check to make sure tx is actually allowed
     // based on the slice dependencies
     tx.metadata.setMetadata(TX_META_STORE_NAME, this.storeName);

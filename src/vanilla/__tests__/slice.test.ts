@@ -793,3 +793,36 @@ describe('creating with slice', () => {
     let textVal0 = slice1.actions.xyz;
   });
 });
+
+describe('rolling up slices', () => {
+  test('rolls up correctly', () => {
+    let testSlice = testSlice3.rollupSlices([testSlice1, testSlice2]);
+
+    expect(testSlice.spec._additionalSlices?.map((r) => r.lineageId)).toEqual([
+      'l_test-1$',
+      'l_test-2$',
+    ]);
+
+    let sliceA = createSlice([], {
+      name: 'sliceA',
+      actions: {},
+      selectors: {},
+      initState: {},
+    }).rollupSlices([testSlice]);
+
+    // shouldn't modify original
+    expect(
+      testSlice.spec._additionalSlices?.map((r) => r.lineageId),
+    ).toHaveLength(2);
+
+    expect(sliceA.spec._additionalSlices?.map((r) => r.lineageId)).toEqual([
+      'l_test-1$',
+      'l_test-2$',
+      'l_test-3$',
+    ]);
+
+    expect(
+      sliceA.spec._additionalSlices?.flatMap((r) => r.spec._additionalSlices),
+    ).toHaveLength(0);
+  });
+});
