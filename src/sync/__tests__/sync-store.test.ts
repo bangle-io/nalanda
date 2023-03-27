@@ -29,7 +29,7 @@ const testSlice1 = createSlice([], {
       counter: state.counter + 1,
     }),
   },
-  selectors: {},
+  selector: () => {},
 });
 
 let aborter = new AbortController();
@@ -59,7 +59,7 @@ const testSlice2 = createSlice([], {
       return { ...state, name: state.name.toUpperCase() };
     },
   },
-  selectors: {},
+  selector: () => {},
 });
 
 const depOnTestSlice1Slice = createSlice([testSlice1], {
@@ -73,11 +73,9 @@ const depOnTestSlice1Slice = createSlice([testSlice1], {
       dep: state.dep + 1 + testSlice1.getState(storeState).counter,
     }),
   },
-  selectors: {
-    added: (state, storeState) => {
-      return state.dep + testSlice1.getState(storeState).counter;
-    },
-  },
+  selector: (state, storeState) => ({
+    added: state.dep + testSlice1.getState(storeState).counter,
+  }),
 });
 
 const createBasicPair = ({
@@ -312,7 +310,7 @@ describe('basic test', () => {
       initState: {},
       actions: {},
       dependencies: [],
-      selectors: {},
+      selector: () => {},
       reducer: (s) => s,
       beforeSlices: [testSlice1],
     });
@@ -613,7 +611,7 @@ describe('sync queuing', () => {
           fives: state.fives + 1,
         }),
       },
-      selectors: {},
+      selector: () => {},
     });
 
     const fiveWatch = syncChangeEffect(
@@ -698,7 +696,7 @@ describe('sync queuing', () => {
           fives: state.fives + 1,
         }),
       },
-      selectors: {},
+      selector: () => {},
     });
 
     const fiveWatch = syncChangeEffect(
@@ -807,7 +805,7 @@ describe('createSyncState', () => {
           initState: {},
           actions: {},
           dependencies: [],
-          selectors: {},
+          selector: () => {},
           reducer: (s) => s,
           beforeSlices: [testSlice1],
         }),
@@ -818,7 +816,7 @@ describe('createSyncState', () => {
           initState: {},
           actions: {},
           dependencies: [],
-          selectors: {},
+          selector: () => {},
           reducer: (s) => s,
           beforeSlices: [testSlice2],
         }),
@@ -857,7 +855,7 @@ describe('createSyncState', () => {
           initState: {},
           actions: {},
           dependencies: [],
-          selectors: {},
+          selector: () => {},
           reducer: (s) => s,
         }),
         changeEffect('test-effect-1', {}, () => {}),

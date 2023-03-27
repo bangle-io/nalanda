@@ -19,9 +19,7 @@ describe('Single slice', () => {
         };
       },
     },
-    selectors: {
-      testSelector: (state) => state.val.toLocaleUpperCase(),
-    },
+    selector: (state) => state.val.toLocaleUpperCase(),
   }).addEffect({
     name: 'testEffect',
     updateSync(slice, store, prevStoreState) {

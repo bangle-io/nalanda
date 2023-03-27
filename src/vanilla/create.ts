@@ -3,6 +3,7 @@ import {
   createSliceKey,
   createSliceNameOpaque,
   LineageId,
+  VoidFn,
 } from './internal-types';
 import {
   ActionBuilder,
@@ -17,14 +18,14 @@ import { Transaction } from './transaction';
 class SliceKey<
   N extends string,
   SS extends object,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
   DS extends AnySlice,
 > {
   constructor(
     public name: N,
     public dependencies: DS[],
     public initState: SS,
-    public selectors: SE,
+    public selector: SE,
   ) {}
 }
 
@@ -32,12 +33,12 @@ export function createKey<
   K extends string,
   SS extends object,
   DS extends AnySlice,
->(id: K, deps: DS[], initState: SS): SliceKey<K, SS, {}, DS>;
+>(id: K, deps: DS[], initState: SS): SliceKey<K, SS, VoidFn, DS>;
 export function createKey<
   K extends string,
   SS extends object,
   DS extends AnySlice,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
 >(id: K, deps: DS[], initState: SS, selector: SE): SliceKey<K, SS, SE, DS>;
 export function createKey(
   id: any,
@@ -45,7 +46,7 @@ export function createKey(
   initState: any,
   selector?: any,
 ): any {
-  return new SliceKey(id, deps, initState, selector || {});
+  return new SliceKey(id, deps, initState, selector || (() => {}));
 }
 
 type InferName<SK extends SliceKey<any, any, any, any>> = SK extends SliceKey<
@@ -60,7 +61,7 @@ type InferInitState<SK extends SliceKey<any, any, any, any>> =
   SK extends SliceKey<any, infer SS, any, any> ? SS : never;
 type InferDependencies<SK extends SliceKey<any, any, any, any>> =
   SK extends SliceKey<any, any, any, infer DS> ? DS : never;
-type InferSelectors<SK extends SliceKey<any, any, any, any>> =
+type InferSelector<SK extends SliceKey<any, any, any, any>> =
   SK extends SliceKey<any, any, infer SE, any> ? SE : never;
 
 export function slice<
@@ -81,15 +82,16 @@ export function slice<
     InferInitState<SK>,
     InferDependencies<SK>,
     any,
-    InferSelectors<SK>
+    InferSelector<SK>
   >[];
 }): Slice<
   InferName<SK>,
   InferInitState<SK>,
   InferDependencies<SK>,
   ActionBuilderRecordConvert<InferName<SK>, A>,
-  InferSelectors<SK>
+  InferSelector<SK>
 > {
+  let sel: typeof key.selector = key.selector || (() => {});
   const slice = new Slice({
     actions: ({ lineageId }) =>
       expandActionBuilders(key.name, actions, lineageId),
@@ -107,7 +109,7 @@ export function slice<
     effects: effects || [],
     initState: key.initState,
     name: key.name,
-    selectors: key.selectors,
+    selector: sel,
   });
 
   return slice;
@@ -125,16 +127,16 @@ type ActionBuilderRecordConvert<
 export function createSlice<
   N extends string,
   SS extends object,
-  DS extends Slice<string, any, any, {}, {}>,
+  DS extends Slice<string, any, any, {}, VoidFn>,
   A extends Record<string, ActionBuilder<any[], SS, DS>>,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
 >(
   dependencies: DS[],
   arg: {
     name: N;
     initState: SS;
     actions: A;
-    selectors: SE;
+    selector: SE;
     terminal?: boolean;
   },
 ): Slice<N, SS, DS, ActionBuilderRecordConvert<N, A>, SE> {
@@ -145,7 +147,7 @@ export function createSlice<
     effects: [],
     initState: arg.initState,
     name: arg.name,
-    selectors: arg.selectors || {},
+    selector: arg.selector || (() => {}),
     reducer: (sliceState, storeState, tx) => {
       const apply = arg.actions[tx.actionId];
 
@@ -167,7 +169,6 @@ function expandActionBuilders<
   N extends string,
   A extends Record<string, ActionBuilder<any[], any, any>>,
 >(name: N, actions: A, lineageId: LineageId): ActionBuilderRecordConvert<N, A> {
-  let sliceKey = createSliceKey(name);
   let sliceName = createSliceNameOpaque(name);
   const result: Record<string, TxCreator> = mapObjectValues(
     actions,

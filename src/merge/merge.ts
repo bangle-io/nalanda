@@ -1,5 +1,5 @@
-import { Slice, Transaction } from '../vanilla';
-import { LineageId } from '../vanilla/internal-types';
+import { Slice, StoreState, Transaction } from '../vanilla';
+import { AnyFn, LineageId } from '../vanilla/internal-types';
 import { SelectorFn, TxCreator } from '../vanilla/public-types';
 import type { UnionToIntersection } from 'type-fest';
 import { isPlainObject } from '../vanilla/helpers';
@@ -16,10 +16,6 @@ type CreateSelectors<S> = {
     : never;
 };
 
-type StateToSelectors<S> = {
-  [K in keyof S]: S[K] extends {} ? SelectorFn<any, any, S[K]> : never;
-};
-
 /**
  * Produces a new slice which serves as the proxy to access any of the merged slices.
  * Ensure all the slices to be merged have distinct state, selector, action keys as
@@ -27,7 +23,7 @@ type StateToSelectors<S> = {
  */
 export function mergeAll<
   N extends string,
-  SL extends Slice<string, any, any, any, any>,
+  SL extends Slice<string, any, any, any, AnyFn>,
 >(
   slices: SL[],
   {
@@ -40,8 +36,12 @@ export function mergeAll<
   {},
   SL,
   ChangeTxCreatorSourceName<N, UnionToIntersection<SL['actions']>>,
-  StateToSelectors<UnionToIntersection<SL['initState']>> &
-    UnionToIntersection<CreateSelectors<SL['selectors']>>
+  SelectorFn<
+    any,
+    any,
+    UnionToIntersection<SL['initState']> &
+      UnionToIntersection<ReturnType<SL['selector']>>
+  >
 > {
   const seenActions = new Set<string>();
   const seenStateKeys = new Set<string>();
@@ -75,23 +75,6 @@ export function mergeAll<
         );
       }
       seenStateKeys.add(key);
-      mergedSelectors.push([
-        key,
-        (_, storeState) => sl.getState(storeState)[key],
-      ]);
-    }
-
-    for (const key of Object.keys(sl.selectors)) {
-      if (seenStateKeys.has(key)) {
-        throw new Error(
-          `Merge slices must have unique selector keys. The slice "${sl.name}" has a selector "${key}" that conflicts with another selector or state of a slice.`,
-        );
-      }
-      seenStateKeys.add(key);
-      mergedSelectors.push([
-        key,
-        (_, storeState) => sl.resolveSelectors(storeState)[key],
-      ]);
     }
   }
 
@@ -117,7 +100,39 @@ export function mergeAll<
 
       return result;
     },
-    selectors: Object.fromEntries(mergedSelectors),
+    selector: (_, storeState) => {
+      const selectorStateRecord: Record<string, any> = {};
+      const sliceStateRecord: Record<string, any> = {};
+
+      for (const slice of slices) {
+        const selector: SelectorFn<any, any, any> = slice.spec.selector;
+
+        const sliceState = slice.getState(storeState as StoreState<any>);
+
+        let result = selector(sliceState, storeState);
+
+        if (isPlainObject(result)) {
+          Object.assign(selectorStateRecord, result);
+        } else {
+          console.warn(
+            `The selector of slice "${slice.name}" returned a non-plain object. This is not supported.`,
+          );
+        }
+
+        if (isPlainObject(sliceState)) {
+          Object.assign(sliceStateRecord, sliceState);
+        } else {
+          console.warn(
+            `The slice "${slice.name}" has a non-plain object as its state. This is not supported.`,
+          );
+        }
+      }
+
+      return {
+        ...sliceStateRecord,
+        ...selectorStateRecord,
+      };
+    },
     reducer: (state) => state,
     forwardMap: Object.fromEntries(forwardEntries),
   }).rollupSlices({ before: slices });

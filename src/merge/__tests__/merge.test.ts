@@ -13,9 +13,9 @@ const testSlice1 = createSlice([], {
     num: 0,
   },
   name: 'test-1',
-  selectors: {
-    doubleNum: (state) => state.num * 2,
-  },
+  selector: (state) => ({
+    doubleNumSelector: state.num * 2,
+  }),
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -31,7 +31,7 @@ const testSlice2 = createSlice([], {
   initState: {
     name2: 'tame',
   },
-  selectors: {},
+  selector: () => {},
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name2: prefix + state.name2 };
@@ -50,7 +50,7 @@ const testSlice3 = createSlice([testSlice2], {
   initState: {
     name3: 'TAME',
   },
-  selectors: {},
+  selector: () => {},
   actions: {
     lowercase: () => (state) => {
       return { ...state, name3: state.name3.toLocaleLowerCase() };
@@ -109,7 +109,7 @@ describe('single slice', () => {
 
     expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
       {
-        "doubleNum": 2,
+        "doubleNumSelector": 2,
         "num": 1,
       }
     `);
@@ -118,7 +118,7 @@ describe('single slice', () => {
 
     expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
       {
-        "doubleNum": 4,
+        "doubleNumSelector": 4,
         "num": 2,
       }
     `);
@@ -207,7 +207,7 @@ describe('forwarding three slices', () => {
 
     expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
       {
-        "doubleNum": 2,
+        "doubleNumSelector": 2,
         "name2": "tame",
         "name3": "TAME",
         "num": 1,
@@ -218,7 +218,7 @@ describe('forwarding three slices', () => {
 
     expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
       {
-        "doubleNum": 4,
+        "doubleNumSelector": 4,
         "name2": "tame",
         "name3": "TAME",
         "num": 2,
@@ -287,7 +287,7 @@ describe('nested forwarding', () => {
 
     expect(forwarded3.resolveState(store.state)).toMatchInlineSnapshot(`
       {
-        "doubleNum": 2,
+        "doubleNumSelector": 2,
         "name2": "tame",
         "name3": "TAME",
         "num": 1,
@@ -299,7 +299,7 @@ describe('nested forwarding', () => {
 
     expect(forwarded3.resolveState(store.state)).toMatchInlineSnapshot(`
       {
-        "doubleNum": 4,
+        "doubleNumSelector": 4,
         "name2": "tame",
         "name3": "tame",
         "num": 2,
@@ -310,7 +310,7 @@ describe('nested forwarding', () => {
 
     expect(forwarded3.resolveState(store.state)).toMatchInlineSnapshot(`
       {
-        "doubleNum": 4,
+        "doubleNumSelector": 4,
         "name2": "tamekk",
         "name3": "tame",
         "num": 2,
@@ -330,9 +330,9 @@ describe('nested forwarding', () => {
           g1State: state.g1 + 'g',
         }),
       },
-      selectors: {
-        g1Selector: (state) => `g: (${state.g1})`,
-      },
+      selector: (state) => ({
+        g1Selector: `g: (${state.g1})`,
+      }),
     });
 
     const t1 = createSlice([g1], {
@@ -340,10 +340,9 @@ describe('nested forwarding', () => {
       initState: {
         t1: 't',
       },
-      selectors: {
-        t1Selector: (state, storeState) =>
-          `t1: ((${state.t1})(${g1.getState(storeState).g1})))`,
-      },
+      selector: (state, storeState) => ({
+        t1Selector: `t1: ((${state.t1})(${g1.getState(storeState).g1})))`,
+      }),
       actions: {
         updateT1State: () => (state) => ({
           ...state,
@@ -363,11 +362,9 @@ describe('nested forwarding', () => {
           r1: state.r1 + 'r',
         }),
       },
-      selectors: {
-        r1Selector: (state, storeState) => {
-          return `r1: ((${state.r1})(${t1.getState(storeState).t1})))`;
-        },
-      },
+      selector: (state, storeState) => ({
+        r1Selector: `r1: ((${state.r1})(${t1.getState(storeState).t1})))`,
+      }),
     }).addEffect({
       name: 't2Effect',
       updateSync(slice, store, prevStoreState) {
@@ -387,11 +384,9 @@ describe('nested forwarding', () => {
         s1: 0,
       },
       actions: {},
-      selectors: {
-        isZero: (state, storeState) => {
-          return state.s1 === 0;
-        },
-      },
+      selector: (state) => ({
+        isZero: state.s1 === 0,
+      }),
     });
 
     const x0 = mergeAll([g1, t1, r1, s1], {

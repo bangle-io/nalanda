@@ -13,14 +13,9 @@ function sleep(t = 20): Promise<void> {
 }
 
 const testSlice1 = slice({
-  key: createKey(
-    'test-1',
-    [],
-    { num: 4 },
-    {
-      numSq: (state) => state.num * state.num,
-    },
-  ),
+  key: createKey('test-1', [], { num: 4 }, (state) => ({
+    numSq: state.num * state.num,
+  })),
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };

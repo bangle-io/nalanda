@@ -12,7 +12,7 @@ const testSlice1Decrement =
   };
 const testSlice1 = createSlice([], {
   name: 'test-1',
-  selectors: {},
+  selector: () => {},
   initState: testSlice1InitState,
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
@@ -52,20 +52,20 @@ describe('lineage id is geneated correctly', () => {
       name: 'slice1',
       actions: {},
       initState: { num: 1 },
-      selectors: {},
+      selector: () => {},
     });
 
     const sliceWithSameName = createSlice([], {
       name: 'slice1',
       actions: {},
       initState: { num: 1 },
-      selectors: {},
+      selector: () => {},
     });
     const sliceWithSameName2 = createSlice([], {
       name: 'slice1',
       actions: {},
       initState: { num: 1 },
-      selectors: {},
+      selector: () => {},
     });
 
     expect(slice1.lineageId).toBe('l_slice1$');

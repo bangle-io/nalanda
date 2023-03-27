@@ -32,7 +32,7 @@ const createAnySliceBase = (name: string, deps: string[]): BareSlice => {
       return createAnySliceBase(dep, []) as AnySlice;
     }),
     actions: {},
-    selectors: {},
+    selector: () => {},
     reducer: (s) => s,
   });
 };
@@ -45,7 +45,7 @@ const createSlice = (name: string): AnySlice => {
     initState: {},
     dependencies: [],
     actions: {},
-    selectors: {},
+    selector: () => {},
     reducer: (s) => s,
   });
 

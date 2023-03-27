@@ -1,6 +1,5 @@
-import { mapObjectValues, weakCache } from './helpers';
+import { weakCache } from './helpers';
 import {
-  AnyFn,
   createLineageId,
   createSliceKey,
   createSliceNameOpaque,
@@ -69,7 +68,7 @@ export interface SliceSpec<
   SS,
   DS extends AnySlice,
   A extends Record<string, TxCreator<N, any[]>>,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
 > {
   name: N;
   dependencies: DS[];
@@ -81,7 +80,7 @@ export interface SliceSpec<
     // adding N breaks things
     tx: Transaction<string, any[]>,
   ) => NoInfer<SS>;
-  selectors: SE;
+  selector: SE;
   terminal?: boolean;
   forwardMap?: Record<string, LineageId>;
   effects?: Effect<N, SS, DS, A, SE>[];
@@ -94,7 +93,7 @@ export class Slice<
   SS,
   DS extends AnySlice,
   A extends Record<string, TxCreator<N, any[]>>,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
 > implements BareSlice<N, SS>
 {
   public readonly initState: SS;
@@ -110,8 +109,8 @@ export class Slice<
     return this.actions;
   }
 
-  get selectors(): SE {
-    return this.spec.selectors;
+  get selector(): SE {
+    return this.spec.selector;
   }
 
   constructor(
@@ -140,7 +139,7 @@ export class Slice<
     this.name = config?.originalSpec.name ?? spec.name;
     this.nameOpaque = createSliceNameOpaque(this.name);
 
-    this.resolveSelectors = weakCache(this.resolveSelectors.bind(this));
+    this.resolveSelector = weakCache(this.resolveSelector.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
 
     this.initState = spec.initState;
@@ -159,22 +158,22 @@ export class Slice<
     return storeState.getSliceState(this as AnySlice);
   }
 
-  resolveSelectors<SState extends StoreState<any>>(
+  resolveSelector<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, N, SState>,
-  ): ResolvedSelectors<SE> {
-    const result = mapObjectValues(this.spec.selectors, (selector) => {
-      return selector(this.getState(storeState), storeState);
-    });
-
-    return result as any;
+  ): ReturnType<SE> {
+    if (typeof this.spec.selector !== 'function') {
+      console.log(this.lineageId, this.spec.selector);
+    }
+    return this.spec.selector(this.getState(storeState), storeState);
   }
 
   resolveState<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, N, SState>,
-  ): Simplify<SS & ResolvedSelectors<SE>> {
+  ): Simplify<SS & ReturnType<SE>> {
+    // TODO this can fail if the selector returns not an object
     return {
       ...this.getState(storeState),
-      ...this.resolveSelectors(storeState),
+      ...this.resolveSelector(storeState),
     };
   }
 
@@ -191,9 +190,7 @@ export class Slice<
    * when you want to just read the value and not trigger the effect if
    * it changes.
    */
-  passivePick<T>(
-    cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
-  ) {
+  passivePick<T>(cb: (resolvedState: Simplify<SS & ReturnType<SE>>) => T) {
     const opts: PickOpts = {
       ignoreChanges: true,
     };
@@ -201,7 +198,7 @@ export class Slice<
   }
 
   pick<T>(
-    cb: (resolvedState: Simplify<SS & ResolvedSelectors<SE>>) => T,
+    cb: (resolvedState: Simplify<SS & ReturnType<SE>>) => T,
     _opts: PickOpts = {},
   ): [Slice<N, SS, DS, A, SE>, (storeState: StoreState<any>) => T, PickOpts] {
     return [
@@ -272,8 +269,4 @@ export type ActionBuilderToTxCreator<
   [KK in keyof A]: A[KK] extends (...param: infer P) => any
     ? TxCreator<N, P>
     : never;
-};
-
-type ResolvedSelectors<SE extends Record<string, SelectorFn<any, any, any>>> = {
-  [K in keyof SE]: SE[K] extends AnyFn ? ReturnType<SE[K]> : never;
 };

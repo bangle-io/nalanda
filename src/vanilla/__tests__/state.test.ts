@@ -202,7 +202,7 @@ describe('validations', () => {
       name: 'slice1',
       actions: {},
       initState: { num: 1 },
-      selectors: {},
+      selector: () => {},
     });
 
     const slice2 = slice1.withoutEffects();
@@ -359,20 +359,16 @@ describe('State creation', () => {
     expect(mySlice2.getState(newAppState).num).toBe(4);
   });
 
-  test('applying action with selectors', () => {
+  test('applying action with selector', () => {
     const key1 = createKey(
       'mySlice',
       [],
       {
         char: '1',
       },
-      {
-        s1: (state) => {
-          return {
-            val1_1: state.char,
-          };
-        },
-      },
+      (state) => ({
+        s1: { val1_1: state.char },
+      }),
     );
 
     const mySlice1 = slice({
@@ -399,14 +395,12 @@ describe('State creation', () => {
         {
           char: '2',
         },
-        {
-          s2: (state, storeState) => {
-            return {
-              val2_1: mySlice1.resolveSelectors(storeState).s1,
-              val2_2: state.char,
-            };
+        (state, storeState) => ({
+          s2: {
+            val2_1: mySlice1.resolveSelector(storeState).s1,
+            val2_2: state.char,
           },
-        },
+        }),
       ),
       actions: {},
     });
@@ -416,15 +410,13 @@ describe('State creation', () => {
         'mySlice3',
         [mySlice1, mySlice2],
         { char: '3' },
-        {
-          s3: (state, storeState) => {
-            return {
-              val3_2: mySlice2.resolveSelectors(storeState).s2,
-              val3_1: mySlice1.resolveSelectors(storeState).s1,
-              val3_3: state.char,
-            };
+        (state, storeState) => ({
+          s3: {
+            val3_2: mySlice2.resolveSelector(storeState).s2,
+            val3_1: mySlice1.resolveSelector(storeState).s1,
+            val3_3: state.char,
           },
-        },
+        }),
       ),
       actions: {},
     });
@@ -445,11 +437,11 @@ describe('State creation', () => {
         val3_3: '3',
       },
     };
-    expect(mySlice3.resolveSelectors(appState)).toEqual(result1);
-    expect(mySlice2.resolveSelectors(appState).s2).toEqual(
+    expect(mySlice3.resolveSelector(appState)).toEqual(result1);
+    expect(mySlice2.resolveSelector(appState).s2).toEqual(
       result1['s3']['val3_2'],
     );
-    expect(mySlice1.resolveSelectors(appState).s1).toEqual(
+    expect(mySlice1.resolveSelector(appState).s1).toEqual(
       result1['s3']['val3_1'],
     );
 
@@ -470,16 +462,16 @@ describe('State creation', () => {
       },
     };
 
-    expect(mySlice3.resolveSelectors(newAppState)).toEqual(result2);
-    expect(mySlice2.resolveSelectors(newAppState).s2).toEqual(
+    expect(mySlice3.resolveSelector(newAppState)).toEqual(result2);
+    expect(mySlice2.resolveSelector(newAppState).s2).toEqual(
       result2['s3']['val3_2'],
     );
-    expect(mySlice1.resolveSelectors(newAppState).s1).toEqual(
+    expect(mySlice1.resolveSelector(newAppState).s1).toEqual(
       result2['s3']['val3_1'],
     );
 
     // previous state is unaltered
-    expect(mySlice3.resolveSelectors(appState)).toEqual(result1);
+    expect(mySlice3.resolveSelector(appState)).toEqual(result1);
   });
 });
 

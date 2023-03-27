@@ -1,4 +1,4 @@
-import { LineageId, SliceKey } from './internal-types';
+import { LineageId, SliceKey, VoidFn } from './internal-types';
 import type { ActionBuilder, AnySlice, BareStore } from './public-types';
 import type { BareSlice, Slice } from './slice';
 import type { Store } from './store';
@@ -148,7 +148,7 @@ export function getActionBuilderByKey(
   key: SliceKey,
   actionId: string,
 ): undefined | ActionBuilder<any[], any, any> {
-  const slice: undefined | Slice<string, any, any, any, {}> = getSliceByKey(
+  const slice: undefined | Slice<string, any, any, any, VoidFn> = getSliceByKey(
     store,
     key,
   );

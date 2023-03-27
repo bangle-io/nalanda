@@ -10,7 +10,7 @@ const testSlice1 = createSlice([], {
     num: 4,
   },
   name: 'test-1',
-  selectors: {},
+  selector: () => {},
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -26,7 +26,7 @@ const testSlice2 = createSlice([], {
   initState: {
     name: 'tame',
   },
-  selectors: {},
+  selector: () => {},
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -45,7 +45,7 @@ const testSlice3 = createSlice([], {
   initState: {
     name: 'tame',
   },
-  selectors: {},
+  selector: () => {},
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };

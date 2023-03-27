@@ -12,7 +12,7 @@ const testSlice1 = createSlice([], {
     num: 4,
   },
   name: 'test-1',
-  selectors: {},
+  selector: () => {},
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -28,9 +28,10 @@ const testSlice2 = slice({
     'test-2',
     [],
     { name: 'tame' },
-    {
-      fancy: (state) => state.name.padEnd(10, ' ').toUpperCase(),
-    },
+
+    (state) => ({
+      fancy: state.name.padEnd(10, ' ').toUpperCase(),
+    }),
   ),
   actions: {
     prefix: (prefix: string) => (state) => {

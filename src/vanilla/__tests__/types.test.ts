@@ -11,7 +11,7 @@ const testSlice0 = new Slice({
     },
   },
   actions: {},
-  selectors: {},
+  selector: () => {},
   dependencies: [],
   reducer: (state) => state,
 });
@@ -22,7 +22,7 @@ const testSlice1 = new Slice({
     a: 1,
   },
   actions: {},
-  selectors: {},
+  selector: () => {},
   dependencies: [],
   reducer: (state) => state,
 });
@@ -35,7 +35,7 @@ const testSlice2 = createSlice([], {
   actions: {
     kick: (now: boolean) => (state) => state,
   },
-  selectors: {},
+  selector: () => {},
 });
 
 const testSlice3 = createSlice([testSlice1, testSlice2], {
@@ -72,7 +72,7 @@ const testSlice3 = createSlice([testSlice1, testSlice2], {
       return { ...state, name: state.name.toUpperCase() };
     },
   },
-  selectors: {},
+  selector: () => {},
 });
 
 const testSlice4 = createSlice([testSlice3], {
@@ -81,7 +81,7 @@ const testSlice4 = createSlice([testSlice3], {
     basket: 'fine',
   },
   actions: {},
-  selectors: {},
+  selector: () => {},
 }).addEffect([
   {
     name: 'testEffect1',
@@ -124,9 +124,9 @@ describe('types', () => {
         val: 0,
       },
       actions: {},
-      selectors: {
-        majin: (state) => state.val + 1,
-      },
+      selector: (state) => ({
+        majin: state.val + 1,
+      }),
     });
     const storeState = InternalStoreState.create([
       testSlice0,
@@ -157,11 +157,15 @@ describe('types', () => {
       `"Slice "testSlice2" not found in store"`,
     );
 
-    let mySliceSelectors = mySlice.resolveSelectors(storeState);
+    let mySliceSelectors = mySlice.resolveSelector(storeState);
     expectType<number>(mySliceSelectors.majin);
 
-    // @ts-expect-error - since not registered
-    let otherSelectors = testSlice2.resolveSelectors(storeState);
+    expect(() => {
+      // @ts-expect-error - since not registered
+      testSlice2.resolveSelector(storeState);
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"Slice "testSlice2" not found in store"`,
+    );
 
     expect(mySlice).toBeDefined();
   });

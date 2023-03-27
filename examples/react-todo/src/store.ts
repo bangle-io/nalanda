@@ -17,16 +17,19 @@ export const todoSlice = new Slice({
   dependencies: [],
   name: 'todo-slice',
   initState: todosInitState,
-  selectors: {
-    filteredTodos: (state) => {
-      if (state.filter === 'all') {
-        return state.todos;
-      }
-      if (state.filter === 'completed') {
-        return state.todos.filter((t) => t.completed);
-      }
-      return state.todos.filter((t) => !t.completed);
-    },
+  selector: (state) => {
+    let result: any;
+    if (state.filter === 'all') {
+      result = state.todos;
+    } else if (state.filter === 'completed') {
+      result = state.todos.filter((t) => t.completed);
+    } else {
+      result = state.todos.filter((t) => !t.completed);
+    }
+
+    return {
+      filteredTodos: result,
+    };
   },
   actions: {
     addTodo: (todo: Todo) => (state) => {

@@ -1,5 +1,5 @@
 import { createSlice } from '../vanilla';
-import { ExtractReturnTypes } from '../vanilla/internal-types';
+import { ExtractReturnTypes, VoidFn } from '../vanilla/internal-types';
 import {
   AnySlice,
   BareStore,
@@ -47,7 +47,7 @@ export const changeEffect = <
     ref: Record<string, any>,
   ) => void | (() => void),
   opts?: { sync?: boolean },
-): Slice<N, {}, never, {}, {}> => {
+): Slice<N, {}, never, {}, VoidFn> => {
   const comparisonEntries = Object.entries(effectSelectors).map(
     (r): [string, (storeState: StoreState<any>) => any, PickOpts] => [
       r[0],
@@ -62,18 +62,6 @@ export const changeEffect = <
     userRef?: Record<string, any>;
   };
 
-  type SliceEffect = Effect<
-    N,
-    {
-      ready: boolean;
-    },
-    AnySlice,
-    {
-      ready: TxCreator<N, [void]>;
-    },
-    {}
-  >;
-
   const run = (
     sl: Slice<
       N,
@@ -82,7 +70,7 @@ export const changeEffect = <
       },
       any,
       {},
-      {}
+      VoidFn
     >,
     store: BareStore<any>,
     prevStoreState: BareStore<any>['state'],
@@ -130,7 +118,7 @@ export const changeEffect = <
     {
       ready: () => any;
     },
-    {}
+    VoidFn
   > = {
     name: name + `(changeEffect)`,
     init(slice, store, ref: EffectRef) {
@@ -164,7 +152,7 @@ export const changeEffect = <
         ready: false,
       }),
     },
-    selectors: {},
+    selector: () => {},
     terminal: true,
   }).addEffect(effect);
 

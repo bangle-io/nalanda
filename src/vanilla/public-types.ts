@@ -1,3 +1,4 @@
+import { VoidFn } from './internal-types';
 import type { BareSlice, Slice } from './slice';
 import type { StoreState } from './state';
 import type { Transaction } from './transaction';
@@ -16,14 +17,14 @@ export type ActionBuilder<P extends any[], SS, DS extends BareSlice> = {
   metadata?: Record<string | symbol, any>;
 };
 
-export type AnySlice = Slice<string, any, any, {}, {}>;
+export type AnySlice = Slice<string, any, any, {}, VoidFn>;
 export type EmptySlice = Slice<
   never,
   {},
   // TODO check if we cna improve thi
   AnySlice,
   {},
-  {}
+  VoidFn
 >;
 
 export interface BareStore<SL extends BareSlice> {
@@ -40,7 +41,7 @@ export interface Effect<
   SS,
   DS extends AnySlice,
   A extends Record<string, TxCreator<N, any[]>>,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
 > {
   name?: string;
   destroy?: (

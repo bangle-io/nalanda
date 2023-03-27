@@ -88,9 +88,9 @@ export function useSliceState<SL extends Slice>(sl: SL) {
 
 Knowing the dependencies of a slice helps ensure any code is only run when its dependencies are updated. Think of it as React's virtual DOM but without the DOM which is the slowest part of React.
 
-## Selectors
+## Selector
 
-### Accessing other selectors inside a selector
+### Accessing other selector inside a selector
 
 ## Syncing across multiple stores
 
@@ -133,7 +133,7 @@ const appleCountSlice = createSlice([], {
       count: state.count + 1,
     }),
   },
-  selectors: {},
+  selector: () => {},
 });
 
 const appleCountChangeEffect = changeEffect(
@@ -172,7 +172,7 @@ const appleCountSlice = createSlice([], {
       spoilCount: spoil,
     }),
   },
-  selectors: {},
+  selector: () => {},
 });
 
 const appleCountChangeEffect = changeEffect(
