@@ -1,5 +1,4 @@
-// import { actionToActionSnapshot, Slice, SliceKey } from '../slice';
-
+import { assertNotUndefined } from '../../sync/helpers';
 import { testOverrideDependencies } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
 import { createSliceKey, expectType, rejectAny } from '../internal-types';
@@ -685,7 +684,8 @@ describe('effects', () => {
 
     let effect = mySlice.spec.effects?.[0];
 
-    expectType<AnyEffect>(effect!);
+    assertNotUndefined(effect, 'cannot be undefined');
+    expectType<AnyEffect>(effect);
 
     expect(effect).toBeDefined();
   });
