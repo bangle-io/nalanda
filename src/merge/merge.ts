@@ -120,7 +120,7 @@ export function mergeAll<
     selectors: Object.fromEntries(mergedSelectors),
     reducer: (state) => state,
     forwardMap: Object.fromEntries(forwardEntries),
-  }).rollupSlices(slices);
+  }).rollupSlices({ before: slices });
 
   return mergedSlice as any;
 }

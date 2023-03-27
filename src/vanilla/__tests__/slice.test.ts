@@ -5,6 +5,7 @@ import { createKey, createSlice, slice } from '../create';
 import { createSliceKey, expectType, rejectAny } from '../internal-types';
 import { AnyEffect, AnySlice, Effect, TxCreator } from '../public-types';
 import { Slice } from '../slice';
+import { expandSlices } from '../slices-helpers';
 import { InternalStoreState, StoreState } from '../state';
 import { Transaction } from '../transaction';
 
@@ -796,9 +797,11 @@ describe('creating with slice', () => {
 
 describe('rolling up slices', () => {
   test('rolls up correctly', () => {
-    let testSlice = testSlice3.rollupSlices([testSlice1, testSlice2]);
+    let testSlice = testSlice3.rollupSlices({
+      before: [testSlice1, testSlice2],
+    });
 
-    expect(testSlice.spec._additionalSlices?.map((r) => r.lineageId)).toEqual([
+    expect(testSlice.spec.beforeSlices?.map((r) => r.lineageId)).toEqual([
       'l_test-1$',
       'l_test-2$',
     ]);
@@ -808,21 +811,41 @@ describe('rolling up slices', () => {
       actions: {},
       selectors: {},
       initState: {},
-    }).rollupSlices([testSlice]);
+    }).rollupSlices({ after: [testSlice] });
+
+    let sliceB = createSlice([], {
+      name: 'sliceB',
+      actions: {},
+      selectors: {},
+      initState: {},
+    });
+
+    let sliceC = createSlice([], {
+      name: 'sliceC',
+      actions: {},
+      selectors: {},
+      initState: {},
+    }).rollupSlices({
+      before: [sliceA],
+      after: [sliceB],
+    });
 
     // shouldn't modify original
-    expect(
-      testSlice.spec._additionalSlices?.map((r) => r.lineageId),
-    ).toHaveLength(2);
+    expect(testSlice.spec.beforeSlices?.map((r) => r.lineageId)).toHaveLength(
+      2,
+    );
 
-    expect(sliceA.spec._additionalSlices?.map((r) => r.lineageId)).toEqual([
-      'l_test-1$',
-      'l_test-2$',
+    expect(sliceA.spec.afterSlices?.map((r) => r.lineageId)).toEqual([
       'l_test-3$',
     ]);
 
-    expect(
-      sliceA.spec._additionalSlices?.flatMap((r) => r.spec._additionalSlices),
-    ).toHaveLength(0);
+    expect(expandSlices([sliceC]).map((r) => r.lineageId)).toEqual([
+      'l_sliceA$1',
+      'l_test-1$',
+      'l_test-2$',
+      'l_test-3$',
+      'l_sliceC$',
+      'l_sliceB$1',
+    ]);
   });
 });

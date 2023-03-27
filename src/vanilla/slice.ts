@@ -48,7 +48,8 @@ export interface BareSlice<K extends string = string, SS = unknown> {
     dependencies: BareSlice[];
     // Adding effects breaks everything
     effects?: any[];
-    _additionalSlices?: BareSlice[];
+    beforeSlices?: BareSlice[];
+    afterSlices?: BareSlice[];
   };
 
   applyTx(
@@ -84,7 +85,8 @@ export interface SliceSpec<
   terminal?: boolean;
   forwardMap?: Record<string, LineageId>;
   effects?: Effect<N, SS, DS, A, SE>[];
-  _additionalSlices?: AnySlice[];
+  beforeSlices?: AnySlice[];
+  afterSlices?: AnySlice[];
 }
 
 export class Slice<
@@ -244,24 +246,21 @@ export class Slice<
   }
 
   /**
-   * Adds slices to the current slice which will be registered before it in the store.
-   * This is used to have a single point of registration for slices.
-   * @param _slices - slices to rollup to the current slice
+   * Allows for registering of numerous slices in a way where they will be registered before/after the current slice in the store.
+   * This is an advanced functionality to bundle misc slices which are self contained (externally not exposed)
+   * and are not meant to be used directly by the user.
    * @returns
    */
-  rollupSlices(_slices: AnySlice[]) {
-    let slices = _slices.flatMap((child) => {
-      const additional = child.spec._additionalSlices || [];
-      return [
-        ...additional,
-        child._fork({
-          _additionalSlices: [],
-        }),
-      ];
-    });
-
+  rollupSlices({
+    before = [],
+    after = [],
+  }: {
+    before?: AnySlice[];
+    after?: AnySlice[];
+  }) {
     return this._fork({
-      _additionalSlices: [...(this.spec._additionalSlices || []), ...slices],
+      beforeSlices: [...(this.spec.beforeSlices || []), ...before],
+      afterSlices: [...(this.spec.afterSlices || []), ...after],
     });
   }
 }

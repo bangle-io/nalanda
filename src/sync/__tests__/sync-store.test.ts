@@ -314,7 +314,7 @@ describe('basic test', () => {
       dependencies: [],
       selectors: {},
       reducer: (s) => s,
-      _additionalSlices: [testSlice1],
+      beforeSlices: [testSlice1],
     });
 
     const result = createBasicPair({
@@ -809,7 +809,7 @@ describe('createSyncState', () => {
           dependencies: [],
           selectors: {},
           reducer: (s) => s,
-          _additionalSlices: [testSlice1],
+          beforeSlices: [testSlice1],
         }),
       ],
       otherSlices: [
@@ -820,7 +820,7 @@ describe('createSyncState', () => {
           dependencies: [],
           selectors: {},
           reducer: (s) => s,
-          _additionalSlices: [testSlice2],
+          beforeSlices: [testSlice2],
         }),
       ],
     });

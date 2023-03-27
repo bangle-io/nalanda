@@ -1,9 +1,13 @@
 import { findDuplications } from './helpers';
 import { BareSlice } from './slice';
 
-export function expandSlices(slices: BareSlice[]) {
+export function expandSlices(slices: BareSlice[] = []): BareSlice[] {
   return slices.flatMap((slice) => {
-    return [...(slice.spec._additionalSlices || []), slice];
+    return [
+      ...expandSlices(slice.spec.beforeSlices),
+      slice,
+      ...expandSlices(slice.spec.afterSlices),
+    ];
   });
 }
 
