@@ -18,14 +18,8 @@ export type ActionBuilder<P extends any[], SS, DS extends BareSlice> = {
 };
 
 export type AnySlice = Slice<string, any, any, {}, VoidFn>;
-export type EmptySlice = Slice<
-  never,
-  {},
-  // TODO check if we cna improve thi
-  AnySlice,
-  {},
-  VoidFn
->;
+
+export type OpaqueSlice<N extends string> = Slice<N, {}, never, {}, () => void>;
 
 export interface BareStore<SL extends BareSlice> {
   state: StoreState<SL>;

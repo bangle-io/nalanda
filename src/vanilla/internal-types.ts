@@ -85,11 +85,17 @@ export function createSliceKey(key: string): SliceKey {
 }
 
 const lineages: Record<string, number> = Object.create(null);
-
 export function createLineageId(name: string): LineageId {
   if (name in lineages) return `l_${name}$${++lineages[name]}` as LineageId;
   lineages[name] = 0;
   return `l_${name}$` as LineageId;
+}
+
+const uniqueSliceName: Record<string, number> = Object.create(null);
+export function createUniqueSliceName(name: string): string {
+  if (name in uniqueSliceName) return `${name}${++uniqueSliceName[name]}$`;
+  uniqueSliceName[name] = 0;
+  return `${name}$`;
 }
 
 export function isLineageId(id: unknown): id is LineageId {

@@ -1,12 +1,7 @@
 import { createSlice } from '../vanilla';
-import { ExtractReturnTypes, VoidFn } from '../vanilla/internal-types';
-import {
-  AnySlice,
-  BareStore,
-  Effect,
-  TxCreator,
-} from '../vanilla/public-types';
-import { PickOpts, Slice } from '../vanilla/slice';
+import { ExtractReturnTypes } from '../vanilla/internal-types';
+import { AnySlice, OpaqueSlice } from '../vanilla/public-types';
+import { PickOpts } from '../vanilla/slice';
 import type { StoreState } from '../vanilla/state';
 import type { ReducedStore } from '../vanilla/store';
 
@@ -47,7 +42,7 @@ export const changeEffect = <
     ref: Record<string, any>,
   ) => void | (() => void),
   opts?: { sync?: boolean },
-): Slice<N, {}, never, {}, VoidFn> => {
+): OpaqueSlice<N> => {
   const comparisonEntries = Object.entries(effectSelectors).map(
     (r): [string, (storeState: StoreState<any>) => any, PickOpts] => [
       r[0],
@@ -62,18 +57,41 @@ export const changeEffect = <
     userRef?: Record<string, any>;
   };
 
-  const run = (
-    sl: Slice<
-      N,
-      {
-        ready: boolean;
-      },
-      any,
-      {},
-      VoidFn
-    >,
-    store: BareStore<any>,
-    prevStoreState: BareStore<any>['state'],
+  const deps = Array.from(
+    new Set(Object.values(effectSelectors).map((r) => r[0])),
+  ) as OpaqueSlice<any>[];
+
+  const slice = createSlice(deps, {
+    name: name,
+    initState: {
+      ready: false,
+    },
+    actions: {
+      ready: () => () => ({
+        ready: false,
+      }),
+    },
+    selector: () => {},
+    terminal: true,
+  });
+
+  const effect: Parameters<(typeof slice)['addEffect']>[0] = {
+    name: name + `(changeEffect)`,
+    init(slice, store, ref: EffectRef) {
+      ref.firstRun = true;
+      ref.prevCleanup = undefined;
+      ref.userRef = {};
+      store.dispatch(slice.actions.ready());
+    },
+    destroy(slice, state, ref: EffectRef) {
+      ref?.prevCleanup?.();
+    },
+  };
+
+  const run: (typeof effect)['update'] = (
+    sl,
+    store,
+    prevStoreState,
     ref: EffectRef,
   ) => {
     let hasNew = false;
@@ -109,52 +127,11 @@ export const changeEffect = <
     }
   };
 
-  const effect: Effect<
-    N,
-    {
-      ready: boolean;
-    },
-    AnySlice,
-    {
-      ready: () => any;
-    },
-    VoidFn
-  > = {
-    name: name + `(changeEffect)`,
-    init(slice, store, ref: EffectRef) {
-      ref.firstRun = true;
-      ref.prevCleanup = undefined;
-      ref.userRef = {};
-      store.dispatch(slice.actions.ready());
-    },
-    destroy(slice, state, ref: EffectRef) {
-      ref?.prevCleanup?.();
-    },
-  };
-
   if (opts?.sync) {
     effect.updateSync = run;
   } else {
     effect.update = run;
   }
 
-  let deps = Array.from(
-    new Set(Object.values(effectSelectors).map((r) => r[0])),
-  ) as any;
-
-  const slice = createSlice(deps, {
-    name: name,
-    initState: {
-      ready: false,
-    },
-    actions: {
-      ready: () => () => ({
-        ready: false,
-      }),
-    },
-    selector: () => {},
-    terminal: true,
-  }).addEffect(effect);
-
-  return slice as any;
+  return slice.addEffect(effect) as any;
 };
