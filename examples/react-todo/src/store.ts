@@ -1,4 +1,4 @@
-import { Store, createUseSliceHook, Slice } from 'nalanda';
+import { Store, createUseSliceHook, Slice, createSlice } from 'nalanda';
 
 type Todo = {
   title: string;
@@ -13,8 +13,7 @@ const todosInitState: {
   filter: 'incompleted',
 };
 
-export const todoSlice = new Slice({
-  dependencies: [],
+export const todoSlice = createSlice([], {
   name: 'todo-slice',
   initState: todosInitState,
   selector: (state) => {

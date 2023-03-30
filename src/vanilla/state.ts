@@ -152,6 +152,8 @@ export class InternalStoreState implements StoreState<any> {
 
       if (
         !scopedSlice ||
+        // TODO make this deep dependency lookup? this is because they can in theory pass it around
+        // so in theory a deep dependency lookup is what we want.
         !sliceDepLineageLookup(scopedSlice).has(_sl.lineageId)
       ) {
         throw new Error(

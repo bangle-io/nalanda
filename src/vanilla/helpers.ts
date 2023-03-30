@@ -3,13 +3,6 @@ import type { ActionBuilder, AnySlice, BareStore } from './public-types';
 import type { BareSlice, Slice } from './slice';
 import type { Store } from './store';
 
-const contextId = uuid(4);
-let counter = 0;
-
-export function incrementalId() {
-  return `${contextId}-${counter++}`;
-}
-
 export function mapObjectValues<T, U>(
   obj: Record<string, T>,
   fn: (v: T, k: string) => U,
@@ -60,17 +53,6 @@ export function uuid(len = 10) {
   return Math.random().toString(36).substring(2, 15).slice(0, len);
 }
 
-export function calcDependencies(
-  slices: BareSlice[],
-): Record<LineageId, Set<LineageId>> {
-  return Object.fromEntries(
-    slices.map((slice) => [
-      slice.lineageId,
-      new Set(slice.spec.dependencies.map((dep) => dep.lineageId)),
-    ]),
-  );
-}
-
 export function flattenReverseDependencies(
   reverseDep: Record<LineageId, Set<LineageId>>,
 ) {
@@ -107,6 +89,7 @@ export function flattenReverseDependencies(
   return result;
 }
 
+// TODO: move this to be an internal method as we only use flattenReverseDependencies
 export function calcReverseDependencies(
   slices: BareSlice[],
 ): Record<LineageId, Set<LineageId>> {

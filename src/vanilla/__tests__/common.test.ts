@@ -1,6 +1,5 @@
 import { testOverrideDependencies } from '../../test-helpers';
 import {
-  calcDependencies,
   calcReverseDependencies,
   flattenReverseDependencies,
 } from '../helpers';
@@ -93,16 +92,6 @@ const setDeps = (slice: AnySlice, deps: string[]) => {
 describe('calcReverseDependencies', () => {
   describe('case 1', () => {
     const slices = [setDeps(sl1, ['2', '3'])];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_1$": Set {
-            "l_2$",
-            "l_3$",
-          },
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
@@ -140,23 +129,6 @@ describe('calcReverseDependencies', () => {
       setDeps(sl2, ['3']),
       setDeps(sl3, []),
     ];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_0$": Set {
-            "l_1$",
-          },
-          "l_1$": Set {
-            "l_2$",
-            "l_3$",
-          },
-          "l_2$": Set {
-            "l_3$",
-          },
-          "l_3$": Set {},
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
@@ -204,23 +176,6 @@ describe('calcReverseDependencies', () => {
       setDeps(sl2, ['3']),
       setDeps(sl3, []),
     ];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_0$": Set {
-            "l_1$",
-          },
-          "l_1$": Set {
-            "l_2$",
-            "l_3$",
-          },
-          "l_2$": Set {
-            "l_3$",
-          },
-          "l_3$": Set {},
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
@@ -268,24 +223,6 @@ describe('calcReverseDependencies', () => {
       setDeps(sl2, ['3']),
       setDeps(sl3, ['4']),
     ];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_0$": Set {
-            "l_1$",
-          },
-          "l_1$": Set {
-            "l_2$",
-          },
-          "l_2$": Set {
-            "l_3$",
-          },
-          "l_3$": Set {
-            "l_4$",
-          },
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
@@ -340,24 +277,6 @@ describe('calcReverseDependencies', () => {
       setDeps(slA, ['2', '3']),
       setDeps(slB, ['A', '1']),
     ];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_1$": Set {
-            "l_2$",
-            "l_3$",
-          },
-          "l_A$": Set {
-            "l_2$",
-            "l_3$",
-          },
-          "l_B$": Set {
-            "l_A$",
-            "l_1$",
-          },
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
@@ -413,24 +332,6 @@ describe('calcReverseDependencies', () => {
       setDeps(slB, []),
       setDeps(slC, ['B']),
     ];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_A$": Set {
-            "l_B$",
-          },
-          "l_B$": Set {},
-          "l_C$": Set {
-            "l_B$",
-          },
-          "l_D$": Set {
-            "l_A$",
-            "l_B$",
-            "l_C$",
-          },
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
@@ -480,29 +381,6 @@ describe('calcReverseDependencies', () => {
       setDeps(slA, []),
       setDeps(slB, []),
     ];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_A$": Set {},
-          "l_B$": Set {},
-          "l_C$": Set {
-            "l_F$",
-            "l_R$",
-          },
-          "l_F$": Set {
-            "l_B$",
-          },
-          "l_R$": Set {
-            "l_B$",
-          },
-          "l_X$": Set {
-            "l_C$",
-            "l_A$",
-            "l_B$",
-          },
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
@@ -571,45 +449,6 @@ describe('calcReverseDependencies', () => {
       setDeps(slC, ['D', 'X']),
       setDeps(slX, []),
     ];
-    test('calcDependencies ', () => {
-      expect(calcDependencies(slices)).toMatchInlineSnapshot(`
-        {
-          "l_A$": Set {
-            "l_X$",
-          },
-          "l_B$": Set {
-            "l_A$",
-            "l_D$",
-          },
-          "l_C$": Set {
-            "l_D$",
-            "l_X$",
-          },
-          "l_D$": Set {
-            "l_X$",
-          },
-          "l_E$": Set {
-            "l_F$",
-            "l_G$",
-            "l_H$",
-          },
-          "l_F$": Set {
-            "l_B$",
-            "l_G$",
-          },
-          "l_G$": Set {
-            "l_B$",
-          },
-          "l_H$": Set {
-            "l_B$",
-          },
-          "l_I$": Set {
-            "l_B$",
-          },
-          "l_X$": Set {},
-        }
-      `);
-    });
 
     test('calcReverseDependencies ', () => {
       expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
