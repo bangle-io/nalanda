@@ -2,7 +2,6 @@ import waitForExpect from 'wait-for-expect';
 import { createDispatchSpy, waitUntil } from '../test-helpers';
 import { createSlice } from '../vanilla';
 import { timeoutSchedular } from '../vanilla/effect';
-import { Slice } from '../vanilla/slice';
 import { Store } from '../vanilla/store';
 
 describe('Single slice', () => {

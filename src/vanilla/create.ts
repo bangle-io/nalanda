@@ -1,10 +1,5 @@
 import { mapObjectValues } from './helpers';
-import {
-  createSliceKey,
-  createSliceNameOpaque,
-  LineageId,
-  VoidFn,
-} from './internal-types';
+import { createSliceNameOpaque, LineageId, VoidFn } from './internal-types';
 import {
   ActionBuilder,
   AnySlice,

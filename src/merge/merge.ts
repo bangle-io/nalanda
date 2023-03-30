@@ -10,12 +10,6 @@ type ChangeTxCreatorSourceName<N extends string, A> = {
     : never;
 };
 
-type CreateSelectors<S> = {
-  [K in keyof S]: S[K] extends SelectorFn<any, any, infer P>
-    ? SelectorFn<any, any, P>
-    : never;
-};
-
 /**
  * Produces a new slice which serves as the proxy to access any of the merged slices.
  * Ensure all the slices to be merged have distinct state, selector, action keys as
@@ -46,7 +40,6 @@ export function mergeAll<
   const seenActions = new Set<string>();
   const seenStateKeys = new Set<string>();
   const forwardEntries: [string, LineageId][] = [];
-  const mergedSelectors: [string, SelectorFn<any, any, any>][] = [];
 
   for (const sl of slices) {
     for (const actionId of Object.keys(sl.actions)) {
