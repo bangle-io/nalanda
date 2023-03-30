@@ -2,11 +2,15 @@ import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 
 import type { BareSlice } from './slice';
-import { InternalStoreState, StoreState } from './state';
-import { DebugFunc, Transaction, txLog } from './transaction';
-import { TX_META_DISPATCH_SOURCE, TX_META_STORE_NAME } from './transaction';
+import { InternalStoreState, sliceDepLineageLookup, StoreState } from './state';
+import {
+  DebugFunc,
+  Transaction,
+  txLog,
+  TX_META_DISPATCH_INFO,
+} from './transaction';
+import { TX_META_DISPATCHER, TX_META_STORE_NAME } from './transaction';
 import { BareStore } from './public-types';
-import { SliceContext } from './internal-types';
 import { expandSlices } from './slices-helpers';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
@@ -21,7 +25,10 @@ export class Store implements BareStore<any> {
       let newState = store.state.applyTransaction(tx);
 
       if (newState === store.state) {
-        console.debug('No state change, skipping update', tx.targetSliceKey);
+        console.debug(
+          'No state change, skipping update to',
+          tx.targetSliceLineage,
+        );
 
         return;
       }
@@ -64,16 +71,27 @@ export class Store implements BareStore<any> {
     return store;
   }
 
-  dispatch = (tx: Transaction<string, any>, debugDispatch?: string) => {
+  dispatch = (tx: Transaction<string, any>, dispatchInfo?: string) => {
     if (this._destroyed) {
       return;
     }
+    if (!this.state.slicesLookupByLineage[tx.targetSliceLineage]) {
+      throw new Error(
+        `Cannot dispatch transaction as slice "${tx.targetSliceLineage}" is not registered in Store`,
+      );
+    }
+    if (!this.state.slicesLookupByLineage[tx.sourceSliceLineage]) {
+      throw new Error(
+        `Cannot dispatch transaction as slice "${tx.sourceSliceLineage}" is not registered in Store`,
+      );
+    }
+
     // TODO add a check to make sure tx is actually allowed
     // based on the slice dependencies
     tx.metadata.setMetadata(TX_META_STORE_NAME, this.storeName);
 
-    if (debugDispatch) {
-      tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
+    if (dispatchInfo) {
+      tx.metadata.appendMetadata(TX_META_DISPATCH_INFO, dispatchInfo);
     }
 
     this._dispatchTx(this, tx);
@@ -136,10 +154,9 @@ export class Store implements BareStore<any> {
    * @returns
    */
   getReducedStore<SB extends BareSlice>(
-    debugDispatch?: string,
-    sliceContext?: SliceContext,
+    dispatcherSlice?: BareSlice,
   ): ReducedStore<SB> {
-    return new ReducedStore(this, debugDispatch, sliceContext);
+    return new ReducedStore(this, dispatcherSlice);
   }
 
   updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
@@ -155,7 +172,7 @@ export class Store implements BareStore<any> {
 
     if (tx) {
       this._effectsManager?.queueSideEffectExecution(this, {
-        sliceKey: tx.targetSliceKey,
+        lineageId: tx.targetSliceLineage,
         actionId: tx.actionId,
       });
     }
@@ -164,42 +181,34 @@ export class Store implements BareStore<any> {
   // TODO: this will be removed once we have better way of adding dynamic slices
   _tempRegisterOnSyncChange(sl: BareSlice, cb: () => void) {
     return (
-      this._effectsManager?._tempRegisterOnSyncChange(sl.key, cb) || (() => {})
+      this._effectsManager?._tempRegisterOnSyncChange(sl.lineageId, cb) ||
+      (() => {})
     );
   }
 }
 
 export class ReducedStore<SB extends BareSlice> {
   dispatch = (tx: Transaction<SB['name'], any>, debugDispatch?: string) => {
-    if (this._debugDispatchSrc) {
+    if (this.dispatcherSlice) {
+      if (
+        tx.sourceSliceLineage !== this.dispatcherSlice.lineageId &&
+        !sliceDepLineageLookup(this.dispatcherSlice).has(tx.sourceSliceLineage)
+      ) {
+        const sourceSlice =
+          this.internalStoreState.slicesLookupByLineage[tx.sourceSliceLineage];
+        throw new Error(
+          `Dispatch not allowed! Slice "${this.dispatcherSlice.name}" does not include "${sourceSlice?.name}" in its dependency.`,
+        );
+      }
+
       tx.metadata.appendMetadata(
-        TX_META_DISPATCH_SOURCE,
-        this._debugDispatchSrc,
+        TX_META_DISPATCHER,
+        this.dispatcherSlice.lineageId,
       );
     }
 
-    const sliceContext = this._sliceContext;
-
-    if (sliceContext) {
-      const matchingSlice =
-        this.internalStoreState.sliceLookupByKey[sliceContext.sliceKey];
-
-      if (matchingSlice) {
-        const newTargetSliceKey = matchingSlice?.keyMap.resolve(
-          tx.targetSliceName,
-        );
-        if (newTargetSliceKey) {
-          tx = tx.changeTargetSlice(newTargetSliceKey);
-        }
-        // TODO: we also have a source slice key field and that will currently be wrong
-        // and will need resolution similar to target slice key
-        // this is because source is set when calling something slice1.actions.foo()
-        // this will set source key from slice1, which might not be the correct source.
-      }
-    }
-
     if (debugDispatch) {
-      tx.metadata.appendMetadata(TX_META_DISPATCH_SOURCE, debugDispatch);
+      tx.metadata.appendMetadata(TX_META_DISPATCH_INFO, debugDispatch);
     }
     // TODO add a developer check to make sure tx slice is actually allowed
     this._store.dispatch(tx);
@@ -207,8 +216,7 @@ export class ReducedStore<SB extends BareSlice> {
 
   constructor(
     private _store: Store | BareStore<any>,
-    public _debugDispatchSrc?: string,
-    public readonly _sliceContext?: SliceContext,
+    private dispatcherSlice?: BareSlice,
   ) {}
 
   get destroyed() {
@@ -220,7 +228,11 @@ export class ReducedStore<SB extends BareSlice> {
   }
 
   get state(): StoreState<SB> {
-    return this.internalStoreState._withContext(this._sliceContext);
+    if (this.dispatcherSlice) {
+      return this.internalStoreState.scoped(this.dispatcherSlice.lineageId);
+    }
+
+    return this.internalStoreState;
   }
 
   destroy() {

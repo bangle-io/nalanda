@@ -1,45 +1,26 @@
-import { createSliceKey } from '../vanilla/internal-types';
-import type {
-  ActionBuilder,
-  AnySlice,
-  BareStore,
-  Effect,
-} from '../vanilla/public-types';
-import { Slice } from '../vanilla/slice';
+import type { AnySlice, BareStore } from '../vanilla/public-types';
 import { DispatchTx } from '../vanilla/store';
 import {
   LogItem,
   Transaction,
-  TX_META_DISPATCH_SOURCE,
+  TX_META_DISPATCHER,
 } from '../vanilla/transaction';
 
 /**
- * To be only used for testing scenarios. In production, slices should always have the same code
+ * To be only used for testing scenarios. In production, slices should never be able
+ * to override their dependencies.
  */
-export function testOverrideSlice<SL extends AnySlice>(
+export function testOverrideDependencies<SL extends AnySlice>(
   slice: SL,
   {
     dependencies = slice.spec.dependencies,
-    initState = slice.spec.initState,
-    effects = slice.spec.effects,
-    actions = slice.spec.actions,
-    selectors = slice.spec.selectors,
   }: {
     // since this is for testing, we can allow any slice
     dependencies?: AnySlice[];
-    initState?: SL['initState'];
-    effects?: Effect<any>[];
-    actions?: Record<string, ActionBuilder<any[], any, any>>;
-    selectors?: Record<string, any>;
   },
 ): SL {
-  return new Slice({
-    name: slice.name,
-    initState,
-    actions,
-    selectors,
+  return slice._fork({
     dependencies,
-    effects: effects || [],
   }) as any;
 }
 
@@ -105,15 +86,21 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
             ? true
             : [filterBySource]
                 .flatMap((s) => s)
-                .some((s) => r.sourceSliceKey == createSliceKey(s.name));
+                .some((s) => r.sourceSliceLineage == s.lineageId);
         })
         .map(
-          ({ sourceSliceKey, targetSliceKey, metadata, payload, config }) => ({
-            sourceSliceKey,
-            targetSliceKey,
+          ({
+            sourceSliceLineage,
+            metadata,
+            payload,
+            config,
+            targetSliceLineage,
+          }) => ({
+            sourceSliceLineage,
             actionId: config.actionId,
             payload,
-            dispatchSource: metadata.getMetadata(TX_META_DISPATCH_SOURCE),
+            dispatchSource: metadata.getMetadata(TX_META_DISPATCHER),
+            targetSliceLineage,
           }),
         );
     },

@@ -6,6 +6,7 @@ import type { Transaction } from './transaction';
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
 export type AnyFn = (...args: any[]) => any;
+export type VoidFn = (...args: any[]) => void;
 
 export const expectType = <Type>(_: Type): void => void 0;
 export function rejectAny<K extends IfAny<K, never, unknown>>(key: K): void {}
@@ -70,11 +71,8 @@ export declare const __brand: unique symbol;
 export type Brand<T, K> = T & { [__brand]: K };
 
 export type SliceKey = Brand<string, 'SliceKey'>;
+export type LineageId = Brand<string, 'LineageId'>;
 export type SliceNameOpaque = Brand<string, 'SliceName'>;
-
-export type SliceContext = {
-  sliceKey: SliceKey;
-};
 
 export const KEY_PREFIX = 'key_';
 
@@ -86,6 +84,24 @@ export function createSliceKey(key: string): SliceKey {
   return (KEY_PREFIX + key) as SliceKey;
 }
 
+const lineages: Record<string, number> = Object.create(null);
+export function createLineageId(name: string): LineageId {
+  if (name in lineages) return `l_${name}$${++lineages[name]}` as LineageId;
+  lineages[name] = 0;
+  return `l_${name}$` as LineageId;
+}
+
+const uniqueSliceName: Record<string, number> = Object.create(null);
+export function createUniqueSliceName(name: string): string {
+  if (name in uniqueSliceName) return `${name}${++uniqueSliceName[name]}$`;
+  uniqueSliceName[name] = 0;
+  return `${name}$`;
+}
+
+export function isLineageId(id: unknown): id is LineageId {
+  return typeof id === 'string' && id.startsWith('l_') && /\$\d*$/.test(id);
+}
+
 export function isSliceKey(key: unknown): key is SliceKey {
   // TODO make this string by prefixing with `key_`
   return typeof key === 'string' && key.startsWith(KEY_PREFIX);
@@ -93,12 +109,4 @@ export function isSliceKey(key: unknown): key is SliceKey {
 
 export function createSliceNameOpaque(name: string): SliceNameOpaque {
   return name as SliceNameOpaque;
-}
-
-export function nestSliceKey(
-  key: SliceKey,
-  parentName: SliceNameOpaque,
-): SliceKey {
-  const rawKey = key.slice(KEY_PREFIX.length);
-  return createSliceKey(parentName + ':' + rawKey);
 }

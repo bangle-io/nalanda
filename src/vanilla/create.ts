@@ -1,17 +1,26 @@
-import { ActionBuilder, AnySlice, Effect, SelectorFn } from './public-types';
+import { mapObjectValues } from './helpers';
+import { createSliceNameOpaque, LineageId, VoidFn } from './internal-types';
+import {
+  ActionBuilder,
+  AnySlice,
+  Effect,
+  SelectorFn,
+  TxCreator,
+} from './public-types';
 import { Slice } from './slice';
+import { Transaction } from './transaction';
 
 class SliceKey<
   N extends string,
   SS extends object,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
   DS extends AnySlice,
 > {
   constructor(
     public name: N,
     public dependencies: DS[],
     public initState: SS,
-    public selectors: SE,
+    public selector: SE,
   ) {}
 }
 
@@ -19,12 +28,12 @@ export function createKey<
   K extends string,
   SS extends object,
   DS extends AnySlice,
->(id: K, deps: DS[], initState: SS): SliceKey<K, SS, {}, DS>;
+>(id: K, deps: DS[], initState: SS): SliceKey<K, SS, VoidFn, DS>;
 export function createKey<
   K extends string,
   SS extends object,
   DS extends AnySlice,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
 >(id: K, deps: DS[], initState: SS, selector: SE): SliceKey<K, SS, SE, DS>;
 export function createKey(
   id: any,
@@ -32,14 +41,22 @@ export function createKey(
   initState: any,
   selector?: any,
 ): any {
-  return new SliceKey(id, deps, initState, selector || {});
+  return new SliceKey(id, deps, initState, selector || (() => {}));
 }
 
+type InferName<SK extends SliceKey<any, any, any, any>> = SK extends SliceKey<
+  infer N,
+  any,
+  any,
+  any
+>
+  ? N
+  : never;
 type InferInitState<SK extends SliceKey<any, any, any, any>> =
   SK extends SliceKey<any, infer SS, any, any> ? SS : never;
 type InferDependencies<SK extends SliceKey<any, any, any, any>> =
   SK extends SliceKey<any, any, any, infer DS> ? DS : never;
-type InferSelectors<SK extends SliceKey<any, any, any, any>> =
+type InferSelector<SK extends SliceKey<any, any, any, any>> =
   SK extends SliceKey<any, any, infer SE, any> ? SE : never;
 
 export function slice<
@@ -56,54 +73,111 @@ export function slice<
   key: SK;
   actions: A;
   effects?: Effect<
-    Slice<
-      SK['name'],
-      InferInitState<SK>,
-      InferDependencies<SK>,
-      A,
-      InferSelectors<SK>
-    >,
-    | Slice<
-        SK['name'],
-        InferInitState<SK>,
-        InferDependencies<SK>,
-        A,
-        InferSelectors<SK>
-      >
-    | InferDependencies<SK>
+    SK['name'],
+    InferInitState<SK>,
+    InferDependencies<SK>,
+    any,
+    InferSelector<SK>
   >[];
-}) {
-  return new Slice({
-    actions,
+}): Slice<
+  InferName<SK>,
+  InferInitState<SK>,
+  InferDependencies<SK>,
+  ActionBuilderRecordConvert<InferName<SK>, A>,
+  InferSelector<SK>
+> {
+  let sel: typeof key.selector = key.selector || (() => {});
+  const slice = new Slice({
+    actions: ({ lineageId }) =>
+      expandActionBuilders(key.name, actions, lineageId),
+    reducer: (sliceState, storeState, tx) => {
+      const apply = actions[tx.actionId];
+
+      if (!apply) {
+        throw new Error(
+          `Action "${tx.actionId}" not found in Slice "${key.name}"`,
+        );
+      }
+      return apply(...tx.payload)(sliceState, storeState);
+    },
     dependencies: key.dependencies,
     effects: effects || [],
     initState: key.initState,
     name: key.name,
-    selectors: key.selectors,
+    selector: sel,
   });
+
+  return slice;
 }
 
-export function createSlice<
+type ActionBuilderRecordConvert<
   K extends string,
+  A extends Record<string, any>,
+> = {
+  [KK in keyof A]: A[KK] extends ActionBuilder<infer P, any, any>
+    ? TxCreator<K, P>
+    : never;
+};
+
+export function createSlice<
+  N extends string,
   SS extends object,
-  DS extends AnySlice,
+  DS extends Slice<string, any, any, {}, VoidFn>,
   A extends Record<string, ActionBuilder<any[], SS, DS>>,
-  SE extends Record<string, SelectorFn<SS, DS, any>>,
+  SE extends SelectorFn<SS, DS, any>,
 >(
   dependencies: DS[],
   arg: {
-    name: K;
+    name: N;
     initState: SS;
     actions: A;
-    selectors: SE;
+    selector: SE;
+    terminal?: boolean;
   },
-): Slice<K, SS, DS, A, SE> {
-  return new Slice({
-    actions: arg.actions,
+): Slice<N, SS, DS, ActionBuilderRecordConvert<N, A>, SE> {
+  const slice = new Slice({
+    actions: ({ lineageId }) =>
+      expandActionBuilders(arg.name, arg.actions, lineageId),
     dependencies,
     effects: [],
     initState: arg.initState,
     name: arg.name,
-    selectors: arg.selectors || {},
+    selector: arg.selector || (() => {}),
+    reducer: (sliceState, storeState, tx) => {
+      const apply = arg.actions[tx.actionId];
+
+      if (!apply) {
+        throw new Error(
+          `Action "${tx.actionId}" not found in Slice "${arg.name}"`,
+        );
+      }
+
+      return apply(...tx.payload)(sliceState, storeState);
+    },
+    terminal: arg.terminal || false,
   });
+
+  return slice;
+}
+
+function expandActionBuilders<
+  N extends string,
+  A extends Record<string, ActionBuilder<any[], any, any>>,
+>(name: N, actions: A, lineageId: LineageId): ActionBuilderRecordConvert<N, A> {
+  let sliceName = createSliceNameOpaque(name);
+  const result: Record<string, TxCreator> = mapObjectValues(
+    actions,
+    (action, actionId): TxCreator => {
+      return (...params) => {
+        return new Transaction({
+          sourceSliceName: sliceName,
+          targetSliceLineage: lineageId,
+          payload: params,
+          actionId,
+        });
+      };
+    },
+  );
+
+  return result as any;
 }

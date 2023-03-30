@@ -1,13 +1,12 @@
 import waitForExpect from 'wait-for-expect';
 import { createDispatchSpy, waitUntil } from '../test-helpers';
+import { createSlice } from '../vanilla';
 import { timeoutSchedular } from '../vanilla/effect';
-import { Slice } from '../vanilla/slice';
 import { Store } from '../vanilla/store';
 
 describe('Single slice', () => {
-  const testSlice = new Slice({
+  const testSlice = createSlice([], {
     name: 'test',
-    dependencies: [],
     initState: {
       val: 'apple',
     },
@@ -19,23 +18,16 @@ describe('Single slice', () => {
         };
       },
     },
-    selectors: {
-      testSelector: (state) => state.val.toLocaleUpperCase(),
+    selector: (state) => state.val.toLocaleUpperCase(),
+  }).addEffect({
+    name: 'testEffect',
+    updateSync(slice, store, prevStoreState) {
+      if (!slice.getState(store.state).val.endsWith('Effect')) {
+        store.dispatch(
+          slice.actions.testAction(slice.getState(store.state).val + 'Effect'),
+        );
+      }
     },
-    effects: [
-      {
-        name: 'testEffect',
-        updateSync(slice, store, prevStoreState) {
-          if (!slice.getState(store.state).val.endsWith('Effect')) {
-            store.dispatch(
-              slice.actions.testAction(
-                slice.getState(store.state).val + 'Effect',
-              ),
-            );
-          }
-        },
-      },
-    ],
   });
 
   test('works', async () => {
@@ -78,17 +70,17 @@ describe('Single slice', () => {
           "payload": [
             "banana",
           ],
-          "sourceSliceKey": "key_test",
-          "targetSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
+          "targetSliceLineage": "l_test$",
         },
         {
           "actionId": "testAction",
-          "dispatchSource": "testEffect",
+          "dispatchSource": "l_test$",
           "payload": [
             "bananaEffect",
           ],
-          "sourceSliceKey": "key_test",
-          "targetSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
+          "targetSliceLineage": "l_test$",
         },
       ]
     `);
@@ -101,13 +93,12 @@ describe('Single slice', () => {
       [
         {
           "actionId": "testAction",
-          "dispatcher": undefined,
           "payload": [
             "banana",
           ],
-          "sourceSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
           "store": "test-store",
-          "targetSliceKey": "key_test",
+          "targetSliceLineage": "l_test$",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -116,20 +107,20 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "testAction",
-              "sliceKey": "key_test",
+              "lineageId": "l_test$",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
         },
         {
           "actionId": "testAction",
-          "dispatcher": "testEffect",
+          "dispatcher": "l_test$",
           "payload": [
             "bananaEffect",
           ],
-          "sourceSliceKey": "key_test",
+          "sourceSliceLineage": "l_test$",
           "store": "test-store",
-          "targetSliceKey": "key_test",
+          "targetSliceLineage": "l_test$",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -138,7 +129,7 @@ describe('Single slice', () => {
           "source": [
             {
               "actionId": "testAction",
-              "sliceKey": "key_test",
+              "lineageId": "l_test$",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",

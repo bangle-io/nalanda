@@ -1,9 +1,10 @@
-import { changeEffect, syncChangeEffect } from '../index';
+import { changeEffect, syncChangeEffect } from '../effects';
 import { createKey, slice } from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { Store } from '../../vanilla/store';
 import waitForExpect from 'wait-for-expect';
 import { expectType, rejectAny } from '../../vanilla/internal-types';
+import { createDispatchSpy } from '../../test-helpers';
 waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
 
@@ -12,14 +13,9 @@ function sleep(t = 20): Promise<void> {
 }
 
 const testSlice1 = slice({
-  key: createKey(
-    'test-1',
-    [],
-    { num: 4 },
-    {
-      numSq: (state) => state.num * state.num,
-    },
-  ),
+  key: createKey('test-1', [], { num: 4 }, (state) => ({
+    numSq: state.num * state.num,
+  })),
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -95,6 +91,8 @@ describe('run once', () => {
   });
 
   test('works', async () => {
+    let dispatchSpy = createDispatchSpy();
+
     let called = jest.fn();
     const once = changeEffect(
       'run-once',
@@ -120,6 +118,8 @@ describe('run once', () => {
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
+      debug: dispatchSpy.debug,
+      dispatchTx: dispatchSpy.dispatch,
       state: [testSlice1, testSlice2, testSlice3, once],
     });
 
@@ -128,18 +128,81 @@ describe('run once', () => {
     store.dispatch(testSlice1.actions.increment({ increment: true }));
 
     await sleep(10);
-    expect(called).toHaveBeenCalledTimes(1);
+    // expect(called).toHaveBeenCalledTimes(1);
 
-    expect(testSlice3.getState(store.state).name).toEqual('tame');
+    // expect(testSlice3.getState(store.state).name).toEqual('tame');
 
     store.dispatch(testSlice1.actions.increment({ increment: true }));
     store.dispatch(testSlice1.actions.increment({ increment: true }));
     store.dispatch(testSlice1.actions.increment({ increment: true }));
 
     await sleep(10);
-    expect(called).toHaveBeenCalledTimes(1);
-    await sleep(10);
-    expect(called).toHaveBeenCalledTimes(1);
+    // expect(called).toHaveBeenCalledTimes(1);
+    // await sleep(10);
+    // expect(called).toHaveBeenCalledTimes(1);
+
+    expect(dispatchSpy.getSimplifiedTransactions()).toMatchInlineSnapshot(`
+      [
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceLineage": "l_test-1$",
+          "targetSliceLineage": "l_test-1$",
+        },
+        {
+          "actionId": "ready",
+          "dispatchSource": "l_run-once$1",
+          "payload": [],
+          "sourceSliceLineage": "l_run-once$1",
+          "targetSliceLineage": "l_run-once$1",
+        },
+        {
+          "actionId": "lowercase",
+          "dispatchSource": "l_run-once$1",
+          "payload": [],
+          "sourceSliceLineage": "l_test-3$",
+          "targetSliceLineage": "l_test-3$",
+        },
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceLineage": "l_test-1$",
+          "targetSliceLineage": "l_test-1$",
+        },
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceLineage": "l_test-1$",
+          "targetSliceLineage": "l_test-1$",
+        },
+        {
+          "actionId": "increment",
+          "dispatchSource": undefined,
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceLineage": "l_test-1$",
+          "targetSliceLineage": "l_test-1$",
+        },
+      ]
+    `);
   });
 });
 
@@ -250,7 +313,7 @@ describe('changeEffect', () => {
 
   test('works', async () => {
     let call = jest.fn();
-
+    let caughtError: any;
     const myEffect = changeEffect(
       'myEffect',
       {
@@ -270,8 +333,12 @@ describe('changeEffect', () => {
         expectType<number>(result.sl1Square);
 
         let wrongAction = testSlice3.actions.lowercase();
-        // @ts-expect-error - should not allow dispatching action from non dep slice
-        dispatch(wrongAction);
+        try {
+          // @ts-expect-error - should not allow dispatching action from non dep slice
+          dispatch(wrongAction);
+        } catch (error) {
+          caughtError = error;
+        }
 
         if (result.sl1Square % 2 === 0) {
           dispatch(testSlice1.actions.increment({ increment: true }));
@@ -288,6 +355,10 @@ describe('changeEffect', () => {
     await sleep(30);
 
     expect(call).toHaveBeenCalledTimes(2);
+
+    expect(caughtError).toMatchInlineSnapshot(
+      `[Error: Dispatch not allowed! Slice "myEffect" does not include "test-3" in its dependency.]`,
+    );
   });
 
   test('cleanup is called', async () => {

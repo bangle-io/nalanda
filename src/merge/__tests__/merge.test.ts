@@ -1,652 +1,483 @@
-import waitForExpect from 'wait-for-expect';
-import { mergeSlices } from '..';
-import { createDispatchSpy } from '../../test-helpers';
-import { createSlice } from '../../vanilla/create';
-import { timeoutSchedular } from '../../vanilla/effect';
-import { getActionBuilderByKey } from '../../vanilla/helpers';
 import {
-  createSliceKey,
-  createSliceNameOpaque,
-} from '../../vanilla/internal-types';
-import { AnySlice } from '../../vanilla/public-types';
-import { Slice } from '../../vanilla/slice';
-import { Store } from '../../vanilla/store';
+  createDispatchSpy,
+  createSlice,
+  Store,
+  Transaction,
+} from '../../vanilla';
+import { expectType, rejectAny } from '../../vanilla/internal-types';
+import { TxCreator } from '../../vanilla/public-types';
+import { mergeAll } from '../merge';
 
-function sleep(t = 20): Promise<void> {
-  return new Promise((res) => setTimeout(res, t));
-}
+const testSlice1 = createSlice([], {
+  initState: {
+    num: 0,
+  },
+  name: 'test-1',
+  selector: (state) => ({
+    doubleNumSelector: state.num * 2,
+  }),
+  actions: {
+    increment: (opts: { increment: boolean }) => (state) => {
+      return { ...state, num: state.num + (opts.increment ? 1 : 0) };
+    },
+    decrement: (opts: { decrement: boolean }) => (state) => {
+      return { ...state, num: state.num - (opts.decrement ? 1 : 0) };
+    },
+  },
+});
 
-function findChildSlice(
-  parent: AnySlice,
-  childSlice: AnySlice,
-): AnySlice | undefined {
-  if (parent.spec._additionalSlices) {
-    return parent.spec._additionalSlices.find(
-      (c) => c.lineageId === childSlice.lineageId,
+const testSlice2 = createSlice([], {
+  name: 'test-2',
+  initState: {
+    name2: 'tame',
+  },
+  selector: () => {},
+  actions: {
+    prefix: (prefix: string) => (state) => {
+      return { ...state, name2: prefix + state.name2 };
+    },
+    padEnd: (length: number, pad: string) => (state) => {
+      return { ...state, name2: state.name2.padEnd(length, pad) };
+    },
+    uppercase: () => (state) => {
+      return { ...state, name2: state.name2.toUpperCase() };
+    },
+  },
+});
+
+const testSlice3 = createSlice([testSlice2], {
+  name: 'test-3',
+  initState: {
+    name3: 'TAME',
+  },
+  selector: () => {},
+  actions: {
+    lowercase: () => (state) => {
+      return { ...state, name3: state.name3.toLocaleLowerCase() };
+    },
+  },
+});
+
+describe('single slice', () => {
+  test('sets up correctly', () => {
+    const forwarded = mergeAll([testSlice1], {
+      name: 'test-1-merged',
+    });
+
+    expect(forwarded.spec.dependencies[0]).toBe(testSlice1);
+    expect(forwarded.spec.forwardMap).toMatchInlineSnapshot(`
+          {
+            "decrement": "l_test-1$",
+            "increment": "l_test-1$",
+          }
+      `);
+
+    expectType<
+      TxCreator<
+        'test-1-merged',
+        [
+          opts: {
+            increment: boolean;
+          },
+        ]
+      >
+    >(forwarded.actions.increment);
+
+    expect(forwarded.actions.increment({ increment: true })).toMatchObject({
+      actionId: 'increment',
+      sourceSliceLineage: 'l_test-1-merged$1',
+      targetSliceLineage: 'l_test-1$',
+      payload: [
+        {
+          increment: true,
+        },
+      ],
+    });
+  });
+
+  test('updates the state', () => {
+    const forwarded = mergeAll([testSlice1], {
+      name: 'test-1-merged',
+    });
+
+    const store = Store.create({
+      storeName: 'test-store',
+      state: [forwarded],
+    });
+
+    store.dispatch(forwarded.actions.increment({ increment: true }));
+
+    expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
+      {
+        "doubleNumSelector": 2,
+        "num": 1,
+      }
+    `);
+
+    store.dispatch(forwarded.actions.increment({ increment: true }));
+
+    expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
+      {
+        "doubleNumSelector": 4,
+        "num": 2,
+      }
+    `);
+  });
+});
+
+describe('forwarding three slices', () => {
+  test('sets up correctly', () => {
+    const forwarded = mergeAll([testSlice1, testSlice2, testSlice3], {
+      name: 'test-1-merged',
+    });
+
+    expect(forwarded.spec.dependencies[0]).toBe(testSlice1);
+    expect(forwarded.spec.dependencies[1]).toBe(testSlice2);
+    expect(forwarded.spec.dependencies[2]).toBe(testSlice3);
+    expect(forwarded.spec.forwardMap).toMatchInlineSnapshot(`
+      {
+        "decrement": "l_test-1$",
+        "increment": "l_test-1$",
+        "lowercase": "l_test-3$",
+        "padEnd": "l_test-2$",
+        "prefix": "l_test-2$",
+        "uppercase": "l_test-2$",
+      }
+    `);
+
+    rejectAny(forwarded.actions);
+    rejectAny(forwarded.actions.increment);
+
+    expectType<
+      TxCreator<
+        'test-1-merged',
+        [
+          opts: {
+            increment: boolean;
+          },
+        ]
+      >
+    >(forwarded.actions.increment);
+
+    expect(
+      forwarded.actions.increment({ increment: true }),
+    ).toMatchInlineSnapshot(
+      { uid: expect.any(String) },
+      `
+      {
+        "actionId": "increment",
+        "config": {
+          "actionId": "increment",
+          "payload": [
+            {
+              "increment": true,
+            },
+          ],
+          "sourceSliceLineage": "l_test-1-merged$3",
+          "sourceSliceName": "test-1-merged",
+          "targetSliceLineage": "l_test-1$",
+        },
+        "metadata": Metadata {
+          "_metadata": {},
+        },
+        "payload": [
+          {
+            "increment": true,
+          },
+        ],
+        "sourceSliceLineage": "l_test-1-merged$3",
+        "targetSliceLineage": "l_test-1$",
+        "uid": Any<String>,
+      }
+    `,
     );
-  }
-  return;
-}
+  });
 
-describe('merging', () => {
-  test('works', () => {
+  test('updates the state', () => {
+    const forwarded = mergeAll([testSlice1, testSlice2, testSlice3], {
+      name: 'test-1-merged',
+    });
+
+    const store = Store.create({
+      storeName: 'test-store',
+      state: [forwarded],
+    });
+
+    store.dispatch(forwarded.actions.increment({ increment: true }));
+
+    expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
+      {
+        "doubleNumSelector": 2,
+        "name2": "tame",
+        "name3": "TAME",
+        "num": 1,
+      }
+    `);
+
+    store.dispatch(forwarded.actions.increment({ increment: true }));
+
+    expect(forwarded.resolveState(store.state)).toMatchInlineSnapshot(`
+      {
+        "doubleNumSelector": 4,
+        "name2": "tame",
+        "name3": "TAME",
+        "num": 2,
+      }
+    `);
+  });
+});
+
+describe('nested forwarding', () => {
+  const forwarded1 = mergeAll([testSlice1, testSlice3], {
+    name: 'test-1-merged',
+  });
+
+  const forwarded2 = mergeAll([testSlice2, forwarded1], {
+    name: 'test-2-merged',
+  });
+
+  const forwarded3 = mergeAll([forwarded2], {
+    name: 'test-3-merged',
+  });
+
+  test('builds correct map', () => {
+    expect(forwarded2.spec.forwardMap).toMatchInlineSnapshot(`
+      {
+        "decrement": "l_test-1$",
+        "increment": "l_test-1$",
+        "lowercase": "l_test-3$",
+        "padEnd": "l_test-2$",
+        "prefix": "l_test-2$",
+        "uppercase": "l_test-2$",
+      }
+    `);
+    expect(forwarded3.spec.forwardMap).toMatchInlineSnapshot(`
+      {
+        "decrement": "l_test-1$",
+        "increment": "l_test-1$",
+        "lowercase": "l_test-3$",
+        "padEnd": "l_test-2$",
+        "prefix": "l_test-2$",
+        "uppercase": "l_test-2$",
+      }
+    `);
+  });
+
+  test('throws error if froward 3 is not registered', () => {
+    const store = Store.create({
+      storeName: 'test-store',
+      state: [forwarded2],
+    });
+
+    expect(
+      // @ts-expect-error - store does not have forward 3
+      () => store.dispatch(forwarded3.actions.increment({ increment: true })),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Cannot dispatch transaction as slice "l_test-3-merged$" is not registered in Store"`,
+    );
+  });
+
+  test('state update works', () => {
+    const store = Store.create({
+      storeName: 'test-store',
+      state: [forwarded3],
+    });
+
+    store.dispatch(forwarded3.actions.increment({ increment: true }));
+
+    expect(forwarded3.resolveState(store.state)).toMatchInlineSnapshot(`
+      {
+        "doubleNumSelector": 2,
+        "name2": "tame",
+        "name3": "TAME",
+        "num": 1,
+      }
+    `);
+
+    store.dispatch(forwarded3.actions.increment({ increment: true }));
+    store.dispatch(forwarded3.actions.lowercase());
+
+    expect(forwarded3.resolveState(store.state)).toMatchInlineSnapshot(`
+      {
+        "doubleNumSelector": 4,
+        "name2": "tame",
+        "name3": "tame",
+        "num": 2,
+      }
+    `);
+
+    store.dispatch(forwarded3.actions.padEnd(6, 'k'));
+
+    expect(forwarded3.resolveState(store.state)).toMatchInlineSnapshot(`
+      {
+        "doubleNumSelector": 4,
+        "name2": "tamekk",
+        "name3": "tame",
+        "num": 2,
+      }
+    `);
+  });
+
+  describe('multiple slices with effects', () => {
     const g1 = createSlice([], {
       name: 'g1',
-      initState: {},
-      actions: {},
-      selectors: {},
+      initState: {
+        g1: 'g',
+      },
+      actions: {
+        updateG1State: () => (state) => ({
+          ...state,
+          g1State: state.g1 + 'g',
+        }),
+      },
+      selector: (state) => ({
+        g1Selector: `g: (${state.g1})`,
+      }),
     });
 
     const t1 = createSlice([g1], {
       name: 't1',
       initState: {
-        f: 4,
+        t1: 't',
       },
-      actions: {},
-      selectors: {},
-    });
-
-    const x0 = mergeSlices({
-      name: 'x0',
-      children: [t1],
-    });
-
-    expect(
-      x0.spec._additionalSlices?.map((r) => ({
-        key: r.key,
-        sDebs: r.spec.dependencies.map((r) => r.key),
-      })),
-    ).toMatchInlineSnapshot(`
-      [
-        {
-          "key": "key_x0:t1",
-          "sDebs": [
-            "key_g1",
-          ],
-        },
-      ]
-    `);
-    const z0 = mergeSlices({
-      name: 'z0',
-      children: [x0],
-    });
-
-    expect(z0.spec.dependencies.map((r) => r.key)).toMatchInlineSnapshot(`[]`);
-
-    expect(
-      z0.spec._additionalSlices?.map((r) => ({
-        key: r.key,
-        sDebs: r.spec.dependencies.map((d) => d.key),
-      })),
-    ).toMatchInlineSnapshot(`
-      [
-        {
-          "key": "key_z0:x0:t1",
-          "sDebs": [
-            "key_g1",
-          ],
-        },
-        {
-          "key": "key_z0:x0",
-          "sDebs": [],
-        },
-      ]
-    `);
-  });
-
-  describe('merging', () => {
-    const g1 = createSlice([], {
-      name: 'g1',
-      initState: {
-        g1State: 0,
-      },
+      selector: (state, storeState) => ({
+        t1Selector: `t1: ((${state.t1})(${g1.getState(storeState).g1})))`,
+      }),
       actions: {
-        updateG1State: () => (state) => ({
+        updateT1State: () => (state) => ({
           ...state,
-          g1State: state.g1State + 1,
+          t1: state.t1 + 't',
         }),
       },
-      selectors: {},
     });
 
-    const t1 = new Slice({
-      name: 't1',
+    const r1 = createSlice([t1], {
+      name: 'r1',
       initState: {
-        t1State: '<unknown>',
-        self: 0,
-      },
-      selectors: {},
-      dependencies: [g1],
-      actions: {
-        updateT1State: () => (state, storeState) => ({
-          ...state,
-          self: state.self + 1,
-          t1State:
-            '(' +
-            g1.getState(storeState).g1State.toString() +
-            '+' +
-            state.t1State +
-            ')',
-        }),
-      },
-      effects: [
-        {
-          name: 't1Effect',
-          updateSync(slice, store, prevStoreState) {
-            if (
-              g1.getState(store.state).g1State === 1 &&
-              g1.getState(prevStoreState).g1State === 0
-            ) {
-              store.dispatch(slice.actions.updateT1State());
-            }
-          },
-        },
-      ],
-    });
-
-    const t2 = new Slice({
-      name: 't2',
-      initState: {
-        t1State: '<unknown>',
-        self: 0,
-      },
-      actions: {},
-      selectors: {
-        t2State1: (state, storeState) => {
-          return {
-            ...state,
-            t1State: t1.getState(storeState).t1State,
-            self: state.self + 1,
-          };
-        },
-      },
-      dependencies: [t1],
-      effects: [
-        {
-          name: 't2Effect',
-          updateSync(slice, store, prevStoreState) {
-            if (
-              t1.getState(store.state).self === 1 &&
-              t1.getState(prevStoreState).self === 0
-            ) {
-              store.dispatch(t1.actions.updateT1State());
-            }
-          },
-        },
-      ],
-    });
-
-    const t3 = new Slice({
-      dependencies: [g1, t1],
-      name: 't3',
-      initState: {
-        g1State: '<unknown>',
-        t1State: '<unknown>',
-        self: 0,
+        r1: 'r',
       },
       actions: {
-        updateT3State: () => (state, storeState) => ({
+        updateR1State: () => (state) => ({
           ...state,
-          g1State: g1.getState(storeState).g1State + '',
-          t1State: t1.getState(storeState).t1State,
-          self: state.self + 1,
+          r1: state.r1 + 'r',
         }),
       },
-      selectors: {},
-      effects: [
-        {
-          name: 't3Effect',
-          updateSync(slice, store, prevStoreState) {
-            if (
-              t1.getState(store.state).self === 2 &&
-              slice.getState(store.state).self === 0
-            ) {
-              store.dispatch(slice.actions.updateT3State());
-            }
-          },
-        },
-      ],
-    });
-
-    const x0 = mergeSlices({
-      name: 'x0',
-      children: [t1, t2, t3],
-    });
-
-    const z0 = mergeSlices({
-      name: 'z0',
-      children: [x0],
-    });
-
-    const getKeys = (slices?: AnySlice[]) => (slices || []).map((s) => s.key);
-
-    test('z0 snapshot', () => {
-      expect(getKeys(z0.spec._additionalSlices)).toMatchInlineSnapshot(`
-        [
-          "key_z0:x0:t1",
-          "key_z0:x0:t2",
-          "key_z0:x0:t3",
-          "key_z0:x0",
-        ]
-      `);
-
-      expect(
-        (z0.spec._additionalSlices || []).map((r) => [
-          r.key,
-          getKeys(r.spec._additionalSlices),
-        ]),
-      ).toMatchInlineSnapshot(`
-        [
-          [
-            "key_z0:x0:t1",
-            [],
-          ],
-          [
-            "key_z0:x0:t2",
-            [],
-          ],
-          [
-            "key_z0:x0:t3",
-            [],
-          ],
-          [
-            "key_z0:x0",
-            [],
-          ],
-        ]
-      `);
-    });
-
-    test('getActionBuilderByKey works on merged slices', () => {
-      const store = Store.create({
-        storeName: 'test-store',
-        state: [g1, z0],
-      });
-
-      expect(
-        getActionBuilderByKey(
-          store,
-          createSliceKey('key_z0:x0:t3'),
-          'updateT3State',
-        ),
-      ).toBe(t3.spec.actions.updateT3State);
-    });
-
-    test('static slices are never modified', () => {
-      expect(x0.spec.dependencies.map((d) => d.key)).toEqual([]);
-      expect(z0.config.originalSpec.dependencies.map((d) => d.key)).toEqual([]);
-
-      expect(x0.spec.dependencies.map((d) => d.key)).toEqual([]);
-      expect(x0.config.originalSpec.dependencies.map((d) => d.key)).toEqual([]);
-      expect(t3.spec.dependencies.map((d) => d.key)).toEqual([
-        'key_g1',
-        'key_t1',
-      ]);
-    });
-
-    test("In Z0 t1 child slice's spec are mapped correctly", () => {
-      const mappedT1 = findChildSlice(z0, t1);
-      expect(mappedT1?.key).toBe('key_z0:x0:t1');
-      expect(mappedT1?.spec.dependencies.map((d) => d.key)).toEqual(['key_g1']);
-    });
-
-    test('In Z0 t2 child slice spec are mapped correctly', () => {
-      // T2
-      const mappedT2 = findChildSlice(z0, t2);
-      expect(mappedT2?.key).toBe('key_z0:x0:t2');
-      expect(mappedT2?.spec.dependencies.map((d) => d.key)).toEqual([
-        'key_z0:x0:t1',
-      ]);
-      expect(
-        mappedT2?.config.originalSpec.dependencies.map((d) => d.key),
-      ).toEqual(['key_t1']);
-      expect(mappedT2?.keyMap.resolve(createSliceNameOpaque('t1'))).toBe(
-        'key_z0:x0:t1',
-      );
-    });
-
-    test('In Z0 t3 child slice spec are mapped correctly', () => {
-      // T3
-      const mappedT3 = findChildSlice(z0, t3);
-      expect(mappedT3?.key).toBe('key_z0:x0:t3');
-
-      expect(mappedT3?.spec.dependencies.map((d) => d.key)).toEqual([
-        'key_g1',
-        'key_z0:x0:t1',
-      ]);
-      // original stays intanct
-      expect(
-        mappedT3?.config.originalSpec.dependencies.map((d) => d.key),
-      ).toEqual(['key_g1', 'key_t1']);
-
-      expect(mappedT3?.keyMap.resolve(createSliceNameOpaque('t1'))).toBe(
-        'key_z0:x0:t1',
-      );
-      expect(mappedT3?.keyMap.resolve(createSliceNameOpaque('t3'))).toBe(
-        'key_z0:x0:t3',
-      );
-    });
-
-    test('state looks okay', () => {
-      expect(
-        x0.spec._additionalSlices?.map((r) => ({
-          key: r.key,
-          dependencies: r.spec.dependencies.map((d) => d.key),
-        })),
-      ).toMatchInlineSnapshot(`
-        [
-          {
-            "dependencies": [
-              "key_g1",
-            ],
-            "key": "key_x0:t1",
-          },
-          {
-            "dependencies": [
-              "key_x0:t1",
-            ],
-            "key": "key_x0:t2",
-          },
-          {
-            "dependencies": [
-              "key_g1",
-              "key_x0:t1",
-            ],
-            "key": "key_x0:t3",
-          },
-        ]
-      `);
-
-      let result: any[] = [];
-
-      [...(z0.spec._additionalSlices || []), z0]?.map((r) => {
-        let miniResult: string[] = [];
-        for (const sl of [g1, t1, t2, t3, x0, z0]) {
-          miniResult.push(
-            [sl.key, r.keyMap.resolve?.(sl.nameOpaque)].join('>'),
-          );
+      selector: (state, storeState) => ({
+        r1Selector: `r1: ((${state.r1})(${t1.getState(storeState).t1})))`,
+      }),
+    }).addEffect({
+      name: 't2Effect',
+      updateSync(slice, store, prevStoreState) {
+        if (t1.getState(store.state).t1.length === 2) {
+          store.dispatch(t1.actions.updateT1State());
         }
-        result.push([r.key, miniResult.join(', ')]);
-      });
 
-      expect(result).toMatchInlineSnapshot(`
-        [
-          [
-            "key_z0:x0:t1",
-            "key_g1>key_g1, key_t1>key_z0:x0:t1, key_t2>, key_t3>, key_x0>, key_z0>",
-          ],
-          [
-            "key_z0:x0:t2",
-            "key_g1>, key_t1>key_z0:x0:t1, key_t2>key_z0:x0:t2, key_t3>, key_x0>, key_z0>",
-          ],
-          [
-            "key_z0:x0:t3",
-            "key_g1>key_g1, key_t1>key_z0:x0:t1, key_t2>, key_t3>key_z0:x0:t3, key_x0>, key_z0>",
-          ],
-          [
-            "key_z0:x0",
-            "key_g1>, key_t1>, key_t2>, key_t3>, key_x0>key_z0:x0, key_z0>",
-          ],
-          [
-            "key_z0",
-            "key_g1>, key_t1>, key_t2>, key_t3>, key_x0>, key_z0>key_z0",
-          ],
-        ]
-      `);
+        if (slice.getState(store.state).r1.length === 1) {
+          store.dispatch(r1.actions.updateR1State());
+        }
+      },
+    });
 
-      expect(
-        z0.spec._additionalSlices?.map((r) => ({
-          key: r.key,
-          sDebs: r.spec.dependencies.map((d) => d.key),
-        })),
-      ).toMatchInlineSnapshot(`
-        [
-          {
-            "key": "key_z0:x0:t1",
-            "sDebs": [
-              "key_g1",
-            ],
-          },
-          {
-            "key": "key_z0:x0:t2",
-            "sDebs": [
-              "key_z0:x0:t1",
-            ],
-          },
-          {
-            "key": "key_z0:x0:t3",
-            "sDebs": [
-              "key_g1",
-              "key_z0:x0:t1",
-            ],
-          },
-          {
-            "key": "key_z0:x0",
-            "sDebs": [],
-          },
-        ]
-      `);
+    const s1 = createSlice([], {
+      name: 's1',
+      initState: {
+        s1: 0,
+      },
+      actions: {},
+      selector: (state) => ({
+        isZero: state.s1 === 0,
+      }),
+    });
+
+    const x0 = mergeAll([g1, t1, r1, s1], {
+      name: 'x0',
+    });
+
+    const z0 = mergeAll([x0], {
+      name: 'z0',
     });
 
     test('state looks okay', async () => {
       let dispatchSpy = createDispatchSpy();
       const store = Store.create({
-        scheduler: timeoutSchedular(0),
         dispatchTx: dispatchSpy.dispatch,
         debug: dispatchSpy.debug,
         storeName: 'test-store',
-        state: [g1, z0],
+        state: [z0],
       });
 
-      store.dispatch(g1.actions.updateG1State());
+      store.dispatch(z0.actions.updateT1State());
+      rejectAny(z0.actions);
+      expectType<{
+        updateT1State: any;
+        updateR1State: any;
+        updateG1State: any;
+      }>(z0.actions);
+
+      expectType<Transaction<'z0', any[]>>(z0.actions.updateT1State());
+      expectType<Transaction<'z0', any[]>>(z0.actions.updateR1State());
+      expectType<Transaction<'z0', any[]>>(z0.actions.updateT1State());
 
       expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
         {
           "key_g1": {
-            "g1State": 1,
+            "g1": "g",
           },
+          "key_r1": {
+            "r1": "r",
+          },
+          "key_s1": {
+            "s1": 0,
+          },
+          "key_t1": {
+            "t1": "tt",
+          },
+          "key_x0": {},
           "key_z0": {},
-          "key_z0:x0": {},
-          "key_z0:x0:t1": {
-            "self": 0,
-            "t1State": "<unknown>",
-          },
-          "key_z0:x0:t2": {
-            "self": 0,
-            "t1State": "<unknown>",
-          },
-          "key_z0:x0:t3": {
-            "g1State": "<unknown>",
-            "self": 0,
-            "t1State": "<unknown>",
-          },
         }
       `);
 
-      await waitForExpect(() => {
-        expect(
-          dispatchSpy
-            .getDebugLogItems()
-            .find((d) => d.type === 'SYNC_UPDATE_EFFECT'),
-        ).toBeDefined();
-      });
+      // just to test types
+      () => {
+        let test = x0.resolveState({} as any);
+        rejectAny(test);
+        expectType<{
+          g1: string;
+          s1: number;
+          isZero: boolean;
+        }>(test);
+      };
 
-      expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
+      let resolvedState = z0.resolveState(store.state);
+
+      rejectAny(resolvedState);
+
+      expectType<{
+        g1: string;
+        s1: number;
+        isZero: boolean;
+        g1Selector: string;
+        t1Selector: string;
+      }>(resolvedState);
+
+      expect(z0.resolveState(store.state)).toMatchInlineSnapshot(`
         {
-          "key_g1": {
-            "g1State": 1,
-          },
-          "key_z0": {},
-          "key_z0:x0": {},
-          "key_z0:x0:t1": {
-            "self": 2,
-            "t1State": "(1+(1+<unknown>))",
-          },
-          "key_z0:x0:t2": {
-            "self": 0,
-            "t1State": "<unknown>",
-          },
-          "key_z0:x0:t3": {
-            "g1State": "1",
-            "self": 1,
-            "t1State": "(1+(1+<unknown>))",
-          },
+          "g1": "g",
+          "g1Selector": "g: (g)",
+          "isZero": true,
+          "r1": "r",
+          "r1Selector": "r1: ((r)(tt)))",
+          "s1": 0,
+          "t1": "tt",
+          "t1Selector": "t1: ((tt)(g)))",
         }
       `);
 
-      expect(dispatchSpy.getSimplifiedTransactions({})).toEqual([
-        {
-          actionId: 'updateG1State',
-          dispatchSource: undefined,
-          payload: [],
-          sourceSliceKey: 'key_g1',
-          targetSliceKey: 'key_g1',
-        },
-        {
-          actionId: 'updateT1State',
-          dispatchSource: 't1Effect',
-          payload: [],
-          sourceSliceKey: 'key_z0:x0:t1',
-          targetSliceKey: 'key_z0:x0:t1',
-        },
-        {
-          actionId: 'updateT1State',
-          dispatchSource: 't2Effect',
-          payload: [],
-          sourceSliceKey: 'key_t1',
-          targetSliceKey: 'key_z0:x0:t1',
-        },
-        {
-          actionId: 'updateT3State',
-          dispatchSource: 't3Effect',
-          payload: [],
-          sourceSliceKey: 'key_z0:x0:t3',
-          targetSliceKey: 'key_z0:x0:t3',
-        },
-      ]);
+      await new Promise((res) => setTimeout(res, 20));
 
-      expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
-        [
-          {
-            "actionId": "updateG1State",
-            "dispatcher": undefined,
-            "payload": [],
-            "sourceSliceKey": "key_g1",
-            "store": "test-store",
-            "targetSliceKey": "key_g1",
-            "txId": "<txId>",
-            "type": "TX",
-          },
-          {
-            "name": "t1Effect",
-            "source": [
-              {
-                "actionId": "updateG1State",
-                "sliceKey": "key_g1",
-              },
-            ],
-            "type": "SYNC_UPDATE_EFFECT",
-          },
-          {
-            "actionId": "updateT1State",
-            "dispatcher": "t1Effect",
-            "payload": [],
-            "sourceSliceKey": "key_z0:x0:t1",
-            "store": "test-store",
-            "targetSliceKey": "key_z0:x0:t1",
-            "txId": "<txId>",
-            "type": "TX",
-          },
-          {
-            "name": "t2Effect",
-            "source": [
-              {
-                "actionId": "updateG1State",
-                "sliceKey": "key_g1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-            ],
-            "type": "SYNC_UPDATE_EFFECT",
-          },
-          {
-            "actionId": "updateT1State",
-            "dispatcher": "t2Effect",
-            "payload": [],
-            "sourceSliceKey": "key_t1",
-            "store": "test-store",
-            "targetSliceKey": "key_z0:x0:t1",
-            "txId": "<txId>",
-            "type": "TX",
-          },
-          {
-            "name": "t3Effect",
-            "source": [
-              {
-                "actionId": "updateG1State",
-                "sliceKey": "key_g1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-            ],
-            "type": "SYNC_UPDATE_EFFECT",
-          },
-          {
-            "actionId": "updateT3State",
-            "dispatcher": "t3Effect",
-            "payload": [],
-            "sourceSliceKey": "key_z0:x0:t3",
-            "store": "test-store",
-            "targetSliceKey": "key_z0:x0:t3",
-            "txId": "<txId>",
-            "type": "TX",
-          },
-          {
-            "name": "t1Effect",
-            "source": [
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-            ],
-            "type": "SYNC_UPDATE_EFFECT",
-          },
-          {
-            "name": "t2Effect",
-            "source": [
-              {
-                "actionId": "updateT1State",
-                "sliceKey": "key_z0:x0:t1",
-              },
-            ],
-            "type": "SYNC_UPDATE_EFFECT",
-          },
-          {
-            "name": "t3Effect",
-            "source": [
-              {
-                "actionId": "updateT3State",
-                "sliceKey": "key_z0:x0:t3",
-              },
-            ],
-            "type": "SYNC_UPDATE_EFFECT",
-          },
-        ]
-      `);
+      //  effects should trigger
+      expect(z0.resolveState(store.state).r1).toBe('rr');
+      expect(z0.resolveState(store.state).t1).toBe('ttt');
     });
   });
 });
-
-describe('getActionBuilderByKey', () => {});

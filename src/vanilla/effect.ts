@@ -1,6 +1,6 @@
 import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
-import { SliceContext, SliceKey } from './internal-types';
-import { AnySlice, Effect } from './public-types';
+import { LineageId } from './internal-types';
+import { AnyEffect, AnySlice } from './public-types';
 import type { BareSlice } from './slice';
 import type { InternalStoreState } from './state';
 import type { Store } from './store';
@@ -36,7 +36,7 @@ export class SideEffectsManager {
       syncUpdate: Set<EffectHandler>;
       deferredUpdate: Set<EffectHandler>;
     };
-    record: Record<string, EffectHandler[]>;
+    record: Record<LineageId, EffectHandler[]>;
   } = {
     queue: {
       syncUpdate: new Set(),
@@ -45,7 +45,7 @@ export class SideEffectsManager {
     record: {},
   };
 
-  private _flatReverseDep: Record<string, Set<string>>;
+  private _flatReverseDep: Record<LineageId, Set<LineageId>>;
 
   private *_effectHandlerEntries(): Iterable<EffectHandler> {
     for (const handlers of Object.values(this._effects.record)) {
@@ -76,7 +76,7 @@ export class SideEffectsManager {
     // fill in record of effects
     slices.forEach((slice) => {
       if (slice.spec.effects) {
-        this._effects.record[slice.key] = slice.spec.effects.map(
+        this._effects.record[slice.lineageId] = slice.spec.effects.map(
           (effect) => new EffectHandler(effect, initState, slice, _debug),
         );
       }
@@ -84,12 +84,12 @@ export class SideEffectsManager {
   }
 
   // TODO: this will be removed once we have better way of adding dynamic slices
-  _tempRegisterOnSyncChange(sliceKey: SliceKey, cb: () => void) {
-    let set = this._tempOnSyncChange.get(sliceKey);
+  _tempRegisterOnSyncChange(lineageId: LineageId, cb: () => void) {
+    let set = this._tempOnSyncChange.get(lineageId);
 
     if (!set) {
       set = new Set();
-      this._tempOnSyncChange.set(sliceKey, set);
+      this._tempOnSyncChange.set(lineageId, set);
     }
 
     set.add(cb);
@@ -97,7 +97,7 @@ export class SideEffectsManager {
     return () => {
       set?.delete(cb);
       if (set?.size === 0) {
-        this._tempOnSyncChange.delete(sliceKey);
+        this._tempOnSyncChange.delete(lineageId);
       }
     };
   }
@@ -113,10 +113,10 @@ export class SideEffectsManager {
   queueSideEffectExecution(
     store: Store,
     {
-      sliceKey,
+      lineageId,
       actionId,
     }: {
-      sliceKey: SliceKey;
+      lineageId: LineageId;
       actionId: string;
     },
   ) {
@@ -130,9 +130,9 @@ export class SideEffectsManager {
     const shouldRunUpdateEffects = queue.deferredUpdate.size === 0;
 
     // queue up effects of source slice to run
-    record[sliceKey]?.forEach((effect) => {
+    record[lineageId]?.forEach((effect) => {
       effect.addDebugInfo({
-        sliceKey,
+        lineageId,
         actionId,
       });
 
@@ -141,10 +141,10 @@ export class SideEffectsManager {
     });
 
     // queue up dependencies's effects to run
-    this._flatReverseDep[sliceKey]?.forEach((revDepKey) => {
-      record[revDepKey]?.forEach((effect) => {
+    this._flatReverseDep[lineageId]?.forEach((revDep) => {
+      record[revDep]?.forEach((effect) => {
         effect.addDebugInfo({
-          sliceKey,
+          lineageId,
           actionId,
         });
         queue.syncUpdate.add(effect);
@@ -165,7 +165,7 @@ export class SideEffectsManager {
 
       // TODO remove this once we have better way of adding dynamic slices
       queueMicrotask(() => {
-        this._tempOnSyncChange.get(sliceKey)?.forEach((cb) => {
+        this._tempOnSyncChange.get(lineageId)?.forEach((cb) => {
           cb();
         });
       });
@@ -234,25 +234,22 @@ export class EffectHandler {
   private _syncPrevState: InternalStoreState;
   private _deferredPrevState: InternalStoreState;
 
-  public debugSyncLastRanBy: { sliceKey: string; actionId: string }[] = [];
-  public debugDeferredLastRanBy: { sliceKey: string; actionId: string }[] = [];
+  public debugSyncLastRanBy: { lineageId: LineageId; actionId: string }[] = [];
+  public debugDeferredLastRanBy: { lineageId: LineageId; actionId: string }[] =
+    [];
   private _ref = {};
-  private _sliceContext: SliceContext;
 
   constructor(
-    public effect: Effect<any>,
+    public effect: AnyEffect,
     public readonly initStoreState: InternalStoreState,
     protected _slice: BareSlice,
     private _debug?: DebugFunc,
   ) {
     this._deferredPrevState = this.initStoreState;
     this._syncPrevState = this.initStoreState;
-    this._sliceContext = {
-      sliceKey: this._slice.key,
-    };
   }
 
-  public addDebugInfo(payload: { sliceKey: string; actionId: string }) {
+  public addDebugInfo(payload: { lineageId: LineageId; actionId: string }) {
     if (!this._debug) {
       return;
     }
@@ -284,22 +281,20 @@ export class EffectHandler {
     }
   }
 
-  get sliceKey() {
-    return this._slice.key;
+  get lineageId() {
+    return this._slice.lineageId;
   }
 
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this.effect.name, {
-        sliceKey: this._slice.key,
-      }),
+      store.getReducedStore(this._slice),
       this._ref,
     );
   }
 
   destroy(state: InternalStoreState) {
-    this.effect.destroy?.(this._slice, state, this._ref);
+    this.effect.destroy?.(this._slice as AnySlice, state, this._ref);
     this._ref = {};
   }
 
@@ -317,8 +312,8 @@ export class EffectHandler {
       // TODO error handling
       this.effect.updateSync(
         this._slice as AnySlice,
-        store.getReducedStore(this.effect.name, this._sliceContext),
-        previouslySeenState._withContext(this._sliceContext),
+        store.getReducedStore(this._slice),
+        previouslySeenState,
         this._ref,
       );
     }
@@ -334,8 +329,8 @@ export class EffectHandler {
       // TODO error handling
       this.effect.update(
         this._slice as AnySlice,
-        store.getReducedStore(this.effect.name, this._sliceContext),
-        previouslySeenState._withContext(this._sliceContext),
+        store.getReducedStore(this._slice),
+        previouslySeenState,
         this._ref,
       );
     }

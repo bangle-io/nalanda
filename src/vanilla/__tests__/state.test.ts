@@ -1,6 +1,7 @@
-import { testOverrideSlice } from '../../test-helpers';
-import { createKey, slice } from '../create';
+import { testOverrideDependencies } from '../../test-helpers';
+import { createKey, createSlice, slice } from '../create';
 import { createSliceKey, expectType } from '../internal-types';
+import { checkUniqueLineage } from '../slices-helpers';
 import { InternalStoreState } from '../state';
 import { Transaction } from '../transaction';
 
@@ -195,6 +196,21 @@ describe('validations', () => {
       `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
     );
   });
+
+  test('throws error if duplicate lineage ids', () => {
+    const slice1 = createSlice([], {
+      name: 'slice1',
+      actions: {},
+      initState: { num: 1 },
+      selector: () => {},
+    });
+
+    const slice2 = slice1.withoutEffects();
+
+    expect(() => checkUniqueLineage([slice1, slice2])).toThrowError(
+      /^Duplicate slice lineageIds l_slice1/,
+    );
+  });
 });
 
 describe('test override helper', () => {
@@ -209,18 +225,17 @@ describe('test override helper', () => {
       actions: {},
     });
 
-    let newState1 = InternalStoreState.create([
-      slice1,
-      testOverrideSlice(slice2, { initState: { num: 99 } }),
-    ]);
+    let newState1 = InternalStoreState.create([slice1, slice2], {
+      test2: { num: 99 },
+    });
 
     expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
     expect(newState1.getSliceState(slice2)).toEqual({ num: 99 });
 
-    let newState2 = InternalStoreState.create([
-      testOverrideSlice(slice1, { initState: { num: -1 } }),
-      slice2,
-    ]);
+    let newState2 = InternalStoreState.create([slice1, slice2], {
+      test1: { num: -1 },
+    });
+
     expect(newState2.getSliceState(slice1)).toEqual({ num: -1 });
     expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
   });
@@ -236,13 +251,9 @@ describe('test override helper', () => {
           },
         },
       ],
-    });
+    }).withoutEffects();
 
-    expect(
-      testOverrideSlice(slice1, { effects: [] }).spec.effects,
-    ).toHaveLength(0);
-    // should not affect initial slice
-    expect(slice1.spec.effects).toHaveLength(1);
+    expect(slice1.spec.effects).toHaveLength(0);
   });
 
   test('overriding dependencies', () => {
@@ -252,7 +263,7 @@ describe('test override helper', () => {
     });
 
     expect(
-      testOverrideSlice(slice1, { dependencies: [testSlice1] }).spec
+      testOverrideDependencies(slice1, { dependencies: [testSlice1] }).spec
         .dependencies.length,
     ).toBe(1);
 
@@ -269,14 +280,15 @@ describe('State creation', () => {
         _slices: expect.any(Array),
         slicesCurrentState: expect.any(Object),
         sliceLookupByKey: expect.any(Object),
+        slicesLookupByLineage: expect.any(Object),
       } as any,
       `
       {
         "_slices": Any<Array>,
-        "context": undefined,
         "opts": undefined,
         "sliceLookupByKey": Any<Object>,
         "slicesCurrentState": Any<Object>,
+        "slicesLookupByLineage": Any<Object>,
       }
     `,
     );
@@ -295,6 +307,7 @@ describe('State creation', () => {
       _slices: expect.any(Array),
       opts: undefined,
       sliceLookupByKey: expect.any(Object),
+      slicesLookupByLineage: { [mySlice.lineageId]: expect.any(Object) },
       slicesCurrentState: {
         key_mySlice: {
           val: null,
@@ -315,12 +328,12 @@ describe('State creation', () => {
       appState.applyTransaction(
         new Transaction({
           sourceSliceName: 'mySlice',
-          sourceSliceKey: createSliceKey('mySlice'),
+          targetSliceLineage: mySlice.lineageId,
           payload: [5],
           actionId: 'updateNum',
         }),
       ),
-    ).toThrowError(`Action "updateNum" not found in Slice "key_mySlice"`);
+    ).toThrowError(`Action "updateNum" not found in Slice "mySlice"`);
   });
 
   test('applying action preserves states of those who donot have apply', () => {
@@ -346,20 +359,16 @@ describe('State creation', () => {
     expect(mySlice2.getState(newAppState).num).toBe(4);
   });
 
-  test('applying action with selectors', () => {
+  test('applying action with selector', () => {
     const key1 = createKey(
       'mySlice',
       [],
       {
         char: '1',
       },
-      {
-        s1: (state) => {
-          return {
-            val1_1: state.char,
-          };
-        },
-      },
+      (state) => ({
+        s1: { val1_1: state.char },
+      }),
     );
 
     const mySlice1 = slice({
@@ -386,14 +395,12 @@ describe('State creation', () => {
         {
           char: '2',
         },
-        {
-          s2: (state, storeState) => {
-            return {
-              val2_1: mySlice1.resolveSelectors(storeState).s1,
-              val2_2: state.char,
-            };
+        (state, storeState) => ({
+          s2: {
+            val2_1: mySlice1.resolveSelector(storeState).s1,
+            val2_2: state.char,
           },
-        },
+        }),
       ),
       actions: {},
     });
@@ -403,15 +410,13 @@ describe('State creation', () => {
         'mySlice3',
         [mySlice1, mySlice2],
         { char: '3' },
-        {
-          s3: (state, storeState) => {
-            return {
-              val3_2: mySlice2.resolveSelectors(storeState).s2,
-              val3_1: mySlice1.resolveSelectors(storeState).s1,
-              val3_3: state.char,
-            };
+        (state, storeState) => ({
+          s3: {
+            val3_2: mySlice2.resolveSelector(storeState).s2,
+            val3_1: mySlice1.resolveSelector(storeState).s1,
+            val3_3: state.char,
           },
-        },
+        }),
       ),
       actions: {},
     });
@@ -432,11 +437,11 @@ describe('State creation', () => {
         val3_3: '3',
       },
     };
-    expect(mySlice3.resolveSelectors(appState)).toEqual(result1);
-    expect(mySlice2.resolveSelectors(appState).s2).toEqual(
+    expect(mySlice3.resolveSelector(appState)).toEqual(result1);
+    expect(mySlice2.resolveSelector(appState).s2).toEqual(
       result1['s3']['val3_2'],
     );
-    expect(mySlice1.resolveSelectors(appState).s1).toEqual(
+    expect(mySlice1.resolveSelector(appState).s1).toEqual(
       result1['s3']['val3_1'],
     );
 
@@ -457,16 +462,16 @@ describe('State creation', () => {
       },
     };
 
-    expect(mySlice3.resolveSelectors(newAppState)).toEqual(result2);
-    expect(mySlice2.resolveSelectors(newAppState).s2).toEqual(
+    expect(mySlice3.resolveSelector(newAppState)).toEqual(result2);
+    expect(mySlice2.resolveSelector(newAppState).s2).toEqual(
       result2['s3']['val3_2'],
     );
-    expect(mySlice1.resolveSelectors(newAppState).s1).toEqual(
+    expect(mySlice1.resolveSelector(newAppState).s1).toEqual(
       result2['s3']['val3_1'],
     );
 
     // previous state is unaltered
-    expect(mySlice3.resolveSelectors(appState)).toEqual(result1);
+    expect(mySlice3.resolveSelector(appState)).toEqual(result1);
   });
 });
 

@@ -1,38 +1,33 @@
 import { uuid } from './helpers';
-import {
-  createSliceNameOpaque,
-  SliceKey,
-  SliceNameOpaque,
-} from './internal-types';
+import { LineageId } from './internal-types';
 
-const contextId = uuid(4);
+const contextId = uuid(5);
 let counter = 0;
 
 function incrementalId() {
   return `tx_${contextId}-${counter++}`;
 }
 
-export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
-export const TX_META_STORE_NAME = 'store-name';
-export const TX_META_CHANGE_KEY = 'TX_META_CHANGE_KEY';
+export const TX_META_DISPATCHER = 'TX_META_DISPATCHER';
+export const TX_META_DISPATCH_INFO = 'TX_META_DISPATCH_INFO';
+export const TX_META_STORE_NAME = 'TX_META_STORE_NAME';
 export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
 export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
+export const TX_META_CHANGE_LINEAGE = 'TX_META_CHANGE_LINEAGE';
 
 export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
 
-  public readonly sourceSliceKey: SliceKey;
-  public readonly targetSliceKey: SliceKey;
-  public readonly targetSliceName: SliceNameOpaque;
+  public readonly sourceSliceLineage: LineageId;
+  public readonly targetSliceLineage: LineageId;
   public readonly payload: P;
   public readonly actionId: string;
   public readonly uid = incrementalId();
 
   toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
     return {
-      sourceSliceKey: this.sourceSliceKey,
-      targetSliceKey: this.targetSliceKey,
-      targetSliceName: this.targetSliceName,
+      sourceSliceLineage: this.sourceSliceLineage,
+      targetSliceLineage: this.targetSliceLineage,
       sourceSliceName: this.config.sourceSliceName,
       payload: payloadSerializer(this.payload),
       actionId: this.actionId,
@@ -44,12 +39,11 @@ export class Transaction<N extends string, P extends unknown[]> {
   static fromJSONObj(
     obj: ReturnType<Transaction<any, any>['toJSONObj']>,
     payloadParser: (payload: string) => unknown[],
-    info?: string,
+    debugInfo?: string,
   ) {
     let tx = new Transaction({
-      sourceSliceKey: obj.sourceSliceKey,
-      targetSliceKey: obj.targetSliceKey,
-      targetSliceName: obj.targetSliceName,
+      sourceSliceLineage: obj.sourceSliceLineage,
+      targetSliceLineage: obj.targetSliceLineage,
       sourceSliceName: obj.sourceSliceName,
       payload: payloadParser(obj.payload),
       actionId: obj.actionId,
@@ -57,52 +51,49 @@ export class Transaction<N extends string, P extends unknown[]> {
     tx.metadata = Metadata.fromJSONObj(obj.metadata);
     tx.metadata.appendMetadata(TX_META_DESERIALIZED_FROM, obj.uid);
 
-    if (info) {
-      tx.metadata.appendMetadata(TX_META_DESERIALIZED_META, info);
+    if (debugInfo) {
+      tx.metadata.appendMetadata(TX_META_DESERIALIZED_META, debugInfo);
     }
 
     return tx;
   }
 
   constructor(
-    // source and target slice key are the same by default
-    // 'source' means the slice that created the transaction
-    /// for ex slice1.actions.foo() -> slice1 is the source
-    //  most of the time, the source and target are the same
-    // but sometimes in merging, the source and target are different
     public readonly config: {
-      // TODO: remove sourceSliceKey ? See store.ts reduced store TODO
-      sourceSliceKey: SliceKey;
+      sourceSliceLineage?: LineageId | undefined;
       sourceSliceName: N;
-      targetSliceKey?: SliceKey;
-      targetSliceName?: SliceNameOpaque;
+      targetSliceLineage: LineageId;
       payload: P;
       actionId: string;
     },
   ) {
-    this.sourceSliceKey = config.sourceSliceKey;
-    this.targetSliceKey = config.targetSliceKey ?? config.sourceSliceKey;
-    this.targetSliceName =
-      config.targetSliceName ?? createSliceNameOpaque(config.sourceSliceName);
-
+    this.targetSliceLineage = config.targetSliceLineage;
+    this.sourceSliceLineage =
+      config.sourceSliceLineage || config.targetSliceLineage;
     this.payload = config.payload;
     this.actionId = config.actionId;
   }
 
-  changeTargetSlice(key: SliceKey): Transaction<N, P> {
-    if (this.targetSliceKey === key) {
-      return this;
-    }
-
-    const originalTarget = this.targetSliceKey;
+  change({
+    targetSliceLineage,
+    sourceSliceLineage,
+  }: {
+    targetSliceLineage: LineageId;
+    sourceSliceLineage?: LineageId;
+  }): Transaction<N, P> {
     const tx = new Transaction({
       ...this.config,
-      targetSliceKey: key,
+      targetSliceLineage,
+      sourceSliceLineage: sourceSliceLineage,
     });
     tx.metadata = this.metadata.fork();
+
     tx.metadata.appendMetadata(
-      TX_META_CHANGE_KEY,
-      `changeTargetKey(${originalTarget} -> ${key})`,
+      TX_META_CHANGE_LINEAGE,
+      `target ${this.targetSliceLineage} -> ${targetSliceLineage}` +
+        (sourceSliceLineage
+          ? ` source ${this.sourceSliceLineage} -> ${sourceSliceLineage}`
+          : ''),
     );
 
     return tx;
@@ -145,31 +136,35 @@ export class Metadata {
 export interface EffectLog {
   type: 'SYNC_UPDATE_EFFECT' | 'UPDATE_EFFECT';
   name: string;
-  source: Array<{ sliceKey: string; actionId: string }>;
+  source: Array<{ lineageId: LineageId; actionId: string }>;
 }
 
 export interface TransactionLog {
   type: 'TX';
-  sourceSliceKey: SliceKey;
-  targetSliceKey: SliceKey;
+  sourceSliceLineage: LineageId;
+  targetSliceLineage: LineageId;
   actionId: string;
-  dispatcher: string | undefined;
-  store: string | undefined;
-  txId: string | undefined;
+  dispatcher?: string;
+  dispatchInfo?: string;
+  store?: string;
+  txId: string;
   payload: unknown[];
 }
 
 export function txLog(tx: Transaction<any, any>): TransactionLog {
-  return {
-    type: 'TX',
-    sourceSliceKey: tx.sourceSliceKey,
-    targetSliceKey: tx.targetSliceKey,
-    actionId: tx.config.actionId,
-    dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
-    store: tx.metadata.getMetadata(TX_META_STORE_NAME),
-    txId: tx.uid,
-    payload: tx.payload,
-  };
+  return Object.fromEntries(
+    Object.entries({
+      type: 'TX',
+      sourceSliceLineage: tx.sourceSliceLineage,
+      targetSliceLineage: tx.targetSliceLineage,
+      actionId: tx.config.actionId,
+      dispatcher: tx.metadata.getMetadata(TX_META_DISPATCHER),
+      dispatchInfo: tx.metadata.getMetadata(TX_META_DISPATCH_INFO),
+      store: tx.metadata.getMetadata(TX_META_STORE_NAME),
+      txId: tx.uid,
+      payload: tx.payload,
+    }).filter((r) => r[1] !== undefined),
+  ) as any;
 }
 
 export type LogItem = EffectLog | TransactionLog;

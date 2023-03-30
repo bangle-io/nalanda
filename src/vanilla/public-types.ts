@@ -1,3 +1,4 @@
+import { VoidFn } from './internal-types';
 import type { BareSlice, Slice } from './slice';
 import type { StoreState } from './state';
 import type { Transaction } from './transaction';
@@ -16,8 +17,9 @@ export type ActionBuilder<P extends any[], SS, DS extends BareSlice> = {
   metadata?: Record<string | symbol, any>;
 };
 
-export type AnySlice = Slice<string, any, AnySlice, {}, {}>;
-export type EmptySlice = Slice<never, {}, EmptySlice, {}, {}>;
+export type AnySlice = Slice<string, any, any, {}, VoidFn>;
+
+export type OpaqueSlice<N extends string> = Slice<N, {}, never, {}, () => void>;
 
 export interface BareStore<SL extends BareSlice> {
   state: StoreState<SL>;
@@ -26,36 +28,40 @@ export interface BareStore<SL extends BareSlice> {
   destroyed: boolean;
 }
 
+export type AnyEffect = Effect<any, any, any, any, any>;
+
 export interface Effect<
-  SL extends AnySlice,
-  //   sibblings must include SL in their union
-  Sibblings extends AnySlice = SL,
+  N extends string,
+  SS,
+  DS extends AnySlice,
+  A extends Record<string, TxCreator<N, any[]>>,
+  SE extends SelectorFn<SS, DS, any>,
 > {
   name?: string;
   destroy?: (
-    slice: SL,
-    state: StoreState<Sibblings>,
+    slice: Slice<N, SS, DS, A, SE>,
+    state: StoreState<Slice<N, SS, DS, A, SE> | DS>,
     ref: Record<string, any>,
   ) => void;
   init?: (
-    slice: SL,
-    store: BareStore<Sibblings>,
+    slice: Slice<N, SS, DS, A, SE>,
+    store: BareStore<Slice<N, SS, DS, A, SE> | DS>,
     ref: Record<string, any>,
   ) => void;
   updateSync?:
     | undefined
     | ((
-        slice: SL,
-        store: BareStore<Sibblings>,
-        prevStoreState: StoreState<Sibblings>,
+        slice: Slice<N, SS, DS, A, SE>,
+        store: BareStore<Slice<N, SS, DS, A, SE> | DS>,
+        prevStoreState: StoreState<Slice<N, SS, DS, A, SE> | DS>,
         ref: Record<string, any>,
       ) => void);
   update?:
     | undefined
     | ((
-        slice: SL,
-        store: BareStore<Sibblings>,
-        prevStoreState: StoreState<Sibblings>,
+        slice: Slice<N, SS, DS, A, SE>,
+        store: BareStore<Slice<N, SS, DS, A, SE> | DS>,
+        prevStoreState: StoreState<Slice<N, SS, DS, A, SE> | DS>,
         ref: Record<string, any>,
       ) => void);
 }

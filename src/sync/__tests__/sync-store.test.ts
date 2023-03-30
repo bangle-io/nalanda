@@ -4,16 +4,11 @@ import {
   createSlice,
   Slice,
   timeoutSchedular,
-  Transaction,
 } from '../../vanilla';
 import {
   createSyncState,
   createSyncStore,
-  MainChannel,
-  MainStoreInfo,
   SyncMessage,
-  ReplicaChannel,
-  ReplicaStoreInfo,
   sliceKeyToReplicaStoreLookup,
 } from '../sync-store';
 import { BareSlice } from '../../vanilla/slice';
@@ -34,7 +29,7 @@ const testSlice1 = createSlice([], {
       counter: state.counter + 1,
     }),
   },
-  selectors: {},
+  selector: () => {},
 });
 
 let aborter = new AbortController();
@@ -64,7 +59,7 @@ const testSlice2 = createSlice([], {
       return { ...state, name: state.name.toUpperCase() };
     },
   },
-  selectors: {},
+  selector: () => {},
 });
 
 const depOnTestSlice1Slice = createSlice([testSlice1], {
@@ -78,11 +73,9 @@ const depOnTestSlice1Slice = createSlice([testSlice1], {
       dep: state.dep + 1 + testSlice1.getState(storeState).counter,
     }),
   },
-  selectors: {
-    added: (state, storeState) => {
-      return state.dep + testSlice1.getState(storeState).counter;
-    },
-  },
+  selector: (state, storeState) => ({
+    added: state.dep + testSlice1.getState(storeState).counter,
+  }),
 });
 
 const createBasicPair = ({
@@ -242,7 +235,7 @@ describe('basic test', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.getReplicaStore().dispatch(testSlice1.actions.increment());
 
     await waitForExpect(() => {
       expect(result.mainOnSyncError).toHaveBeenCalledTimes(1);
@@ -317,8 +310,9 @@ describe('basic test', () => {
       initState: {},
       actions: {},
       dependencies: [],
-      selectors: {},
-      _additionalSlices: [testSlice1],
+      selector: () => {},
+      reducer: (s) => s,
+      beforeSlices: [testSlice1],
     });
 
     const result = createBasicPair({
@@ -392,21 +386,20 @@ describe('basic test', () => {
       [
         {
           "actionId": "increment",
-          "dispatcher": undefined,
           "payload": [],
-          "sourceSliceKey": "key_testSlice1",
+          "sourceSliceLineage": "l_testSlice1$",
           "store": "test-main",
-          "targetSliceKey": "key_testSlice1",
+          "targetSliceLineage": "l_testSlice1$",
           "txId": "<txId>",
           "type": "TX",
         },
         {
           "actionId": "increment",
-          "dispatcher": "watch-in-main(changeEffect)",
+          "dispatcher": "l_watch-in-main$",
           "payload": [],
-          "sourceSliceKey": "key_testSlice1",
+          "sourceSliceLineage": "l_testSlice1$",
           "store": "test-main",
-          "targetSliceKey": "key_testSlice1",
+          "targetSliceLineage": "l_testSlice1$",
           "txId": "<txId>",
           "type": "TX",
         },
@@ -618,7 +611,7 @@ describe('sync queuing', () => {
           fives: state.fives + 1,
         }),
       },
-      selectors: {},
+      selector: () => {},
     });
 
     const fiveWatch = syncChangeEffect(
@@ -663,9 +656,12 @@ describe('sync queuing', () => {
     });
 
     expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
-      body: expect.objectContaining({
-        actionId: 'increment',
-      }),
+      body: {
+        targetSliceKey: 'key_testSlice1',
+        tx: expect.objectContaining({
+          actionId: 'increment',
+        }),
+      },
       from: 'test-replica-store-1',
       to: 'test-main',
       type: 'tx',
@@ -700,7 +696,7 @@ describe('sync queuing', () => {
           fives: state.fives + 1,
         }),
       },
-      selectors: {},
+      selector: () => {},
     });
 
     const fiveWatch = syncChangeEffect(
@@ -759,9 +755,12 @@ describe('sync queuing', () => {
     });
     // first should be main
     expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
-      body: expect.objectContaining({
-        actionId: 'increment',
-      }),
+      body: {
+        tx: expect.objectContaining({
+          actionId: 'increment',
+        }),
+        targetSliceKey: 'key_testSlice1',
+      },
       from: 'test-main',
       to: 'test-replica-store-1',
       type: 'tx',
@@ -780,6 +779,11 @@ describe('createSyncState', () => {
     expect(result.syncSliceKeys).toMatchInlineSnapshot(`
       Set {
         "key_testSlice1",
+      }
+    `);
+    expect(result.syncLineageIds).toMatchInlineSnapshot(`
+      Set {
+        "l_testSlice1$",
       }
     `);
 
@@ -801,8 +805,9 @@ describe('createSyncState', () => {
           initState: {},
           actions: {},
           dependencies: [],
-          selectors: {},
-          _additionalSlices: [testSlice1],
+          selector: () => {},
+          reducer: (s) => s,
+          beforeSlices: [testSlice1],
         }),
       ],
       otherSlices: [
@@ -811,8 +816,9 @@ describe('createSyncState', () => {
           initState: {},
           actions: {},
           dependencies: [],
-          selectors: {},
-          _additionalSlices: [testSlice2],
+          selector: () => {},
+          reducer: (s) => s,
+          beforeSlices: [testSlice2],
         }),
       ],
     });
@@ -821,6 +827,12 @@ describe('createSyncState', () => {
       Set {
         "key_testSlice1",
         "key_mySlice1",
+      }
+    `);
+    expect(result.syncLineageIds).toMatchInlineSnapshot(`
+      Set {
+        "l_testSlice1$",
+        "l_mySlice1$",
       }
     `);
     expect((result.state as InternalStoreState)._slices.map((r) => r.key))
@@ -843,7 +855,8 @@ describe('createSyncState', () => {
           initState: {},
           actions: {},
           dependencies: [],
-          selectors: {},
+          selector: () => {},
+          reducer: (s) => s,
         }),
         changeEffect('test-effect-1', {}, () => {}),
       ],

@@ -23,7 +23,7 @@ export function createUseSliceHook<SSL extends AnySlice>(
   ): [SLS, BareStore<SSL>['dispatch']] {
     const [subscribe] = useState(() => {
       return (cb: () => void) => {
-        return (store as Store)._tempRegisterOnSyncChange(sl, cb);
+        return (store as any)._tempRegisterOnSyncChange(sl, cb);
       };
     });
 

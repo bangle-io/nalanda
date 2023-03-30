@@ -1,19 +1,7 @@
-import type { SliceKey } from './internal-types';
-import type {
-  ActionBuilder,
-  AnySlice,
-  BareStore,
-  EmptySlice,
-} from './public-types';
+import { LineageId, SliceKey, VoidFn } from './internal-types';
+import type { ActionBuilder, AnySlice, BareStore } from './public-types';
 import type { BareSlice, Slice } from './slice';
 import type { Store } from './store';
-
-const contextId = uuid(4);
-let counter = 0;
-
-export function incrementalId() {
-  return `${contextId}-${counter++}`;
-}
 
 export function mapObjectValues<T, U>(
   obj: Record<string, T>,
@@ -65,30 +53,19 @@ export function uuid(len = 10) {
   return Math.random().toString(36).substring(2, 15).slice(0, len);
 }
 
-export function calcDependencies(
-  slices: BareSlice[],
-): Record<string, Set<string>> {
-  return Object.fromEntries(
-    slices.map((slice) => [
-      slice.key,
-      new Set(slice.spec.dependencies.map((dep) => dep.key)),
-    ]),
-  );
-}
-
 export function flattenReverseDependencies(
-  reverseDep: Record<string, Set<string>>,
+  reverseDep: Record<LineageId, Set<LineageId>>,
 ) {
-  const result: Record<string, Set<string>> = {};
+  const result: Record<LineageId, Set<LineageId>> = {};
 
-  const recurse = (key: string) => {
+  const recurse = (key: LineageId) => {
     let vals = result[key];
 
     if (vals) {
       return vals;
     }
 
-    vals = new Set<string>();
+    vals = new Set<LineageId>();
     result[key] = vals;
 
     const deps = reverseDep[key];
@@ -106,27 +83,28 @@ export function flattenReverseDependencies(
   };
 
   for (const key of Object.keys(reverseDep)) {
-    recurse(key);
+    recurse(key as LineageId);
   }
 
   return result;
 }
 
+// TODO: move this to be an internal method as we only use flattenReverseDependencies
 export function calcReverseDependencies(
   slices: BareSlice[],
-): Record<string, Set<string>> {
-  let reverseDependencies: Record<string, Set<string>> = {};
+): Record<LineageId, Set<LineageId>> {
+  let reverseDependencies: Record<LineageId, Set<LineageId>> = {};
 
   for (const slice of slices) {
     for (const dep of slice.spec.dependencies) {
-      let result = reverseDependencies[dep.key];
+      let result = reverseDependencies[dep.lineageId];
 
       if (!result) {
         result = new Set();
-        reverseDependencies[dep.key] = result;
+        reverseDependencies[dep.lineageId] = result;
       }
 
-      result.add(slice.key);
+      result.add(slice.lineageId);
     }
   }
 
@@ -144,8 +122,8 @@ export function changeBareSlice<SL extends BareSlice>(
 export function getSliceByKey(
   store: BareStore<any> | Store,
   key: SliceKey,
-): EmptySlice | undefined {
-  return (store as Store).state.sliceLookupByKey[key] as EmptySlice;
+): AnySlice | undefined {
+  return (store as Store).state.sliceLookupByKey[key] as AnySlice;
 }
 
 export function getActionBuilderByKey(
@@ -153,15 +131,26 @@ export function getActionBuilderByKey(
   key: SliceKey,
   actionId: string,
 ): undefined | ActionBuilder<any[], any, any> {
-  const slice:
-    | undefined
-    | Slice<
-        string,
-        any,
-        AnySlice,
-        Record<string, ActionBuilder<any[], any, any>>,
-        {}
-      > = getSliceByKey(store, key);
+  const slice: undefined | Slice<string, any, any, any, VoidFn> = getSliceByKey(
+    store,
+    key,
+  );
 
-  return slice?.spec.actions[actionId];
+  return slice?.a?.[actionId];
+}
+
+export function isPlainObject(value: any) {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return (
+    (prototype === null ||
+      prototype === Object.prototype ||
+      Object.getPrototypeOf(prototype) === null) &&
+    !(Symbol.toStringTag in value) &&
+    !(Symbol.iterator in value)
+  );
 }

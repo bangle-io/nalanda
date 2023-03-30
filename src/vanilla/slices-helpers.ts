@@ -1,27 +1,46 @@
 import { findDuplications } from './helpers';
 import { BareSlice } from './slice';
 
-export function expandSlices(slices: BareSlice[]) {
+export function expandSlices(slices: BareSlice[] = []): BareSlice[] {
   return slices.flatMap((slice) => {
-    return [...(slice.spec._additionalSlices || []), slice];
+    return [
+      ...expandSlices(slice.spec.beforeSlices),
+      slice,
+      ...expandSlices(slice.spec.afterSlices),
+    ];
   });
 }
 
 export function validateSlices(slices: BareSlice[]) {
   checkUniqueKeys(slices);
+  checkUniqueLineage(slices);
   checkUniqDependency(slices);
   circularCheck(slices);
   checkDependencyOrder(slices);
 }
 
 export function checkUniqueKeys(slices: BareSlice[]) {
-  const keys = slices.map((s) => s.key);
-  const unique = new Set(keys);
-
-  if (keys.length !== unique.size) {
-    const dups = findDuplications(keys);
+  const dups = checkUnique(slices.map((s) => s.key));
+  if (dups) {
     throw new Error('Duplicate slice keys ' + dups.join(', '));
   }
+}
+
+export function checkUniqueLineage(slices: BareSlice[]) {
+  const dups = checkUnique(slices.map((s) => s.lineageId));
+  if (dups) {
+    throw new Error('Duplicate slice lineageIds ' + dups.join(', '));
+  }
+}
+
+function checkUnique<T>(entities: T[]): T[] | undefined {
+  const unique = new Set(entities);
+
+  if (entities.length !== unique.size) {
+    return findDuplications(entities);
+  }
+
+  return;
 }
 
 // TODO add test

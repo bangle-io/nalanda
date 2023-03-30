@@ -1,5 +1,5 @@
+import { testOverrideDependencies } from '../../test-helpers';
 import {
-  calcDependencies,
   calcReverseDependencies,
   flattenReverseDependencies,
 } from '../helpers';
@@ -23,285 +23,522 @@ test('reject any', () => {
   expect(true).toBe(true);
 });
 
+const createAnySliceBase = (name: string, deps: string[]): BareSlice => {
+  return new Slice({
+    name: name,
+    initState: {},
+    dependencies: deps.map((dep) => {
+      return createAnySliceBase(dep, []) as AnySlice;
+    }),
+    actions: {},
+    selector: () => {},
+    reducer: (s) => s,
+  });
+};
+
+let register = new Map<string, AnySlice>();
+
+const createSlice = (name: string): AnySlice => {
+  let slice = new Slice({
+    name,
+    initState: {},
+    dependencies: [],
+    actions: {},
+    selector: () => {},
+    reducer: (s) => s,
+  });
+
+  register.set(name, slice);
+
+  return slice;
+};
+
+const sl0 = createSlice('0');
+const sl1 = createSlice('1');
+const sl2 = createSlice('2');
+const sl3 = createSlice('3');
+const sl4 = createSlice('4');
+const sl5 = createSlice('5');
+const sl6 = createSlice('6');
+const sl7 = createSlice('7');
+
+const slA = createSlice('A');
+const slB = createSlice('B');
+const slC = createSlice('C');
+const slD = createSlice('D');
+const slE = createSlice('E');
+const slF = createSlice('F');
+const slG = createSlice('G');
+const slH = createSlice('H');
+const slI = createSlice('I');
+const slR = createSlice('R');
+const slX = createSlice('X');
+const slY = createSlice('Y');
+
+const setDeps = (slice: AnySlice, deps: string[]) => {
+  return testOverrideDependencies(slice, {
+    dependencies: deps.map((r) => {
+      let dep = register.get(r);
+
+      if (!dep) {
+        throw new Error(`Missing dependency: ${r}`);
+      }
+
+      return dep;
+    }),
+  });
+};
+
 describe('calcReverseDependencies', () => {
-  const createAnySliceBase = (name: string, deps: string[]): BareSlice => {
-    return new Slice({
-      name: name,
-      initState: {},
-      dependencies: deps.map((dep) => {
-        return createAnySliceBase(dep, []) as AnySlice;
-      }),
-      actions: {},
-      selectors: {},
-    });
-  };
+  describe('case 1', () => {
+    const slices = [setDeps(sl1, ['2', '3'])];
 
-  describe.each([
-    {
-      name: '1',
-      slices: [createAnySliceBase('sl1', ['sl2', 'sl3'])],
-      dep: {
-        key_sl1: new Set(['key_sl2', 'key_sl3']),
-      },
-      reverseDep: {
-        key_sl2: new Set(['key_sl1']),
-        key_sl3: new Set(['key_sl1']),
-      },
-      flatReverseDep: {
-        key_sl1: new Set([]),
-        key_sl2: new Set(['key_sl1']),
-        key_sl3: new Set(['key_sl1']),
-      },
-    },
-    {
-      name: '2',
-      slices: [
-        createAnySliceBase('sl0', ['sl1']),
-        createAnySliceBase('sl1', ['sl2', 'sl3']),
-        createAnySliceBase('sl2', ['sl3']),
-        createAnySliceBase('sl3', []),
-      ],
-      dep: {
-        key_sl0: new Set(['key_sl1']),
-        key_sl1: new Set(['key_sl2', 'key_sl3']),
-        key_sl2: new Set(['key_sl3']),
-        key_sl3: new Set([]),
-      },
-      reverseDep: {
-        key_sl1: new Set(['key_sl0']),
-        key_sl2: new Set(['key_sl1']),
-        key_sl3: new Set(['key_sl1', 'key_sl2']),
-      },
-      flatReverseDep: {
-        key_sl0: new Set([]),
-        key_sl1: new Set(['key_sl0']),
-        key_sl2: new Set(['key_sl0', 'key_sl1']),
-        key_sl3: new Set(['key_sl0', 'key_sl1', 'key_sl2']),
-      },
-    },
-    {
-      name: '3',
-      slices: [
-        createAnySliceBase('sl0', ['sl1']),
-        createAnySliceBase('sl1', ['sl2', 'sl3']),
-        createAnySliceBase('sl2', ['sl3']),
-        createAnySliceBase('sl3', []),
-      ],
-      dep: {
-        key_sl0: new Set(['key_sl1']),
-        key_sl1: new Set(['key_sl2', 'key_sl3']),
-        key_sl2: new Set(['key_sl3']),
-        key_sl3: new Set([]),
-      },
-      reverseDep: {
-        key_sl1: new Set(['key_sl0']),
-        key_sl2: new Set(['key_sl1']),
-        key_sl3: new Set(['key_sl1', 'key_sl2']),
-      },
-      flatReverseDep: {
-        key_sl0: new Set([]),
-        key_sl1: new Set(['key_sl0']),
-        key_sl2: new Set(['key_sl0', 'key_sl1']),
-        key_sl3: new Set(['key_sl0', 'key_sl1', 'key_sl2']),
-      },
-    },
-    {
-      name: '4',
-      slices: [
-        createAnySliceBase('sl0', ['sl1']),
-        createAnySliceBase('sl1', ['sl2']),
-        createAnySliceBase('sl2', ['sl3']),
-        createAnySliceBase('sl3', ['sl4']),
-      ],
-      dep: {
-        key_sl0: new Set(['key_sl1']),
-        key_sl1: new Set(['key_sl2']),
-        key_sl2: new Set(['key_sl3']),
-        key_sl3: new Set(['key_sl4']),
-      },
-      reverseDep: {
-        key_sl1: new Set(['key_sl0']),
-        key_sl2: new Set(['key_sl1']),
-        key_sl3: new Set(['key_sl2']),
-        key_sl4: new Set(['key_sl3']),
-      },
-      flatReverseDep: {
-        key_sl0: new Set([]),
-        key_sl1: new Set(['key_sl0']),
-        key_sl2: new Set(['key_sl0', 'key_sl1']),
-        key_sl3: new Set(['key_sl0', 'key_sl1', 'key_sl2']),
-        key_sl4: new Set(['key_sl0', 'key_sl1', 'key_sl2', 'key_sl3']),
-      },
-    },
-
-    {
-      name: '4',
-      slices: [
-        createAnySliceBase('sl1', ['sl2', 'sl3']),
-        createAnySliceBase('slA', ['sl2', 'sl3']),
-        createAnySliceBase('slB', ['slA', 'sl1']),
-      ],
-      dep: {
-        key_sl1: new Set(['key_sl2', 'key_sl3']),
-        key_slA: new Set(['key_sl2', 'key_sl3']),
-        key_slB: new Set(['key_slA', 'key_sl1']),
-      },
-      reverseDep: {
-        key_sl1: new Set(['key_slB']),
-        key_sl2: new Set(['key_slA', 'key_sl1']),
-        key_sl3: new Set(['key_slA', 'key_sl1']),
-        key_slA: new Set(['key_slB']),
-      },
-      flatReverseDep: {
-        key_sl1: new Set(['key_slB']),
-        key_sl2: new Set(['key_slA', 'key_sl1', 'key_slB']),
-        key_sl3: new Set(['key_slA', 'key_sl1', 'key_slB']),
-        key_slA: new Set(['key_slB']),
-        key_slB: new Set([]),
-      },
-    },
-
-    {
-      name: '5',
-      slices: [
-        createAnySliceBase('D', ['A', 'B', 'C']),
-        createAnySliceBase('A', ['B']),
-        createAnySliceBase('B', []),
-        createAnySliceBase('C', ['B']),
-      ],
-      dep: {
-        key_D: new Set(['key_A', 'key_B', 'key_C']),
-        key_A: new Set(['key_B']),
-        key_B: new Set([]),
-        key_C: new Set(['key_B']),
-      },
-      reverseDep: {
-        key_A: new Set(['key_D']),
-        key_B: new Set(['key_A', 'key_C', 'key_D']),
-        key_C: new Set(['key_D']),
-      },
-      flatReverseDep: {
-        key_A: new Set(['key_D']),
-        key_B: new Set(['key_A', 'key_C', 'key_D']),
-        key_C: new Set(['key_D']),
-        key_D: new Set([]),
-      },
-    },
-
-    {
-      name: '6',
-      slices: [
-        createAnySliceBase('X', ['C', 'A', 'B']),
-        createAnySliceBase('C', ['F', 'R']),
-        createAnySliceBase('F', ['B']),
-        createAnySliceBase('R', ['B']),
-        createAnySliceBase('A', []),
-        createAnySliceBase('B', []),
-      ],
-      dep: {
-        key_X: new Set(['key_C', 'key_A', 'key_B']),
-        key_C: new Set(['key_F', 'key_R']),
-        key_F: new Set(['key_B']),
-        key_R: new Set(['key_B']),
-        key_A: new Set([]),
-        key_B: new Set([]),
-      },
-      reverseDep: {
-        key_C: new Set(['key_X']),
-        key_F: new Set(['key_C']),
-        key_R: new Set(['key_C']),
-        key_A: new Set(['key_X']),
-        key_B: new Set(['key_F', 'key_R', 'key_X']),
-      },
-      flatReverseDep: {
-        key_C: new Set(['key_X']),
-        key_F: new Set(['key_C', 'key_X']),
-        key_R: new Set(['key_C', 'key_X']),
-        key_A: new Set(['key_X']),
-        key_B: new Set(['key_F', 'key_R', 'key_C', 'key_X']),
-        key_X: new Set([]),
-      },
-    },
-
-    {
-      name: '7',
-      slices: [
-        createAnySliceBase('E', ['F', 'G', 'H']),
-        createAnySliceBase('F', ['B', 'G']),
-        createAnySliceBase('G', ['B']),
-        createAnySliceBase('H', ['B']),
-        createAnySliceBase('I', ['B']),
-        createAnySliceBase('B', ['A', 'D']),
-        createAnySliceBase('A', ['X']),
-        createAnySliceBase('D', ['X']),
-        createAnySliceBase('C', ['D', 'X']),
-        createAnySliceBase('X', []),
-      ],
-      dep: {
-        key_E: new Set(['key_F', 'key_G', 'key_H']),
-        key_F: new Set(['key_B', 'key_G']),
-        key_G: new Set(['key_B']),
-        key_H: new Set(['key_B']),
-        key_I: new Set(['key_B']),
-        key_B: new Set(['key_A', 'key_D']),
-        key_A: new Set(['key_X']),
-        key_D: new Set(['key_X']),
-        key_C: new Set(['key_D', 'key_X']),
-        key_X: new Set([]),
-      },
-      reverseDep: {
-        key_F: new Set(['key_E']),
-        key_G: new Set(['key_E', 'key_F']),
-        key_H: new Set(['key_E']),
-        key_B: new Set(['key_F', 'key_G', 'key_H', 'key_I']),
-        key_A: new Set(['key_B']),
-        key_D: new Set(['key_B', 'key_C']),
-        key_X: new Set(['key_A', 'key_D', 'key_C']),
-      },
-      flatReverseDep: {
-        key_F: new Set(['key_E']),
-        key_G: new Set(['key_E', 'key_F']),
-        key_H: new Set(['key_E']),
-        key_I: new Set([]),
-        key_B: new Set(['key_E', 'key_G', 'key_H', 'key_I', 'key_F']),
-        key_A: new Set(['key_B', 'key_E', 'key_G', 'key_H', 'key_I', 'key_F']),
-        key_D: new Set([
-          'key_B',
-          'key_C',
-          'key_E',
-          'key_G',
-          'key_H',
-          'key_I',
-          'key_F',
-        ]),
-        key_X: new Set([
-          'key_A',
-          'key_C',
-          'key_D',
-          'key_B',
-          'key_E',
-          'key_G',
-          'key_H',
-          'key_I',
-          'key_F',
-        ]),
-        key_E: new Set([]),
-        key_C: new Set([]),
-      },
-    },
-  ])('dep calcs', ({ name, slices, dep, reverseDep, flatReverseDep }) => {
-    test('calcDependencies ' + name, () => {
-      expect(calcDependencies(slices)).toEqual(dep);
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_2$": Set {
+            "l_1$",
+          },
+          "l_3$": Set {
+            "l_1$",
+          },
+        }
+      `);
     });
 
-    test('calcReverseDependencies ' + name, () => {
-      expect(calcReverseDependencies(slices)).toEqual(reverseDep);
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_1$": Set {},
+          "l_2$": Set {
+            "l_1$",
+          },
+          "l_3$": Set {
+            "l_1$",
+          },
+        }
+      `);
+    });
+  });
+
+  describe('case 2', () => {
+    const slices = [
+      setDeps(sl0, ['1']),
+      setDeps(sl1, ['2', '3']),
+      setDeps(sl2, ['3']),
+      setDeps(sl3, []),
+    ];
+
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_1$": Set {
+            "l_0$",
+          },
+          "l_2$": Set {
+            "l_1$",
+          },
+          "l_3$": Set {
+            "l_1$",
+            "l_2$",
+          },
+        }
+      `);
     });
 
-    test('flattenReverseDependencies ' + name, () => {
-      expect(
-        flattenReverseDependencies(calcReverseDependencies(slices)),
-      ).toEqual(flatReverseDep);
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_0$": Set {},
+          "l_1$": Set {
+            "l_0$",
+          },
+          "l_2$": Set {
+            "l_1$",
+            "l_0$",
+          },
+          "l_3$": Set {
+            "l_1$",
+            "l_0$",
+            "l_2$",
+          },
+        }
+      `);
+    });
+  });
+
+  describe('case 3', () => {
+    const slices = [
+      setDeps(sl0, ['1']),
+      setDeps(sl1, ['2', '3']),
+      setDeps(sl2, ['3']),
+      setDeps(sl3, []),
+    ];
+
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_1$": Set {
+            "l_0$",
+          },
+          "l_2$": Set {
+            "l_1$",
+          },
+          "l_3$": Set {
+            "l_1$",
+            "l_2$",
+          },
+        }
+      `);
+    });
+
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_0$": Set {},
+          "l_1$": Set {
+            "l_0$",
+          },
+          "l_2$": Set {
+            "l_1$",
+            "l_0$",
+          },
+          "l_3$": Set {
+            "l_1$",
+            "l_0$",
+            "l_2$",
+          },
+        }
+      `);
+    });
+  });
+
+  describe('case 4.a', () => {
+    const slices = [
+      setDeps(sl0, ['1']),
+      setDeps(sl1, ['2']),
+      setDeps(sl2, ['3']),
+      setDeps(sl3, ['4']),
+    ];
+
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_1$": Set {
+            "l_0$",
+          },
+          "l_2$": Set {
+            "l_1$",
+          },
+          "l_3$": Set {
+            "l_2$",
+          },
+          "l_4$": Set {
+            "l_3$",
+          },
+        }
+      `);
+    });
+
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_0$": Set {},
+          "l_1$": Set {
+            "l_0$",
+          },
+          "l_2$": Set {
+            "l_1$",
+            "l_0$",
+          },
+          "l_3$": Set {
+            "l_2$",
+            "l_1$",
+            "l_0$",
+          },
+          "l_4$": Set {
+            "l_3$",
+            "l_2$",
+            "l_1$",
+            "l_0$",
+          },
+        }
+      `);
+    });
+  });
+
+  describe('case 4.b', () => {
+    const slices = [
+      setDeps(sl1, ['2', '3']),
+      setDeps(slA, ['2', '3']),
+      setDeps(slB, ['A', '1']),
+    ];
+
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_1$": Set {
+            "l_B$",
+          },
+          "l_2$": Set {
+            "l_1$",
+            "l_A$",
+          },
+          "l_3$": Set {
+            "l_1$",
+            "l_A$",
+          },
+          "l_A$": Set {
+            "l_B$",
+          },
+        }
+      `);
+    });
+
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_1$": Set {
+            "l_B$",
+          },
+          "l_2$": Set {
+            "l_1$",
+            "l_B$",
+            "l_A$",
+          },
+          "l_3$": Set {
+            "l_1$",
+            "l_B$",
+            "l_A$",
+          },
+          "l_A$": Set {
+            "l_B$",
+          },
+          "l_B$": Set {},
+        }
+      `);
+    });
+  });
+
+  describe('case 5', () => {
+    const slices = [
+      setDeps(slD, ['A', 'B', 'C']),
+      setDeps(slA, ['B']),
+      setDeps(slB, []),
+      setDeps(slC, ['B']),
+    ];
+
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_A$": Set {
+            "l_D$",
+          },
+          "l_B$": Set {
+            "l_D$",
+            "l_A$",
+            "l_C$",
+          },
+          "l_C$": Set {
+            "l_D$",
+          },
+        }
+      `);
+    });
+
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_A$": Set {
+            "l_D$",
+          },
+          "l_B$": Set {
+            "l_D$",
+            "l_A$",
+            "l_C$",
+          },
+          "l_C$": Set {
+            "l_D$",
+          },
+          "l_D$": Set {},
+        }
+      `);
+    });
+  });
+
+  describe('case 6', () => {
+    const slices = [
+      setDeps(slX, ['C', 'A', 'B']),
+      setDeps(slC, ['F', 'R']),
+      setDeps(slF, ['B']),
+      setDeps(slR, ['B']),
+      setDeps(slA, []),
+      setDeps(slB, []),
+    ];
+
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_A$": Set {
+            "l_X$",
+          },
+          "l_B$": Set {
+            "l_X$",
+            "l_F$",
+            "l_R$",
+          },
+          "l_C$": Set {
+            "l_X$",
+          },
+          "l_F$": Set {
+            "l_C$",
+          },
+          "l_R$": Set {
+            "l_C$",
+          },
+        }
+      `);
+    });
+
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_A$": Set {
+            "l_X$",
+          },
+          "l_B$": Set {
+            "l_X$",
+            "l_F$",
+            "l_C$",
+            "l_R$",
+          },
+          "l_C$": Set {
+            "l_X$",
+          },
+          "l_F$": Set {
+            "l_C$",
+            "l_X$",
+          },
+          "l_R$": Set {
+            "l_C$",
+            "l_X$",
+          },
+          "l_X$": Set {},
+        }
+      `);
+    });
+  });
+
+  describe('case 7', () => {
+    const slices = [
+      setDeps(slE, ['F', 'G', 'H']),
+      setDeps(slF, ['B', 'G']),
+      setDeps(slG, ['B']),
+      setDeps(slH, ['B']),
+      setDeps(slI, ['B']),
+      setDeps(slB, ['A', 'D']),
+      setDeps(slA, ['X']),
+      setDeps(slD, ['X']),
+      setDeps(slC, ['D', 'X']),
+      setDeps(slX, []),
+    ];
+
+    test('calcReverseDependencies ', () => {
+      expect(calcReverseDependencies(slices)).toMatchInlineSnapshot(`
+        {
+          "l_A$": Set {
+            "l_B$",
+          },
+          "l_B$": Set {
+            "l_F$",
+            "l_G$",
+            "l_H$",
+            "l_I$",
+          },
+          "l_D$": Set {
+            "l_B$",
+            "l_C$",
+          },
+          "l_F$": Set {
+            "l_E$",
+          },
+          "l_G$": Set {
+            "l_E$",
+            "l_F$",
+          },
+          "l_H$": Set {
+            "l_E$",
+          },
+          "l_X$": Set {
+            "l_A$",
+            "l_D$",
+            "l_C$",
+          },
+        }
+      `);
+    });
+
+    test('flattenReverseDependencies ', () => {
+      expect(flattenReverseDependencies(calcReverseDependencies(slices)))
+        .toMatchInlineSnapshot(`
+        {
+          "l_A$": Set {
+            "l_B$",
+            "l_F$",
+            "l_E$",
+            "l_G$",
+            "l_H$",
+            "l_I$",
+          },
+          "l_B$": Set {
+            "l_F$",
+            "l_E$",
+            "l_G$",
+            "l_H$",
+            "l_I$",
+          },
+          "l_C$": Set {},
+          "l_D$": Set {
+            "l_B$",
+            "l_F$",
+            "l_E$",
+            "l_G$",
+            "l_H$",
+            "l_I$",
+            "l_C$",
+          },
+          "l_E$": Set {},
+          "l_F$": Set {
+            "l_E$",
+          },
+          "l_G$": Set {
+            "l_E$",
+            "l_F$",
+          },
+          "l_H$": Set {
+            "l_E$",
+          },
+          "l_I$": Set {},
+          "l_X$": Set {
+            "l_A$",
+            "l_B$",
+            "l_F$",
+            "l_E$",
+            "l_G$",
+            "l_H$",
+            "l_I$",
+            "l_D$",
+            "l_C$",
+          },
+        }
+      `);
     });
   });
 });
