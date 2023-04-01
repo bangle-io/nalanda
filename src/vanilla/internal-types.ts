@@ -6,6 +6,7 @@ import type { Transaction } from './transaction';
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
 export type AnyFn = (...args: any[]) => any;
+export type UnknownFn = (...args: unknown[]) => unknown;
 export type VoidFn = (...args: any[]) => void;
 
 export const expectType = <Type>(_: Type): void => void 0;
