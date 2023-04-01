@@ -1,6 +1,6 @@
-import { LineageId, SliceKey, VoidFn } from './internal-types';
+import { LineageId, SliceKey } from './internal-types';
 import type { ActionBuilder, AnySlice, BareStore } from './public-types';
-import type { BareSlice, Slice } from './slice';
+import type { BareSlice } from './slice';
 import type { Store } from './store';
 
 export function mapObjectValues<T, U>(

@@ -1,5 +1,5 @@
 import { mapObjectValues } from './helpers';
-import { createSliceNameOpaque, LineageId, VoidFn } from './internal-types';
+import { LineageId, VoidFn } from './internal-types';
 import {
   ActionBuilder,
   AnySlice,
@@ -164,13 +164,12 @@ function expandActionBuilders<
   N extends string,
   A extends Record<string, ActionBuilder<any[], any, any>>,
 >(name: N, actions: A, lineageId: LineageId): ActionBuilderRecordConvert<N, A> {
-  let sliceName = createSliceNameOpaque(name);
   const result: Record<string, TxCreator> = mapObjectValues(
     actions,
     (action, actionId): TxCreator => {
       return (...params) => {
         return new Transaction({
-          sourceSliceName: sliceName,
+          sourceSliceName: name,
           targetSliceLineage: lineageId,
           payload: params,
           actionId,

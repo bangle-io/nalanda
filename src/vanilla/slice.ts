@@ -2,13 +2,11 @@ import { weakCache } from './helpers';
 import {
   createLineageId,
   createSliceKey,
-  createSliceNameOpaque,
   isSliceKey,
   KEY_PREFIX,
   LineageId,
   NoInfer,
   SliceKey,
-  SliceNameOpaque,
 } from './internal-types';
 import {
   Effect,
@@ -98,7 +96,6 @@ export class Slice<
 {
   public readonly initState: SS;
   public readonly name: N;
-  public readonly nameOpaque: SliceNameOpaque;
   public readonly lineageId: LineageId;
   public key: SliceKey;
   public _metadata: Record<string | symbol, any> = {};
@@ -137,7 +134,6 @@ export class Slice<
 
     this.key = createSliceKey(this.spec.name);
     this.name = config?.originalSpec.name ?? spec.name;
-    this.nameOpaque = createSliceNameOpaque(this.name);
 
     this.resolveSelector = weakCache(this.resolveSelector.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
