@@ -9,7 +9,7 @@ import {
 import { AnySlice } from '../vanilla/public-types';
 import { BareSlice } from '../vanilla/slice';
 import { expandSlices } from '../vanilla/slices-helpers';
-import { InternalStoreState } from '../vanilla/state';
+import { StoreState } from '../vanilla/state';
 import { DispatchTx } from '../vanilla/store';
 import { DebugFunc } from '../vanilla/transaction';
 import { abortableSetTimeout, assertNotUndefined } from './helpers';
@@ -143,10 +143,7 @@ export function createSyncState({
     syncLineageIds,
     syncSliceKeys,
     syncSlices,
-    state: InternalStoreState.create([
-      ...syncSlices,
-      ...expandSlices(otherSlices),
-    ]),
+    state: StoreState.create([...syncSlices, ...expandSlices(otherSlices)]),
   };
 }
 
@@ -175,7 +172,7 @@ export function createSyncStore<
 
 const defaultDispatchTx: DispatchTx<Transaction<any, any>> = (store, tx) => {
   let newState = store.state.applyTransaction(tx);
-  store.updateState(newState, tx);
+  Store.updateState(store, newState, tx);
 };
 
 export const sendTxToReplicas = (
@@ -297,7 +294,7 @@ class SyncStoreMain<SbSync extends BareSlice, SbOther extends BareSlice> {
 
     // keep this as the last thing ALWAYS to avoid
     this.store = new Store(
-      internalState as InternalStoreState,
+      internalState,
       config.storeName,
       this.dispatchTx,
       scheduler,
@@ -480,7 +477,7 @@ class SyncStoreReplica<SbSync extends BareSlice, SbOther extends BareSlice> {
 
     // keep this as the last thing ALWAYS to avoid
     this.store = new Store(
-      internalState as InternalStoreState,
+      internalState,
       storeName,
       this.syncedDispatch,
       scheduler,

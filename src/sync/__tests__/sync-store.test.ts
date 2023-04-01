@@ -13,7 +13,7 @@ import {
 } from '../sync-store';
 import { BareSlice } from '../../vanilla/slice';
 import { changeEffect, syncChangeEffect } from '../../effects';
-import { InternalStoreState } from '../../vanilla/state';
+import { StoreState } from '../../vanilla/state';
 import { abortableSetTimeout } from '../helpers';
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
@@ -787,7 +787,7 @@ describe('createSyncState', () => {
       }
     `);
 
-    expect((result.state as InternalStoreState)._slices.map((r) => r.key))
+    expect(StoreState.getSlices(result.state).map((r) => r.key))
       .toMatchInlineSnapshot(`
       [
         "key_testSlice1",
@@ -835,7 +835,7 @@ describe('createSyncState', () => {
         "l_mySlice1$",
       }
     `);
-    expect((result.state as InternalStoreState)._slices.map((r) => r.key))
+    expect(StoreState.getSlices(result.state).map((r) => r.key))
       .toMatchInlineSnapshot(`
       [
         "key_testSlice1",
@@ -864,10 +864,7 @@ describe('createSyncState', () => {
     });
 
     expect(
-      (result.state as InternalStoreState)._slices.map((r) => [
-        r.key,
-        r.spec.effects,
-      ]),
+      StoreState.getSlices(result.state).map((r) => [r.key, r.spec.effects]),
     ).toEqual([
       ['key_mySlice1', []],
       ['key_test-effect-1', []],

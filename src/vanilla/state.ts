@@ -13,16 +13,6 @@ export type ResolveSliceIfRegistered<
     : never
   : never;
 
-export interface StoreState<RegSlices extends BareSlice> {
-  getSliceState<SL extends BareSlice>(
-    slice: ResolveSliceIfRegistered<SL, RegSlices>,
-  ): SL['initState'];
-
-  applyTransaction(
-    tx: Transaction<RegSlices['name'], unknown[]>,
-  ): StoreState<RegSlices>;
-}
-
 interface StoreStateOptions {
   debug?: boolean;
   scoped?: LineageId;
@@ -46,12 +36,7 @@ export const sliceDepLineageLookup = weakCache(
   },
 );
 
-export class InternalStoreState implements StoreState<any> {
-  protected slicesCurrentState: Record<SliceKey, unknown> = Object.create(null);
-
-  public readonly sliceLookupByKey: SliceLookupByKey;
-  public readonly slicesLookupByLineage: SliceLookupByLineage;
-
+export class StoreState<RegSlices extends BareSlice = any> {
   /**
    *
    * @param slices - the slices to use to create the store state
@@ -67,7 +52,7 @@ export class InternalStoreState implements StoreState<any> {
   ): StoreState<SL> {
     validateSlices(slices);
 
-    const instance = new InternalStoreState(slices);
+    const instance = new StoreState(slices);
 
     for (const slice of slices) {
       instance.slicesCurrentState[slice.key] = slice.initState;
@@ -97,17 +82,76 @@ export class InternalStoreState implements StoreState<any> {
     return instance;
   }
 
+  static fork(
+    store: StoreState,
+    slicesState: Record<string, unknown> = store.slicesCurrentState,
+    opts: (opts: StoreStateOptions) => StoreStateOptions = (opts) => opts,
+  ): StoreState {
+    const newOpts = opts(store.opts || {});
+    const newInstance = new StoreState(store._slices, newOpts);
+    newInstance.slicesCurrentState = slicesState;
+    return newInstance;
+  }
+
+  static scoped(store: StoreState, lineageId: LineageId): StoreState {
+    return StoreState.fork(store, undefined, (opts) => ({
+      ...opts,
+      scoped: lineageId,
+    }));
+  }
+
+  static getSliceState(storeState: StoreState<any>, _sl: BareSlice): unknown {
+    const sl = storeState.slicesLookupByLineage[_sl.lineageId];
+
+    if (!sl) {
+      throw new Error(`Slice "${_sl.name}" not found in store`);
+    }
+
+    const scopeId = storeState.opts?.scoped;
+    if (scopeId && scopeId !== _sl.lineageId) {
+      const scopedSlice = storeState.slicesLookupByLineage[scopeId];
+
+      if (
+        !scopedSlice ||
+        // TODO make this deep dependency lookup? this is because they can in theory pass it around
+        // so in theory a deep dependency lookup is what we want.
+        !sliceDepLineageLookup(scopedSlice).has(_sl.lineageId)
+      ) {
+        throw new Error(
+          `Slice "${sl.name}" is not included in the dependencies of the scoped slice "${scopedSlice?.name}"`,
+        );
+      }
+    }
+
+    let result = storeState._getDirectSliceState(sl.key);
+    if (!result.found) {
+      throw new Error(`Slice "${sl.key}" not found in store`);
+    }
+    return result.value;
+  }
+
+  static getSlices(storeState: StoreState<any>): BareSlice[] {
+    return storeState._slices;
+  }
+
+  protected slicesCurrentState: Record<SliceKey, unknown> = Object.create(null);
+
+  public readonly sliceLookupByKey: SliceLookupByKey;
+  public readonly slicesLookupByLineage: SliceLookupByLineage;
+
   constructor(
-    public readonly _slices: BareSlice[],
+    protected readonly _slices: BareSlice[],
     public opts?: StoreStateOptions,
   ) {
     this.sliceLookupByKey = createSliceLookup(_slices);
     this.slicesLookupByLineage = createSliceLineageLookup(_slices);
   }
 
-  applyTransaction(tx: Transaction<string, unknown[]>): InternalStoreState {
+  applyTransaction(
+    tx: Transaction<RegSlices['name'], unknown[]>,
+  ): StoreState<RegSlices> {
     const newState = { ...this.slicesCurrentState };
-    const newStoreState = this._fork(newState);
+    const newStoreState = StoreState.fork(this, newState);
 
     let found = false;
 
@@ -138,37 +182,6 @@ export class InternalStoreState implements StoreState<any> {
     return newStoreState;
   }
 
-  // TODO make sure this works with mapping keys
-  getSliceState(_sl: BareSlice): unknown {
-    const sl = this.slicesLookupByLineage[_sl.lineageId];
-
-    if (!sl) {
-      throw new Error(`Slice "${_sl.name}" not found in store`);
-    }
-
-    const scopeId = this.opts?.scoped;
-    if (scopeId && scopeId !== _sl.lineageId) {
-      const scopedSlice = this.slicesLookupByLineage[scopeId];
-
-      if (
-        !scopedSlice ||
-        // TODO make this deep dependency lookup? this is because they can in theory pass it around
-        // so in theory a deep dependency lookup is what we want.
-        !sliceDepLineageLookup(scopedSlice).has(_sl.lineageId)
-      ) {
-        throw new Error(
-          `Slice "${sl.name}" is not included in the dependencies of the scoped slice "${scopedSlice?.name}"`,
-        );
-      }
-    }
-
-    let result = this._getDirectSliceState(sl.key);
-    if (!result.found) {
-      throw new Error(`Slice "${sl.key}" not found in store`);
-    }
-    return result.value;
-  }
-
   private _getDirectSliceState(key: SliceKey) {
     if (Object.prototype.hasOwnProperty.call(this.slicesCurrentState, key)) {
       return {
@@ -178,28 +191,5 @@ export class InternalStoreState implements StoreState<any> {
     }
 
     return { found: false, value: undefined };
-  }
-
-  private _fork(
-    slicesState: Record<string, unknown>,
-    opts?: Partial<StoreStateOptions>,
-  ): InternalStoreState {
-    const newOpts = !opts
-      ? this.opts
-      : {
-          ...this.opts,
-          ...opts,
-        };
-
-    const newInstance = new InternalStoreState(this._slices, newOpts);
-    newInstance.slicesCurrentState = slicesState;
-    return newInstance;
-  }
-
-  scoped(lineageId: LineageId): InternalStoreState {
-    return this._fork(this.slicesCurrentState, {
-      ...this.opts,
-      scoped: lineageId,
-    });
   }
 }

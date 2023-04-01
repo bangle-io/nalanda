@@ -155,7 +155,7 @@ export class Slice<
   getState<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, N, SState>,
   ): IfSliceRegistered<SState, N, SS> {
-    return storeState.getSliceState(this as AnySlice);
+    return StoreState.getSliceState(storeState, this as AnySlice) as any;
   }
 
   resolveSelector<SState extends StoreState<any>>(

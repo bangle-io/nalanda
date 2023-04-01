@@ -1,7 +1,7 @@
 import { createSlice } from '../create';
 import { expectType, rejectAny } from '../internal-types';
 import { Slice } from '../slice';
-import { InternalStoreState } from '../state';
+import { StoreState } from '../state';
 
 const testSlice0 = new Slice({
   name: 'testSlice0',
@@ -52,16 +52,10 @@ const testSlice3 = createSlice([testSlice1, testSlice2], {
 
       let t2State = testSlice2.getState(storeState);
       expectType<{ football: boolean }>(t2State);
-      let t2SliceState = storeState.getSliceState(testSlice2);
-      expectType<{ football: boolean }>(t2SliceState);
 
       //   @ts-expect-error - since not registered
       let t0State = testSlice0.getState(storeState);
       expectType<never>(t0State);
-      //   @ts-expect-error - since not registered
-      let t0SliceState = storeState.getSliceState(testSlice0);
-
-      expectType<{ name: string }>(state);
 
       return { ...state, name: prefix + state.name };
     },
@@ -128,20 +122,14 @@ describe('types', () => {
         majin: state.val + 1,
       }),
     });
-    const storeState = InternalStoreState.create([
-      testSlice0,
-      testSlice1,
-      mySlice,
-    ]);
+    const storeState = StoreState.create([testSlice0, testSlice1, mySlice]);
 
     let result = mySlice.getState(storeState);
 
     expectType<number>(result.val);
 
     let res2 = testSlice1.getState(storeState);
-    let res2Reverse = storeState.getSliceState(testSlice1);
     expectType<{ a: number }>(res2);
-    expectType<{ a: number }>(res2Reverse);
 
     expect(() => {
       // @ts-expect-error - since not registered
@@ -151,8 +139,7 @@ describe('types', () => {
     );
 
     expect(() => {
-      // @ts-expect-error - since not registered
-      let result2Reverse = storeState.getSliceState(testSlice2);
+      let result2Reverse = StoreState.getSliceState(storeState, testSlice2);
     }).toThrowErrorMatchingInlineSnapshot(
       `"Slice "testSlice2" not found in store"`,
     );

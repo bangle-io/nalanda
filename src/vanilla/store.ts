@@ -2,7 +2,7 @@ import type { Scheduler } from './effect';
 import { SideEffectsManager } from './effect';
 
 import type { BareSlice } from './slice';
-import { InternalStoreState, sliceDepLineageLookup, StoreState } from './state';
+import { sliceDepLineageLookup, StoreState } from './state';
 import {
   DebugFunc,
   Transaction,
@@ -32,8 +32,7 @@ export class Store implements BareStore<any> {
 
         return;
       }
-
-      store.updateState(newState, tx);
+      Store.updateState(store, newState, tx);
     },
     scheduler,
     state,
@@ -48,19 +47,19 @@ export class Store implements BareStore<any> {
     storeName: string;
     debug?: DebugFunc | undefined;
     // A record of slice name and the override state for that slice.
-    // See InternalStoreState.create for more info.
+    // See StoreState.create for more info.
     initStateOverride?: Record<string, unknown>;
   }): BareStore<SB> {
-    if (!(state instanceof InternalStoreState)) {
+    if (!(state instanceof StoreState)) {
       if (Array.isArray(state)) {
         let slices: BareSlice[] = expandSlices(state);
 
-        state = InternalStoreState.create(slices, initStateOverride);
+        state = StoreState.create(slices, initStateOverride);
       }
     }
 
     const store = new Store(
-      state as InternalStoreState,
+      state,
       storeName,
       dispatchTx,
       scheduler,
@@ -69,6 +68,41 @@ export class Store implements BareStore<any> {
     );
 
     return store;
+  }
+
+  /**
+   * Create a new store that only has access to the given slices
+   * @param slices
+   * @returns
+   */
+  static getReducedStore<SB extends BareSlice>(
+    store: BareStore<any>,
+    dispatcherSlice?: BareSlice,
+  ): ReducedStore<SB> {
+    return new ReducedStore(store, dispatcherSlice);
+  }
+
+  static updateState(
+    store: Store,
+    newState: StoreState,
+    tx?: Transaction<any, any>,
+  ) {
+    if (store._destroyed) {
+      return;
+    }
+
+    if (store._debug && tx) {
+      store._debug(txLog(tx));
+    }
+
+    store.state = newState;
+
+    if (tx) {
+      store._effectsManager?.queueSideEffectExecution(store, {
+        lineageId: tx.targetSliceLineage,
+        actionId: tx.actionId,
+      });
+    }
   }
 
   dispatch = (tx: Transaction<string, any>, dispatchInfo?: string) => {
@@ -100,10 +134,10 @@ export class Store implements BareStore<any> {
   private _abortController = new AbortController();
   private _destroyed = false;
 
-  private _effectsManager: SideEffectsManager | undefined;
+  protected _effectsManager: SideEffectsManager | undefined;
 
   constructor(
-    public state: InternalStoreState,
+    public state: StoreState,
     public storeName: string,
     private _dispatchTx: DispatchTx<any>,
     scheduler?: Scheduler,
@@ -112,7 +146,7 @@ export class Store implements BareStore<any> {
   ) {
     if (!disableSideEffects) {
       this._effectsManager = new SideEffectsManager(
-        state._slices,
+        StoreState.getSlices(state),
         state,
         scheduler,
         this._debug,
@@ -148,36 +182,6 @@ export class Store implements BareStore<any> {
     this._abortController.abort();
   }
 
-  /**
-   * Create a new store that only has access to the given slices
-   * @param slices
-   * @returns
-   */
-  getReducedStore<SB extends BareSlice>(
-    dispatcherSlice?: BareSlice,
-  ): ReducedStore<SB> {
-    return new ReducedStore(this, dispatcherSlice);
-  }
-
-  updateState(newState: InternalStoreState, tx?: Transaction<any, any>) {
-    if (this._destroyed) {
-      return;
-    }
-
-    if (this._debug && tx) {
-      this._debug(txLog(tx));
-    }
-
-    this.state = newState;
-
-    if (tx) {
-      this._effectsManager?.queueSideEffectExecution(this, {
-        lineageId: tx.targetSliceLineage,
-        actionId: tx.actionId,
-      });
-    }
-  }
-
   // TODO: this will be removed once we have better way of adding dynamic slices
   _tempRegisterOnSyncChange(sl: BareSlice, cb: () => void) {
     return (
@@ -195,7 +199,7 @@ export class ReducedStore<SB extends BareSlice> {
         !sliceDepLineageLookup(this.dispatcherSlice).has(tx.sourceSliceLineage)
       ) {
         const sourceSlice =
-          this.internalStoreState.slicesLookupByLineage[tx.sourceSliceLineage];
+          this.storeState.slicesLookupByLineage[tx.sourceSliceLineage];
         throw new Error(
           `Dispatch not allowed! Slice "${this.dispatcherSlice.name}" does not include "${sourceSlice?.name}" in its dependency.`,
         );
@@ -223,16 +227,16 @@ export class ReducedStore<SB extends BareSlice> {
     return this._store.destroyed;
   }
 
-  private get internalStoreState(): InternalStoreState {
-    return this._store.state as InternalStoreState;
+  private get storeState(): StoreState {
+    return this._store.state;
   }
 
   get state(): StoreState<SB> {
     if (this.dispatcherSlice) {
-      return this.internalStoreState.scoped(this.dispatcherSlice.lineageId);
+      return StoreState.scoped(this.storeState, this.dispatcherSlice.lineageId);
     }
 
-    return this.internalStoreState;
+    return this.storeState;
   }
 
   destroy() {
