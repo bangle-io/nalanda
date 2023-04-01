@@ -60,8 +60,16 @@ export class Transaction<N extends string, P extends unknown[]> {
 
   constructor(
     public readonly config: {
+      /**
+       * The source slice where the transaction is created.
+       * For example calling slice1.action.foo() will create a transaction with sourceSliceName = 'slice1'
+       */
       sourceSliceLineage?: LineageId | undefined;
       sourceSliceName: N;
+      /**
+       * The target slice where the transaction is dispatched. It's should be same as source slice unless
+       * you want to dispatch the transaction to a different slice.
+       */
       targetSliceLineage: LineageId;
       payload: P;
       actionId: string;

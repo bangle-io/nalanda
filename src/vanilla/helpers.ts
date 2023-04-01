@@ -93,7 +93,7 @@ export function flattenReverseDependencies(
 export function calcReverseDependencies(
   slices: BareSlice[],
 ): Record<LineageId, Set<LineageId>> {
-  let reverseDependencies: Record<LineageId, Set<LineageId>> = {};
+  const reverseDependencies: Record<LineageId, Set<LineageId>> = {};
 
   for (const slice of slices) {
     for (const dep of slice.spec.dependencies) {
@@ -131,10 +131,7 @@ export function getActionBuilderByKey(
   key: SliceKey,
   actionId: string,
 ): undefined | ActionBuilder<any[], any, any> {
-  const slice: undefined | Slice<string, any, any, any, VoidFn> = getSliceByKey(
-    store,
-    key,
-  );
+  const slice = getSliceByKey(store, key);
 
   return slice?.a?.[actionId];
 }

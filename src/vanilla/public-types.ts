@@ -1,4 +1,4 @@
-import { VoidFn } from './internal-types';
+import { AnyFn, VoidFn } from './internal-types';
 import type { BareSlice, Slice } from './slice';
 import type { StoreState } from './state';
 import type { Transaction } from './transaction';
@@ -17,9 +17,9 @@ export type ActionBuilder<P extends any[], SS, DS extends BareSlice> = {
   metadata?: Record<string | symbol, any>;
 };
 
-export type AnySlice = Slice<string, any, any, {}, VoidFn>;
+export type AnySlice = Slice<string, any, any, any, AnyFn>;
 
-export type OpaqueSlice<N extends string> = Slice<N, {}, never, {}, () => void>;
+export type OpaqueSlice<N extends string> = Slice<N, {}, never, {}, VoidFn>;
 
 export interface BareStore<SL extends BareSlice> {
   state: StoreState<SL>;
