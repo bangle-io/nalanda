@@ -100,9 +100,10 @@ export function mergeAll<N extends string, SL extends AnySlice>(
         const sliceState = slice.getState(storeState as StoreState<any>);
 
         let result = selector(sliceState, storeState);
-
         if (isPlainObject(result)) {
           Object.assign(selectorStateRecord, result);
+        } else if (result === undefined) {
+          // ignore undefined
         } else {
           console.warn(
             `The selector of slice "${slice.name}" returned a non-plain object. This is not supported.`,

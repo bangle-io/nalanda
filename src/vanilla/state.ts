@@ -1,5 +1,5 @@
 import { weakCache } from './helpers';
-import { LineageId, SliceKey } from './internal-types';
+import { LineageId } from './internal-types';
 import { BareSlice } from './slice';
 import { validateSlices } from './slices-helpers';
 import { Transaction } from './transaction';
@@ -18,12 +18,8 @@ interface StoreStateOptions {
   scoped?: LineageId;
 }
 
-export type SliceLookupByKey = Record<SliceKey, BareSlice>;
 export type SliceLookupByLineage = Record<LineageId, BareSlice>;
 
-const createSliceLookup = weakCache((slices: BareSlice[]) => {
-  return Object.fromEntries(slices.map((s) => [s.key, s]));
-});
 const createSliceLineageLookup = weakCache(
   (slices: BareSlice[]): SliceLookupByLineage => {
     return Object.fromEntries(slices.map((s) => [s.lineageId, s]));
@@ -47,27 +43,24 @@ export class StoreState<RegSlices extends BareSlice = any> {
    */
   static create<SL extends BareSlice>(
     slices: SL[],
-    // TODO make this more precise by using lineageId or key
-    initStateOverride?: Record<string, unknown>,
+    initStateOverride?: Record<LineageId, unknown>,
   ): StoreState<SL> {
     validateSlices(slices);
 
     const instance = new StoreState(slices);
 
     for (const slice of slices) {
-      instance.slicesCurrentState[slice.key] = slice.initState;
+      instance.slicesCurrentState[slice.lineageId] = slice.initState;
     }
 
     if (initStateOverride) {
       const overriddenSlices = new Set<string>(Object.keys(initStateOverride));
       for (const slice of slices) {
-        if (
-          Object.prototype.hasOwnProperty.call(initStateOverride, slice.name)
-        ) {
-          instance.slicesCurrentState[slice.key] =
-            initStateOverride[slice.name];
+        if (initStateOverride[slice.lineageId] !== undefined) {
+          instance.slicesCurrentState[slice.lineageId] =
+            initStateOverride[slice.lineageId];
 
-          overriddenSlices.delete(slice.name);
+          overriddenSlices.delete(slice.lineageId);
         }
       }
       if (overriddenSlices.size > 0) {
@@ -101,7 +94,7 @@ export class StoreState<RegSlices extends BareSlice = any> {
   }
 
   static getSliceState(storeState: StoreState<any>, _sl: BareSlice): unknown {
-    const sl = storeState.slicesLookupByLineage[_sl.lineageId];
+    const sl = storeState.slicesLookup[_sl.lineageId];
 
     if (!sl) {
       throw new Error(`Slice "${_sl.name}" not found in store`);
@@ -109,7 +102,7 @@ export class StoreState<RegSlices extends BareSlice = any> {
 
     const scopeId = storeState.opts?.scoped;
     if (scopeId && scopeId !== _sl.lineageId) {
-      const scopedSlice = storeState.slicesLookupByLineage[scopeId];
+      const scopedSlice = storeState.slicesLookup[scopeId];
 
       if (
         !scopedSlice ||
@@ -123,9 +116,11 @@ export class StoreState<RegSlices extends BareSlice = any> {
       }
     }
 
-    let result = storeState._getDirectSliceState(sl.key);
+    let result = storeState._getDirectSliceState(sl.lineageId);
     if (!result.found) {
-      throw new Error(`Slice "${sl.key}" not found in store`);
+      throw new Error(
+        `Slice "${sl.name}" "${sl.lineageId}" not found in store`,
+      );
     }
     return result.value;
   }
@@ -134,17 +129,16 @@ export class StoreState<RegSlices extends BareSlice = any> {
     return storeState._slices;
   }
 
-  protected slicesCurrentState: Record<SliceKey, unknown> = Object.create(null);
+  protected slicesCurrentState: Record<LineageId, unknown> =
+    Object.create(null);
 
-  public readonly sliceLookupByKey: SliceLookupByKey;
-  public readonly slicesLookupByLineage: SliceLookupByLineage;
+  public readonly slicesLookup: SliceLookupByLineage;
 
   constructor(
     protected readonly _slices: BareSlice[],
     public opts?: StoreStateOptions,
   ) {
-    this.sliceLookupByKey = createSliceLookup(_slices);
-    this.slicesLookupByLineage = createSliceLineageLookup(_slices);
+    this.slicesLookup = createSliceLineageLookup(_slices);
   }
 
   applyTransaction(
@@ -159,7 +153,7 @@ export class StoreState<RegSlices extends BareSlice = any> {
       if (slice.lineageId === tx.targetSliceLineage) {
         found = true;
 
-        const sliceState = newStoreState._getDirectSliceState(slice.key);
+        const sliceState = newStoreState._getDirectSliceState(slice.lineageId);
 
         if (!sliceState.found) {
           throw new Error(
@@ -167,7 +161,7 @@ export class StoreState<RegSlices extends BareSlice = any> {
           );
         }
 
-        newState[slice.key] = slice.applyTx(
+        newState[slice.lineageId] = slice.applyTx(
           sliceState.value,
           newStoreState,
           tx,
@@ -182,11 +176,13 @@ export class StoreState<RegSlices extends BareSlice = any> {
     return newStoreState;
   }
 
-  private _getDirectSliceState(key: SliceKey) {
-    if (Object.prototype.hasOwnProperty.call(this.slicesCurrentState, key)) {
+  private _getDirectSliceState(lineageId: LineageId) {
+    if (
+      Object.prototype.hasOwnProperty.call(this.slicesCurrentState, lineageId)
+    ) {
       return {
         found: true,
-        value: this.slicesCurrentState[key]!,
+        value: this.slicesCurrentState[lineageId]!,
       };
     }
 

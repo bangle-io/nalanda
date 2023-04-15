@@ -7,7 +7,7 @@ import {
   SliceKey,
 } from '../vanilla/internal-types';
 import { AnySlice } from '../vanilla/public-types';
-import { BareSlice } from '../vanilla/slice';
+import { BareSlice, Slice } from '../vanilla/slice';
 import { expandSlices } from '../vanilla/slices-helpers';
 import { StoreState } from '../vanilla/state';
 import { DispatchTx } from '../vanilla/store';
@@ -682,15 +682,22 @@ function validateMainInfo(
 }
 
 function getSliceKey(store: Store, lineageId: LineageId): SliceKey {
-  let key = store.state.slicesLookupByLineage[lineageId]?.key;
+  let key = store.state.slicesLookup[lineageId]?.key;
 
   assertNotUndefined(key, `Slice with lineage "${lineageId}" not found`);
 
   return key;
 }
 
+const lookupByKey = weakCache(
+  (slices: BareSlice[]): Record<SliceKey, BareSlice> => {
+    return Object.fromEntries(slices.map((s) => [s.key, s]));
+  },
+);
+
 function getLineageId(store: Store, sliceKey: SliceKey): LineageId {
-  let lineageId = store.state.sliceLookupByKey[sliceKey]?.lineageId;
+  let lineageId = lookupByKey(StoreState.getSlices(store.state))[sliceKey]
+    ?.lineageId;
 
   assertNotUndefined(lineageId, `Slice with key "${sliceKey}" not found`);
 

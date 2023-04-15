@@ -1,7 +1,6 @@
-import { LineageId, SliceKey } from './internal-types';
-import type { ActionBuilder, AnySlice, BareStore } from './public-types';
+import { LineageId } from './internal-types';
+import type { AnySlice } from './public-types';
 import type { BareSlice } from './slice';
-import type { Store } from './store';
 
 export function mapObjectValues<T, U>(
   obj: Record<string, T>,
@@ -117,23 +116,6 @@ export function changeBareSlice<SL extends BareSlice>(
   cb: (sl: AnySlice) => AnySlice,
 ): SL {
   return cb(slice as unknown as AnySlice) as unknown as SL;
-}
-
-export function getSliceByKey(
-  store: BareStore<any> | Store,
-  key: SliceKey,
-): AnySlice | undefined {
-  return (store as Store).state.sliceLookupByKey[key] as AnySlice;
-}
-
-export function getActionBuilderByKey(
-  store: BareStore<any> | Store,
-  key: SliceKey,
-  actionId: string,
-): undefined | ActionBuilder<any[], any, any> {
-  const slice = getSliceByKey(store, key);
-
-  return slice?.a?.[actionId];
 }
 
 export function isPlainObject(value: any) {

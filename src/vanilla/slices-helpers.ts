@@ -47,10 +47,12 @@ function checkUnique<T>(entities: T[]): T[] | undefined {
 function checkUniqDependency(slices: BareSlice[]) {
   for (const slice of slices) {
     const dependencies = slice.spec.dependencies;
-    if (new Set(dependencies.map((d) => d.key)).size !== dependencies.length) {
+    if (
+      new Set(dependencies.map((d) => d.lineageId)).size !== dependencies.length
+    ) {
       throw new Error(
-        `Slice "${slice.key}" has duplicate dependencies: ${dependencies
-          .map((d) => d.key)
+        `Slice "${slice.name}" has duplicate dependencies: ${dependencies
+          .map((d) => d.lineageId)
           .join(', ')}`,
       );
     }
@@ -58,20 +60,20 @@ function checkUniqDependency(slices: BareSlice[]) {
 }
 
 function checkDependencyOrder(slices: BareSlice[]) {
-  let seenKeys = new Set<string>();
+  let seenLineageIds = new Set<string>();
   for (const slice of slices) {
     const dependencies = slice.spec.dependencies;
     if (dependencies !== undefined) {
-      const depKeys = dependencies.map((d) => d.key);
+      const depKeys = dependencies.map((d) => d.lineageId);
       for (const depKey of depKeys) {
-        if (!seenKeys.has(depKey)) {
+        if (!seenLineageIds.has(depKey)) {
           throw new Error(
-            `Slice "${slice.key}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
+            `Slice "${slice.lineageId}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
           );
         }
       }
     }
-    seenKeys.add(slice.key);
+    seenLineageIds.add(slice.lineageId);
   }
 }
 
@@ -80,19 +82,19 @@ function circularCheck(slices: BareSlice[]) {
   const visited = new Set<string>();
 
   const checkCycle = (slice: BareSlice): boolean => {
-    const key = slice.key;
-    if (stack.has(key)) return true;
-    if (visited.has(key)) return false;
+    const lineageId = slice.lineageId;
+    if (stack.has(lineageId)) return true;
+    if (visited.has(lineageId)) return false;
 
-    visited.add(key);
-    stack.add(key);
+    visited.add(lineageId);
+    stack.add(lineageId);
 
     for (const dep of slice.spec.dependencies) {
       if (checkCycle(dep)) {
         return true;
       }
     }
-    stack.delete(key);
+    stack.delete(lineageId);
     return false;
   };
 
@@ -100,11 +102,11 @@ function circularCheck(slices: BareSlice[]) {
     const cycle = checkCycle(slice);
     if (cycle) {
       const path = [...stack];
-      path.push(slice.key);
+      path.push(slice.lineageId);
 
       throw new Error(
         `Circular dependency detected in slice "${
-          slice.key
+          slice.lineageId
         }" with path ${path.join(' ->')}`,
       );
     }

@@ -109,12 +109,12 @@ export class Store implements BareStore<any> {
     if (this._destroyed) {
       return;
     }
-    if (!this.state.slicesLookupByLineage[tx.targetSliceLineage]) {
+    if (!this.state.slicesLookup[tx.targetSliceLineage]) {
       throw new Error(
         `Cannot dispatch transaction as slice "${tx.targetSliceLineage}" is not registered in Store`,
       );
     }
-    if (!this.state.slicesLookupByLineage[tx.sourceSliceLineage]) {
+    if (!this.state.slicesLookup[tx.sourceSliceLineage]) {
       throw new Error(
         `Cannot dispatch transaction as slice "${tx.sourceSliceLineage}" is not registered in Store`,
       );
@@ -198,8 +198,7 @@ export class ReducedStore<SB extends BareSlice> {
         tx.sourceSliceLineage !== this.dispatcherSlice.lineageId &&
         !sliceDepLineageLookup(this.dispatcherSlice).has(tx.sourceSliceLineage)
       ) {
-        const sourceSlice =
-          this.storeState.slicesLookupByLineage[tx.sourceSliceLineage];
+        const sourceSlice = this.storeState.slicesLookup[tx.sourceSliceLineage];
         throw new Error(
           `Dispatch not allowed! Slice "${this.dispatcherSlice.name}" does not include "${sourceSlice?.name}" in its dependency.`,
         );

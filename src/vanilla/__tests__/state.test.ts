@@ -1,6 +1,6 @@
 import { testOverrideDependencies } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
-import { expectType } from '../internal-types';
+import { createLineageId, expectType } from '../internal-types';
 import { checkUniqueLineage } from '../slices-helpers';
 import { StoreState } from '../state';
 import { Transaction } from '../transaction';
@@ -226,14 +226,14 @@ describe('test override helper', () => {
     });
 
     let newState1 = StoreState.create([slice1, slice2], {
-      test2: { num: 99 },
+      [slice2.lineageId]: { num: 99 },
     });
 
     expect(slice1.getState(newState1)).toEqual({ num: 1 });
     expect(slice2.getState(newState1)).toEqual({ num: 99 });
 
     let newState2 = StoreState.create([slice1, slice2], {
-      test1: { num: -1 },
+      [slice1.lineageId]: { num: -1 },
     });
 
     expect(slice1.getState(newState2)).toEqual({ num: -1 });
@@ -275,23 +275,14 @@ describe('State creation', () => {
   test('empty slices', () => {
     const appState = StoreState.create([]);
 
-    expect(appState).toMatchInlineSnapshot(
-      {
-        _slices: expect.any(Array),
-        slicesCurrentState: expect.any(Object),
-        sliceLookupByKey: expect.any(Object),
-        slicesLookupByLineage: expect.any(Object),
-      } as any,
-      `
-      {
-        "_slices": Any<Array>,
+    expect(appState).toMatchInlineSnapshot(`
+      StoreState {
+        "_slices": [],
         "opts": undefined,
-        "sliceLookupByKey": Any<Object>,
-        "slicesCurrentState": Any<Object>,
-        "slicesLookupByLineage": Any<Object>,
+        "slicesCurrentState": {},
+        "slicesLookup": {},
       }
-    `,
-    );
+    `);
   });
 
   test('with a slice', () => {
@@ -306,10 +297,9 @@ describe('State creation', () => {
     expect(appState).toEqual({
       _slices: expect.any(Array),
       opts: undefined,
-      sliceLookupByKey: expect.any(Object),
-      slicesLookupByLineage: { [mySlice.lineageId]: expect.any(Object) },
+      slicesLookup: { [mySlice.lineageId]: expect.any(Object) },
       slicesCurrentState: {
-        key_mySlice: {
+        [mySlice.lineageId]: {
           val: null,
         },
       },
@@ -486,7 +476,7 @@ describe('Override init state', () => {
   });
   test('can override state', () => {
     const appState = StoreState.create([mySlice1, mySlice2], {
-      mySlice1: { num1: 5 },
+      [mySlice1.lineageId]: { num1: 5 },
     });
 
     expect(mySlice1.getState(appState).num1).toBe(5);
@@ -495,11 +485,11 @@ describe('Override init state', () => {
   test('throws error if slice not found', () => {
     expect(() =>
       StoreState.create([mySlice1, mySlice2], {
-        mySlice1: { num1: 5 },
-        xSlice: { num1: 5 },
+        [mySlice1.lineageId]: { num1: 5 },
+        [createLineageId('xSlice')]: { num1: 5 },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Some slice names (xSlice) in initStateOverride were not found in the provided slices"`,
+      `"Some slice names (l_xSlice$) in initStateOverride were not found in the provided slices"`,
     );
   });
 });

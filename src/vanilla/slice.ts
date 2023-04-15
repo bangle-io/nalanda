@@ -8,13 +8,7 @@ import {
   NoInfer,
   SliceKey,
 } from './internal-types';
-import {
-  Effect,
-  SelectorFn,
-  ActionBuilder,
-  AnySlice,
-  TxCreator,
-} from './public-types';
+import { Effect, SelectorFn, AnySlice, TxCreator } from './public-types';
 import { StoreState } from './state';
 import { Transaction } from './transaction';
 import type { Simplify } from 'type-fest';
@@ -157,9 +151,6 @@ export class Slice<
   resolveSelector<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, N, SState>,
   ): ReturnType<SE> {
-    if (typeof this.spec.selector !== 'function') {
-      console.log(this.lineageId, this.spec.selector);
-    }
     return this.spec.selector(this.getState(storeState), storeState);
   }
 
@@ -257,12 +248,3 @@ export class Slice<
     });
   }
 }
-
-export type ActionBuilderToTxCreator<
-  N extends string,
-  A extends Record<string, ActionBuilder<any[], any, any>>,
-> = {
-  [KK in keyof A]: A[KK] extends (...param: infer P) => any
-    ? TxCreator<N, P>
-    : never;
-};
