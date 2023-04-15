@@ -144,7 +144,7 @@ describe('dependencies', () => {
           mySlice2,
         ]),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Circular dependency detected in slice "key_test-1" with path key_test-1 ->key_my-slice-2 ->key_my-slice-1 ->key_test-1"`,
+        `"Circular dependency detected in slice "l_test-1$" with path l_test-1$ ->l_my-slice-2$ ->l_my-slice-1$ ->l_test-1$"`,
       );
     });
 
@@ -168,7 +168,7 @@ describe('dependencies', () => {
       expect(() =>
         StoreState.create([sl0, sl1, sl2, sl3, sl4]),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Circular dependency detected in slice "key_sl0" with path key_sl0 ->key_sl1 ->key_sl3 ->key_sl4 ->key_sl0"`,
+        `"Circular dependency detected in slice "l_sl0$" with path l_sl0$ ->l_sl1$ ->l_sl3$ ->l_sl4$ ->l_sl0$"`,
       );
     });
   });
@@ -822,7 +822,7 @@ describe('rolling up slices', () => {
       'l_test-3$',
     ]);
 
-    expect(expandSlices([sliceC]).map((r) => r.lineageId)).toEqual([
+    expect(expandSlices([sliceC]).slices.map((r) => r.lineageId)).toEqual([
       'l_sliceA$1',
       'l_test-1$',
       'l_test-2$',
@@ -830,5 +830,15 @@ describe('rolling up slices', () => {
       'l_sliceC$',
       'l_sliceB$1',
     ]);
+    expect(expandSlices([sliceC]).pathMap).toMatchInlineSnapshot(`
+      Map {
+        "l_sliceC$" => "sliceC",
+        "l_sliceA$1" => "sliceC.sliceA",
+        "l_test-3$" => "sliceC.sliceA.test-3",
+        "l_test-1$" => "sliceC.sliceA.test-3.test-1",
+        "l_test-2$" => "sliceC.sliceA.test-3.test-2",
+        "l_sliceB$1" => "sliceC.sliceB",
+      }
+    `);
   });
 });

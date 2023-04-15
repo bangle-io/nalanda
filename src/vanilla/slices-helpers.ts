@@ -1,20 +1,36 @@
 import { findDuplications } from './helpers';
+import { LineageId } from './internal-types';
 import { BareSlice } from './slice';
 
-export function expandSlices(slices: BareSlice[] = []): BareSlice[] {
-  return slices.flatMap((slice) => {
-    return [
-      ...expandSlices(slice.spec.beforeSlices),
-      slice,
-      ...expandSlices(slice.spec.afterSlices),
-    ];
-  });
+export function expandSlices(slices: BareSlice[] = []): {
+  slices: BareSlice[];
+  pathMap: Map<LineageId, string>;
+} {
+  const pathMap = new Map<LineageId, string>();
+
+  const expand = (
+    slices: BareSlice[] = [],
+    parentPrefix: string,
+  ): BareSlice[] => {
+    return slices.flatMap((slice) => {
+      const prefix = parentPrefix + slice.name;
+      pathMap.set(slice.lineageId, prefix);
+
+      return [
+        ...expand(slice.spec.beforeSlices, prefix + '.'),
+        slice,
+        ...expand(slice.spec.afterSlices, prefix + '.'),
+      ];
+    });
+  };
+
+  return { slices: expand(slices, ''), pathMap };
 }
 
 export function validateSlices(slices: BareSlice[]) {
+  checkUniqDependency(slices);
   checkUniqueKeys(slices);
   checkUniqueLineage(slices);
-  checkUniqDependency(slices);
   circularCheck(slices);
   checkDependencyOrder(slices);
 }

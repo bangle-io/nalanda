@@ -52,7 +52,7 @@ export class Store implements BareStore<any> {
   }): BareStore<SB> {
     if (!(state instanceof StoreState)) {
       if (Array.isArray(state)) {
-        let slices: BareSlice[] = expandSlices(state);
+        let slices: BareSlice[] = expandSlices(state).slices;
 
         state = StoreState.create(slices, initStateOverride);
       }

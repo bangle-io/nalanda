@@ -6,15 +6,13 @@ import {
   timeoutSchedular,
 } from '../../vanilla';
 import {
-  createSyncState,
   createSyncStore,
   SyncMessage,
-  sliceKeyToReplicaStoreLookup,
+  pathToReplicaStoreLookup,
 } from '../sync-store';
 import { BareSlice } from '../../vanilla/slice';
 import { changeEffect, syncChangeEffect } from '../../effects';
-import { StoreState } from '../../vanilla/state';
-import { abortableSetTimeout } from '../helpers';
+import { abortableSetTimeout, SyncManager } from '../helpers';
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
 }
@@ -244,7 +242,7 @@ describe('basic test', () => {
       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(0);
 
       expect(result.mainOnSyncError.mock.calls[0]?.[0]).toMatchInlineSnapshot(
-        `[Error: Invalid Sync setup. Slice "key_testSlice1" is defined in replica store "test-replica-store-1" but not in main store "test-main".]`,
+        `[Error: Invalid Sync setup. Slice "testSlice1" is defined in replica store "test-replica-store-1" but not in main store "test-main".]`,
       );
     });
   });
@@ -259,7 +257,7 @@ describe('basic test', () => {
         replica: {},
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Duplicate slice keys key_testSlice2"`,
+      `"Slices are not unique. Please ensure that slices have unique name."`,
     );
   });
 
@@ -273,7 +271,30 @@ describe('basic test', () => {
         },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Duplicate slice keys key_testSlice2"`,
+      `"Slices are not unique. Please ensure that slices have unique name."`,
+    );
+  });
+  test('erroring - in replica , a slice is defined in sync and other slice', () => {
+    expect(() =>
+      createBasicPair({
+        main: {},
+        replica: {
+          syncSlices: [
+            new Slice({
+              name: 'mySlice1',
+              initState: {},
+              actions: {},
+              dependencies: [],
+              selector: () => {},
+              reducer: (s) => s,
+              beforeSlices: [testSlice1, testSlice1],
+            }),
+          ],
+          slices: [testSlice2],
+        },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Slices are not unique. Please ensure that slices have unique name."`,
     );
   });
 
@@ -282,12 +303,12 @@ describe('basic test', () => {
   test('having a sync slice in main but no replica', async () => {
     const result = createBasicPair({
       main: {
-        syncSlices: [testSlice1],
         slices: [],
+        syncSlices: [testSlice1],
       },
       replica: {
-        syncSlices: [],
         slices: [testSlice2],
+        syncSlices: [],
       },
     });
 
@@ -302,6 +323,42 @@ describe('basic test', () => {
       counter: 1,
     });
     expect(result.sendMessages).toMatchSnapshot();
+  });
+
+  test('incorrect slice path results in error', async () => {
+    // testSlice1 is inside mySlice but the same order is not there in
+    // replica
+    const mySlice = new Slice({
+      name: 'mySlice',
+      initState: {},
+      actions: {},
+      dependencies: [],
+      selector: () => {},
+      reducer: (s) => s,
+      beforeSlices: [testSlice1],
+    });
+
+    const result = createBasicPair({
+      main: {
+        syncSlices: [mySlice],
+        slices: [testSlice2],
+      },
+      replica: {
+        syncSlices: [testSlice1],
+      },
+    });
+
+    await waitForExpect(() => {
+      expect(result.mainOnSyncError).toHaveBeenCalledTimes(1);
+      expect(result.replicaOnSyncError).toHaveBeenCalledTimes(1);
+    });
+
+    expect(result.mainOnSyncError.mock.calls[0]?.[0]).toMatchInlineSnapshot(
+      `[Error: Invalid Sync setup. Slice "testSlice1" is defined in replica store "test-replica-store-1" but not in main store "test-main".]`,
+    );
+    expect(result.replicaOnSyncError.mock.calls[0]?.[0]).toMatchInlineSnapshot(
+      `[Error: Handshake error]`,
+    );
   });
 
   test('additional slices work in main', async () => {
@@ -321,7 +378,7 @@ describe('basic test', () => {
         slices: [testSlice2],
       },
       replica: {
-        syncSlices: [testSlice1],
+        syncSlices: [mySlice],
       },
     });
 
@@ -657,7 +714,7 @@ describe('sync queuing', () => {
 
     expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
       body: {
-        targetSliceKey: 'key_testSlice1',
+        targetPath: 'testSlice1',
         tx: expect.objectContaining({
           actionId: 'increment',
         }),
@@ -759,7 +816,7 @@ describe('sync queuing', () => {
         tx: expect.objectContaining({
           actionId: 'increment',
         }),
-        targetSliceKey: 'key_testSlice1',
+        targetPath: 'testSlice1',
       },
       from: 'test-main',
       to: 'test-replica-store-1',
@@ -768,135 +825,126 @@ describe('sync queuing', () => {
   });
 });
 
-describe('createSyncState', () => {
+describe('SyncManager', () => {
   test('works', () => {
-    const result = createSyncState({
-      type: 'main',
-      syncSlices: [testSlice1],
+    const result = new SyncManager({
+      sync: {
+        type: 'main',
+        slices: [testSlice1],
+        replicaStores: [],
+        sendMessage: () => {},
+      },
       otherSlices: [testSlice2],
     });
 
-    expect(result.syncSliceKeys).toMatchInlineSnapshot(`
-      Set {
-        "key_testSlice1",
-      }
-    `);
-    expect(result.syncLineageIds).toMatchInlineSnapshot(`
-      Set {
-        "l_testSlice1$",
-      }
-    `);
-
-    expect(StoreState.getSlices(result.state).map((r) => r.key))
-      .toMatchInlineSnapshot(`
+    expect(result.syncSlices.map((r) => r.lineageId)).toMatchInlineSnapshot(`
       [
-        "key_testSlice1",
-        "key_testSlice2",
+        "l_testSlice1$",
+      ]
+    `);
+    expect(result.syncSlicePaths).toMatchInlineSnapshot(`
+      [
+        "testSlice1",
       ]
     `);
   });
 
   test('additional slice are expanded', () => {
-    const result = createSyncState({
-      type: 'main',
-      syncSlices: [
-        new Slice({
-          name: 'mySlice1',
-          initState: {},
-          actions: {},
-          dependencies: [],
-          selector: () => {},
-          reducer: (s) => s,
-          beforeSlices: [testSlice1],
-        }),
-      ],
-      otherSlices: [
-        new Slice({
-          name: 'mySlice2',
-          initState: {},
-          actions: {},
-          dependencies: [],
-          selector: () => {},
-          reducer: (s) => s,
-          beforeSlices: [testSlice2],
-        }),
-      ],
+    const result = new SyncManager({
+      sync: {
+        type: 'main',
+        slices: [
+          new Slice({
+            name: 'mySlice1',
+            initState: {},
+            actions: {},
+            dependencies: [],
+            selector: () => {},
+            reducer: (s) => s,
+            beforeSlices: [testSlice1],
+          }),
+        ],
+        replicaStores: [],
+        sendMessage: () => {},
+      },
+      otherSlices: [testSlice2],
     });
 
-    expect(result.syncSliceKeys).toMatchInlineSnapshot(`
-      Set {
-        "key_testSlice1",
-        "key_mySlice1",
-      }
-    `);
-    expect(result.syncLineageIds).toMatchInlineSnapshot(`
-      Set {
-        "l_testSlice1$",
-        "l_mySlice1$",
-      }
-    `);
-    expect(StoreState.getSlices(result.state).map((r) => r.key))
-      .toMatchInlineSnapshot(`
+    expect(result.syncSlicePaths).toMatchInlineSnapshot(`
       [
-        "key_testSlice1",
-        "key_mySlice1",
-        "key_testSlice2",
-        "key_mySlice2",
+        "mySlice1",
+        "mySlice1.testSlice1",
+      ]
+    `);
+    expect(result.otherSlices.map((r) => r.lineageId)).toMatchInlineSnapshot(`
+      [
+        "l_testSlice2$",
       ]
     `);
   });
 
   test('effects are removed in replica', () => {
-    const result = createSyncState({
-      type: 'replica',
-      syncSlices: [
-        new Slice({
-          name: 'mySlice1',
-          initState: {},
-          actions: {},
-          dependencies: [],
-          selector: () => {},
-          reducer: (s) => s,
-        }),
-        changeEffect('test-effect-1', {}, () => {}),
-      ],
+    const result = new SyncManager({
+      sync: {
+        type: 'replica',
+        mainStore: 'main-store',
+        slices: [
+          new Slice({
+            name: 'mySlice1',
+            initState: {},
+            actions: {},
+            dependencies: [],
+            selector: () => {},
+            reducer: (s) => s,
+          }),
+          changeEffect('test-effect-1', {}, () => {}),
+        ],
+        sendMessage: () => {},
+      },
       otherSlices: [changeEffect('test-effect-2', {}, () => {})],
     });
 
+    expect(result.syncSlices.map((r) => [r.lineageId, r.spec.effects])).toEqual(
+      [
+        [expect.stringMatching(/^l_mySlice1\$/), []],
+        [expect.stringMatching(/^l_test-effect-1\$/), []],
+      ],
+    );
     expect(
-      StoreState.getSlices(result.state).map((r) => [r.key, r.spec.effects]),
-    ).toEqual([
-      ['key_mySlice1', []],
-      ['key_test-effect-1', []],
+      result.otherSlices.map((r) => [r.lineageId, r.spec.effects]),
+    ).toEqual(
       // non sync slice effects are not removed
       [
-        'key_test-effect-2',
         [
-          expect.objectContaining({
-            destroy: expect.any(Function),
-            init: expect.any(Function),
-            update: expect.any(Function),
-          }),
+          'l_test-effect-2$',
+          [
+            expect.objectContaining({
+              destroy: expect.any(Function),
+              init: expect.any(Function),
+              update: expect.any(Function),
+              name: 'test-effect-2(changeEffect)',
+            }),
+          ],
         ],
       ],
-    ]);
+    );
   });
 });
 
 describe('sliceKeyToReplicaStoreLookup', () => {
   test('works', () => {
     expect(
-      sliceKeyToReplicaStoreLookup({
+      pathToReplicaStoreLookup({
         'store-a': {
           mainStoreName: 'main-store',
           storeName: 'store-a',
-          syncSliceKeys: ['key_testSlice1', 'key_testSlice2'],
+          syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
         },
 
         'store-b': {
           mainStoreName: 'main-store',
           storeName: 'store-b',
-          syncSliceKeys: ['key_testSlice1'],
+          syncSlicePaths: ['key_testSlice1'],
         },
       }),
     ).toEqual({
@@ -904,14 +952,14 @@ describe('sliceKeyToReplicaStoreLookup', () => {
       key_testSlice2: ['store-a'],
     });
 
-    expect(sliceKeyToReplicaStoreLookup({})).toEqual({});
+    expect(pathToReplicaStoreLookup({})).toEqual({});
 
     expect(
-      sliceKeyToReplicaStoreLookup({
+      pathToReplicaStoreLookup({
         'store-a': {
           mainStoreName: 'main-store',
           storeName: 'store-a',
-          syncSliceKeys: ['key_testSlice1', 'key_testSlice2'],
+          syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
         },
       }),
     ).toEqual({

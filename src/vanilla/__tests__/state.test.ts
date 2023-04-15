@@ -172,7 +172,7 @@ describe('validations', () => {
     expect(() => {
       StoreState.create([mySlice]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "l_test$4" has a dependency on Slice "l_test-dep$" which is either not registered or is registered after this slice."`,
     );
   });
 
@@ -193,7 +193,7 @@ describe('validations', () => {
     expect(() => {
       StoreState.create([mySlice, sliceDep]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "l_test$5" has a dependency on Slice "l_test-dep$1" which is either not registered or is registered after this slice."`,
     );
   });
 
