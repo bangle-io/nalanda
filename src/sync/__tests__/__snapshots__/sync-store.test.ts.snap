@@ -6,7 +6,7 @@ exports[`basic test additional slices work in main 1`] = `
     "body": {
       "mainStoreName": "test-main",
       "storeName": "test-replica-store-1",
-      "syncSlicePaths": [
+      "syncSliceIds": [
         "mySlice",
         "mySlice.testSlice1",
       ],
@@ -21,7 +21,7 @@ exports[`basic test additional slices work in main 1`] = `
         "test-replica-store-1",
       ],
       "storeName": "test-main",
-      "syncSlicePaths": [
+      "syncSliceIds": [
         "mySlice",
         "mySlice.testSlice1",
       ],
@@ -37,25 +37,15 @@ exports[`basic test additional slices work in main 1`] = `
   },
   {
     "body": {
-      "targetPath": "mySlice.testSlice1",
       "tx": {
         "actionId": "increment",
-        "config": {
-          "actionId": "increment",
-          "payload": [],
-          "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$",
-          "sourceSliceName": "testSlice1",
-          "targetSliceLineage": "l_<PURGED>$",
-        },
         "metadata": {
-          "_metadata": {
-            "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$ source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$",
-            "TX_META_STORE_NAME": "test-main",
-          },
+          "TX_META_STORE_NAME": "test-main",
         },
         "payload": [],
-        "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$",
-        "targetSliceLineage": "l_<PURGED>$",
+        "sourceSliceId": "mySlice.testSlice1",
+        "sourceSliceName": "testSlice1",
+        "targetSliceId": "mySlice.testSlice1",
         "uid": "<<UID>>",
       },
     },
@@ -72,7 +62,7 @@ exports[`basic test having a sync slice in main but no replica 1`] = `
     "body": {
       "mainStoreName": "test-main",
       "storeName": "test-replica-store-1",
-      "syncSlicePaths": [],
+      "syncSliceIds": [],
     },
     "from": "test-replica-store-1",
     "to": "test-main",
@@ -84,7 +74,7 @@ exports[`basic test having a sync slice in main but no replica 1`] = `
         "test-replica-store-1",
       ],
       "storeName": "test-main",
-      "syncSlicePaths": [
+      "syncSliceIds": [
         "testSlice1",
       ],
     },
@@ -164,7 +154,7 @@ exports[`basic test one slice sync - case 1 3`] = `
     "body": {
       "mainStoreName": "test-main",
       "storeName": "test-replica-store-1",
-      "syncSlicePaths": [
+      "syncSliceIds": [
         "testSlice1",
       ],
     },
@@ -178,7 +168,7 @@ exports[`basic test one slice sync - case 1 3`] = `
         "test-replica-store-1",
       ],
       "storeName": "test-main",
-      "syncSlicePaths": [
+      "syncSliceIds": [
         "testSlice1",
       ],
     },
@@ -193,25 +183,15 @@ exports[`basic test one slice sync - case 1 3`] = `
   },
   {
     "body": {
-      "targetPath": "testSlice1",
       "tx": {
         "actionId": "increment",
-        "config": {
-          "actionId": "increment",
-          "payload": [],
-          "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$1",
-          "sourceSliceName": "testSlice1",
-          "targetSliceLineage": "l_<PURGED>$1",
-        },
         "metadata": {
-          "_metadata": {
-            "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$1 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$1",
-            "TX_META_STORE_NAME": "test-main",
-          },
+          "TX_META_STORE_NAME": "test-main",
         },
         "payload": [],
-        "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$1",
-        "targetSliceLineage": "l_<PURGED>$1",
+        "sourceSliceId": "testSlice1",
+        "sourceSliceName": "testSlice1",
+        "targetSliceId": "testSlice1",
         "uid": "<<UID>>",
       },
     },
@@ -221,26 +201,16 @@ exports[`basic test one slice sync - case 1 3`] = `
   },
   {
     "body": {
-      "targetPath": "testSlice1",
       "tx": {
         "actionId": "increment",
-        "config": {
-          "actionId": "increment",
-          "payload": [],
-          "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$2",
-          "sourceSliceName": "testSlice1",
-          "targetSliceLineage": "l_<PURGED>$2",
-        },
         "metadata": {
-          "_metadata": {
-            "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$2 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$2",
-            "TX_META_DISPATCHER": "l_watch-in-main$",
-            "TX_META_STORE_NAME": "test-main",
-          },
+          "TX_META_DISPATCHER": "l_watch-in-main$",
+          "TX_META_STORE_NAME": "test-main",
         },
         "payload": [],
-        "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$2",
-        "targetSliceLineage": "l_<PURGED>$2",
+        "sourceSliceId": "testSlice1",
+        "sourceSliceName": "testSlice1",
+        "targetSliceId": "testSlice1",
         "uid": "<<UID>>",
       },
     },
@@ -315,7 +285,7 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
     "body": {
       "mainStoreName": "test-main",
       "storeName": "test-replica-store-1",
-      "syncSlicePaths": [
+      "syncSliceIds": [
         "testSlice1",
       ],
     },
@@ -329,7 +299,7 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
         "test-replica-store-1",
       ],
       "storeName": "test-main",
-      "syncSlicePaths": [
+      "syncSliceIds": [
         "testSlice1",
       ],
     },
@@ -344,25 +314,16 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
   },
   {
     "body": {
-      "targetPath": "testSlice1",
       "tx": {
         "actionId": "increment",
-        "config": {
-          "actionId": "increment",
-          "payload": [],
-          "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$8",
-          "sourceSliceName": "testSlice1",
-          "targetSliceLineage": "l_<PURGED>$11",
-        },
         "metadata": {
-          "_metadata": {
-            "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$11 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$8",
-            "TX_META_STORE_NAME": "test-main",
-          },
+          "TX_META_DESERIALIZED_FROM": "<txMetaDeserializedFrom>",
+          "TX_META_STORE_NAME": "test-main",
         },
         "payload": [],
-        "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$8",
-        "targetSliceLineage": "l_<PURGED>$11",
+        "sourceSliceId": "testSlice1",
+        "sourceSliceName": "testSlice1",
+        "targetSliceId": "testSlice1",
         "uid": "<<UID>>",
       },
     },
@@ -372,26 +333,17 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
   },
   {
     "body": {
-      "targetPath": "testSlice1",
       "tx": {
         "actionId": "increment",
-        "config": {
-          "actionId": "increment",
-          "payload": [],
-          "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$9",
-          "sourceSliceName": "testSlice1",
-          "targetSliceLineage": "l_<PURGED>$12",
-        },
         "metadata": {
-          "_metadata": {
-            "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$12 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$9",
-            "TX_META_DISPATCHER": "l_watch-in-main-store$",
-            "TX_META_STORE_NAME": "test-main",
-          },
+          "TX_META_DESERIALIZED_FROM": "<txMetaDeserializedFrom>",
+          "TX_META_DISPATCHER": "l_watch-in-main-store$",
+          "TX_META_STORE_NAME": "test-main",
         },
         "payload": [],
-        "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$9",
-        "targetSliceLineage": "l_<PURGED>$12",
+        "sourceSliceId": "testSlice1",
+        "sourceSliceName": "testSlice1",
+        "targetSliceId": "testSlice1",
         "uid": "<<UID>>",
       },
     },
@@ -401,26 +353,17 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
   },
   {
     "body": {
-      "targetPath": "testSlice1",
       "tx": {
         "actionId": "increment",
-        "config": {
-          "actionId": "increment",
-          "payload": [],
-          "sourceSliceLineage": "l_<FOREIGN_STORE(test-replica-store-1)>$3",
-          "sourceSliceName": "testSlice1",
-          "targetSliceLineage": "l_<PURGED>$13",
-        },
         "metadata": {
-          "_metadata": {
-            "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$13 source l_testSlice1$ -> l_<FOREIGN_STORE(test-replica-store-1)>$3",
-            "TX_META_DISPATCHER": "l_watch-in-replica-store$2",
-            "TX_META_STORE_NAME": "test-replica-store-1",
-          },
+          "TX_META_DESERIALIZED_FROM": "<txMetaDeserializedFrom>",
+          "TX_META_DISPATCHER": "l_watch-in-replica-store$2",
+          "TX_META_STORE_NAME": "test-replica-store-1",
         },
         "payload": [],
-        "sourceSliceLineage": "l_<FOREIGN_STORE(test-replica-store-1)>$3",
-        "targetSliceLineage": "l_<PURGED>$13",
+        "sourceSliceId": "testSlice1",
+        "sourceSliceName": "testSlice1",
+        "targetSliceId": "testSlice1",
         "uid": "<<UID>>",
       },
     },
@@ -430,26 +373,17 @@ exports[`sync queuing with a send delay in main & replica 1`] = `
   },
   {
     "body": {
-      "targetPath": "testSlice1",
       "tx": {
         "actionId": "increment",
-        "config": {
-          "actionId": "increment",
-          "payload": [],
-          "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$10",
-          "sourceSliceName": "testSlice1",
-          "targetSliceLineage": "l_<PURGED>$14",
-        },
         "metadata": {
-          "_metadata": {
-            "TX_META_CHANGE_LINEAGE": "target l_testSlice1$ -> l_<PURGED>$13 source l_testSlice1$ -> l_<FOREIGN_STORE(test-replica-store-1)>$3,target l_<PURGED>$13 -> l_testSlice1$,target l_testSlice1$ -> l_<PURGED>$14 source l_testSlice1$ -> l_<FOREIGN_STORE(test-main)>$10",
-            "TX_META_DISPATCHER": "l_watch-in-replica-store$2",
-            "TX_META_STORE_NAME": "test-replica-store-1",
-          },
+          "TX_META_DESERIALIZED_FROM": "<txMetaDeserializedFrom>",
+          "TX_META_DISPATCHER": "l_watch-in-replica-store$2",
+          "TX_META_STORE_NAME": "test-replica-store-1",
         },
         "payload": [],
-        "sourceSliceLineage": "l_<FOREIGN_STORE(test-main)>$10",
-        "targetSliceLineage": "l_<PURGED>$14",
+        "sourceSliceId": "testSlice1",
+        "sourceSliceName": "testSlice1",
+        "targetSliceId": "testSlice1",
         "uid": "<<UID>>",
       },
     },

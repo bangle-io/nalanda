@@ -133,3 +133,11 @@ export function isPlainObject(value: any) {
     !(Symbol.iterator in value)
   );
 }
+
+export function reverseMap<K, V>(map: Map<K, V>): Map<V, K> {
+  const reversed = new Map<V, K>();
+  for (const [key, value] of map) {
+    reversed.set(value, key);
+  }
+  return reversed;
+}

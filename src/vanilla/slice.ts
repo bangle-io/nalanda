@@ -111,9 +111,9 @@ export class Slice<
       lineageId: createLineageId(spec.name),
     },
   ) {
-    if (spec.name.includes('.')) {
+    if (spec.name.includes('.') || spec.name.includes('_')) {
       throw new Error(
-        `Slice name cannot contain a period. Please use a different name for slice "${spec.name}"`,
+        `Slice name cannot contain a period (.) or underscore (_). Please use a different name for slice "${spec.name}"`,
       );
     }
     // can only set slice key as a name when forking

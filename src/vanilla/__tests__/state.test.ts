@@ -278,9 +278,13 @@ describe('State creation', () => {
     expect(appState).toMatchInlineSnapshot(`
       StoreState {
         "_slices": [],
-        "opts": undefined,
+        "config": {
+          "lineageToStable": {},
+          "lookupByLineage": {},
+          "stableToLineage": {},
+        },
+        "opts": {},
         "slicesCurrentState": {},
-        "slicesLookup": {},
       }
     `);
   });
@@ -296,8 +300,16 @@ describe('State creation', () => {
     expect(mySlice.getState(appState)).toEqual({ val: null });
     expect(appState).toEqual({
       _slices: expect.any(Array),
-      opts: undefined,
-      slicesLookup: { [mySlice.lineageId]: expect.any(Object) },
+      opts: {},
+      config: {
+        stableToLineage: { [mySlice.name]: mySlice.lineageId },
+        lineageToStable: {
+          l_mySlice$: 'mySlice',
+        },
+        lookupByLineage: {
+          l_mySlice$: mySlice,
+        },
+      },
       slicesCurrentState: {
         [mySlice.lineageId]: {
           val: null,

@@ -1,7 +1,12 @@
+import { assertNotUndefined } from '../sync/helpers';
 import { weakCache } from './helpers';
-import { LineageId } from './internal-types';
+import { LineageId, StableSliceId } from './internal-types';
 import { BareSlice } from './slice';
-import { validateSlices } from './slices-helpers';
+import {
+  expandSlices,
+  validatePathMap,
+  validateSlices,
+} from './slices-helpers';
 import { Transaction } from './transaction';
 
 export type ResolveSliceIfRegistered<
@@ -13,18 +18,22 @@ export type ResolveSliceIfRegistered<
     : never
   : never;
 
-interface StoreStateOptions {
-  debug?: boolean;
-  scoped?: LineageId;
+interface StoreStateConfig {
+  readonly stableToLineage: Record<StableSliceId, LineageId>;
+  readonly lineageToStable: Record<LineageId, StableSliceId>;
+  readonly lookupByLineage: Record<LineageId, BareSlice>;
 }
 
-export type SliceLookupByLineage = Record<LineageId, BareSlice>;
+interface StoreStateOpts {
+  debug?: boolean;
+  scope?: LineageId;
+}
 
-const createSliceLineageLookup = weakCache(
-  (slices: BareSlice[]): SliceLookupByLineage => {
-    return Object.fromEntries(slices.map((s) => [s.lineageId, s]));
-  },
-);
+const createSliceLineageLookup = (
+  slices: BareSlice[],
+): StoreStateConfig['lookupByLineage'] => {
+  return Object.fromEntries(slices.map((s) => [s.lineageId, s]));
+};
 
 export const sliceDepLineageLookup = weakCache(
   (slice: BareSlice): Set<LineageId> => {
@@ -33,21 +42,20 @@ export const sliceDepLineageLookup = weakCache(
 );
 
 export class StoreState<RegSlices extends BareSlice = any> {
-  /**
-   *
-   * @param slices - the slices to use to create the store state
-   * @param initStateOverride - optional state to override the initial state of the slices
-   *                          Note! that this is a record of slice name and not slice key.
-   *                          If there are multiple slices with the same name, all of them will be overridden.
-   * @returns
-   */
-  static create<SL extends BareSlice>(
-    slices: SL[],
+  static createWithExpanded<SL extends BareSlice>(
+    expanded: ReturnType<typeof expandSlices>,
     initStateOverride?: Record<LineageId, unknown>,
   ): StoreState<SL> {
+    const { slices, pathMap, reversePathMap } = expanded;
     validateSlices(slices);
 
-    const instance = new StoreState(slices);
+    validatePathMap(pathMap, reversePathMap);
+
+    const instance = new StoreState(slices, {
+      lineageToStable: pathMap,
+      stableToLineage: reversePathMap,
+      lookupByLineage: createSliceLineageLookup(slices),
+    });
 
     for (const slice of slices) {
       instance.slicesCurrentState[slice.lineageId] = slice.initState;
@@ -75,34 +83,60 @@ export class StoreState<RegSlices extends BareSlice = any> {
     return instance;
   }
 
+  /**
+   *
+   * @param _slices - the slices to use to create the store state
+   * @param initStateOverride - optional state to override the initial state of the slices
+   *                          Note! that this is a record of slice name and not slice key.
+   *                          If there are multiple slices with the same name, all of them will be overridden.
+   * @returns
+   */
+  static create<SL extends BareSlice>(
+    slices: SL[],
+    initStateOverride?: Record<LineageId, unknown>,
+  ): StoreState<SL> {
+    return StoreState.createWithExpanded(
+      expandSlices(slices),
+      initStateOverride,
+    );
+  }
+
   static fork(
     store: StoreState,
     slicesState: Record<string, unknown> = store.slicesCurrentState,
-    opts: (opts: StoreStateOptions) => StoreStateOptions = (opts) => opts,
+    opts: (opts: StoreStateOpts) => StoreStateOpts = (opts) => opts,
   ): StoreState {
-    const newOpts = opts(store.opts || {});
-    const newInstance = new StoreState(store._slices, newOpts);
+    const newOpts = opts(store.opts);
+
+    const newInstance = new StoreState(store._slices, store.config, newOpts);
     newInstance.slicesCurrentState = slicesState;
     return newInstance;
   }
 
+  // scope the state to be only accessed by a specific slice
+  // and its dependencies
   static scoped(store: StoreState, lineageId: LineageId): StoreState {
-    return StoreState.fork(store, undefined, (opts) => ({
-      ...opts,
-      scoped: lineageId,
-    }));
+    return StoreState.fork(
+      store,
+      undefined,
+      (opts): StoreStateOpts => ({
+        ...opts,
+        scope: lineageId,
+      }),
+    );
   }
 
   static getSliceState(storeState: StoreState<any>, _sl: BareSlice): unknown {
-    const sl = storeState.slicesLookup[_sl.lineageId];
+    const sl = storeState.config.lookupByLineage[_sl.lineageId];
 
     if (!sl) {
       throw new Error(`Slice "${_sl.name}" not found in store`);
     }
 
-    const scopeId = storeState.opts?.scoped;
+    const scopeId = storeState.opts.scope;
+
     if (scopeId && scopeId !== _sl.lineageId) {
-      const scopedSlice = storeState.slicesLookup[scopeId];
+      const scopedSlice = storeState.config.lookupByLineage[scopeId];
 
       if (
         !scopedSlice ||
@@ -125,21 +159,46 @@ export class StoreState<RegSlices extends BareSlice = any> {
     return result.value;
   }
 
+  static getSlice(
+    state: StoreState,
+    lineageId: LineageId,
+  ): BareSlice | undefined {
+    return state.config.lookupByLineage[lineageId];
+  }
+
   static getSlices(storeState: StoreState<any>): BareSlice[] {
     return storeState._slices;
+  }
+
+  static getStableSliceId(
+    storeState: StoreState,
+    lineageId: LineageId,
+  ): StableSliceId {
+    const sliceId = storeState.config.lineageToStable[lineageId];
+    assertNotUndefined(sliceId, `Slice "${lineageId}" not found in store`);
+    return sliceId;
+  }
+
+  static getLineageId(
+    storeState: StoreState,
+    stableSliceId: StableSliceId,
+  ): LineageId {
+    const lineageId = storeState.config.stableToLineage[stableSliceId];
+    assertNotUndefined(
+      lineageId,
+      `Slice "${stableSliceId}" not found in store`,
+    );
+    return lineageId;
   }
 
   protected slicesCurrentState: Record<LineageId, unknown> =
     Object.create(null);
 
-  public readonly slicesLookup: SliceLookupByLineage;
-
   constructor(
     protected readonly _slices: BareSlice[],
-    public opts?: StoreStateOptions,
-  ) {
-    this.slicesLookup = createSliceLineageLookup(_slices);
-  }
+    protected readonly config: StoreStateConfig,
+    protected readonly opts: StoreStateOpts = {},
+  ) {}
 
   applyTransaction(
     tx: Transaction<RegSlices['name'], unknown[]>,

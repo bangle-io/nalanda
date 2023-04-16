@@ -697,7 +697,7 @@ test('throws error if name starts with key_', () => {
       actions: {},
     }),
   ).toThrowErrorMatchingInlineSnapshot(
-    `"Slice name cannot start with "key_". Please use a different name for slice "key_my-test-slice""`,
+    `"Slice name cannot contain a period (.) or underscore (_). Please use a different name for slice "key_my-test-slice""`,
   );
 });
 
@@ -831,13 +831,13 @@ describe('rolling up slices', () => {
       'l_sliceB$1',
     ]);
     expect(expandSlices([sliceC]).pathMap).toMatchInlineSnapshot(`
-      Map {
-        "l_sliceC$" => "sliceC",
-        "l_sliceA$1" => "sliceC.sliceA",
-        "l_test-3$" => "sliceC.sliceA.test-3",
-        "l_test-1$" => "sliceC.sliceA.test-3.test-1",
-        "l_test-2$" => "sliceC.sliceA.test-3.test-2",
-        "l_sliceB$1" => "sliceC.sliceB",
+      {
+        "l_sliceA$1": "sliceC.sliceA",
+        "l_sliceB$1": "sliceC.sliceB",
+        "l_sliceC$": "sliceC",
+        "l_test-1$": "sliceC.sliceA.test-3.test-1",
+        "l_test-2$": "sliceC.sliceA.test-3.test-2",
+        "l_test-3$": "sliceC.sliceA.test-3",
       }
     `);
   });

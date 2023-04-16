@@ -11,7 +11,6 @@ import {
 } from './transaction';
 import { TX_META_DISPATCHER, TX_META_STORE_NAME } from './transaction';
 import { BareStore } from './public-types';
-import { expandSlices } from './slices-helpers';
 
 export type DispatchTx<TX extends Transaction<any, any>> = (
   store: Store,
@@ -52,9 +51,7 @@ export class Store implements BareStore<any> {
   }): BareStore<SB> {
     if (!(state instanceof StoreState)) {
       if (Array.isArray(state)) {
-        let slices: BareSlice[] = expandSlices(state).slices;
-
-        state = StoreState.create(slices, initStateOverride);
+        state = StoreState.create(state, initStateOverride);
       }
     }
 
@@ -109,12 +106,12 @@ export class Store implements BareStore<any> {
     if (this._destroyed) {
       return;
     }
-    if (!this.state.slicesLookup[tx.targetSliceLineage]) {
+    if (!StoreState.getSlice(this.state, tx.targetSliceLineage)) {
       throw new Error(
         `Cannot dispatch transaction as slice "${tx.targetSliceLineage}" is not registered in Store`,
       );
     }
-    if (!this.state.slicesLookup[tx.sourceSliceLineage]) {
+    if (!StoreState.getSlice(this.state, tx.sourceSliceLineage)) {
       throw new Error(
         `Cannot dispatch transaction as slice "${tx.sourceSliceLineage}" is not registered in Store`,
       );
@@ -198,7 +195,10 @@ export class ReducedStore<SB extends BareSlice> {
         tx.sourceSliceLineage !== this.dispatcherSlice.lineageId &&
         !sliceDepLineageLookup(this.dispatcherSlice).has(tx.sourceSliceLineage)
       ) {
-        const sourceSlice = this.storeState.slicesLookup[tx.sourceSliceLineage];
+        const sourceSlice = StoreState.getSlice(
+          this.storeState,
+          tx.sourceSliceLineage,
+        );
         throw new Error(
           `Dispatch not allowed! Slice "${this.dispatcherSlice.name}" does not include "${sourceSlice?.name}" in its dependency.`,
         );

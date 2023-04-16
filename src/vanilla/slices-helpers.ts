@@ -1,19 +1,32 @@
-import { findDuplications } from './helpers';
-import { LineageId } from './internal-types';
+import { findDuplications, reverseMap } from './helpers';
+import {
+  createStableSliceId,
+  LineageId,
+  StableSliceId,
+} from './internal-types';
 import { BareSlice } from './slice';
 
 export function expandSlices(slices: BareSlice[] = []): {
   slices: BareSlice[];
-  pathMap: Map<LineageId, string>;
+  pathMap: Record<LineageId, StableSliceId>;
+  reversePathMap: Record<StableSliceId, LineageId>;
 } {
-  const pathMap = new Map<LineageId, string>();
+  // TODO improve the stability of StableSliceID by
+  // accounting for slice dependencies, state and anything else
+  // so that the same source code will always produce the same in different
+  // environments. Currently, it generates the same slice id as long as the name
+  // is the same, which can be problematic if somehow two slices have same name.
+  // DO note getting to the ideal state is impossible, and lineageId should be used
+  // for most purposes unless cross environment compatibility is needed.
+
+  const pathMap = new Map<LineageId, StableSliceId>();
 
   const expand = (
     slices: BareSlice[] = [],
     parentPrefix: string,
   ): BareSlice[] => {
     return slices.flatMap((slice) => {
-      const prefix = parentPrefix + slice.name;
+      const prefix = createStableSliceId(parentPrefix + slice.name);
       pathMap.set(slice.lineageId, prefix);
 
       return [
@@ -24,7 +37,11 @@ export function expandSlices(slices: BareSlice[] = []): {
     });
   };
 
-  return { slices: expand(slices, ''), pathMap };
+  return {
+    slices: expand(slices, ''),
+    pathMap: Object.fromEntries(pathMap.entries()),
+    reversePathMap: Object.fromEntries(reverseMap(pathMap).entries()),
+  };
 }
 
 export function validateSlices(slices: BareSlice[]) {
@@ -33,6 +50,15 @@ export function validateSlices(slices: BareSlice[]) {
   checkUniqueLineage(slices);
   circularCheck(slices);
   checkDependencyOrder(slices);
+}
+
+export function validatePathMap(
+  pathMap: Record<LineageId, StableSliceId>,
+  reversePathMap: Record<StableSliceId, LineageId>,
+) {
+  if (Object.keys(pathMap).length !== Object.keys(reversePathMap).length) {
+    throw new Error('Path map is not valid');
+  }
 }
 
 export function checkUniqueKeys(slices: BareSlice[]) {

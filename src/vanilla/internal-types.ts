@@ -73,6 +73,11 @@ export type Brand<T, K> = T & { [__brand]: K };
 
 export type SliceKey = Brand<string, 'SliceKey'>;
 export type LineageId = Brand<string, 'LineageId'>;
+export type StableSliceId = Brand<string, 'StableSliceId'>;
+
+export function createStableSliceId(id: string): StableSliceId {
+  return id as StableSliceId;
+}
 
 export const KEY_PREFIX = 'key_';
 

@@ -3,19 +3,20 @@ import {
   createDispatchSpy,
   createSlice,
   Slice,
+  Store,
   timeoutSchedular,
+  Transaction,
 } from '../../vanilla';
-import {
-  createSyncStore,
-  SyncMessage,
-  pathToReplicaStoreLookup,
-} from '../sync-store';
+import { createSyncStore, SyncMessage } from '../sync-store';
 import { BareSlice } from '../../vanilla/slice';
 import { changeEffect, syncChangeEffect } from '../../effects';
-import { abortableSetTimeout, SyncManager } from '../helpers';
+import { abortableSetTimeout, getReplicaLookup, SyncManager } from '../helpers';
+import { createStableSliceId } from '../../vanilla/internal-types';
+
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
 }
+
 const testSlice1 = createSlice([], {
   name: 'testSlice1',
   initState: {
@@ -26,11 +27,23 @@ const testSlice1 = createSlice([], {
       ...state,
       counter: state.counter + 1,
     }),
+    update: (num: number) => (state) => ({
+      ...state,
+      counter: state.counter + num,
+    }),
   },
   selector: () => {},
 });
 
 let aborter = new AbortController();
+
+const defaultPayloadSerializer = (p: unknown[]): unknown => p;
+const defaultPayloadParser = (p: unknown): unknown[] => {
+  if (Array.isArray(p)) {
+    return p;
+  }
+  throw new Error('invalid payload');
+};
 
 beforeEach(() => {
   aborter = new AbortController();
@@ -85,6 +98,8 @@ const createBasicPair = ({
     syncSlices?: BareSlice[];
     replicaStores?: string[];
     sendDelay?: number;
+    payloadParser?: typeof defaultPayloadParser;
+    payloadSerializer?: typeof defaultPayloadSerializer;
   };
   replica?: {
     mainStore?: string;
@@ -92,6 +107,8 @@ const createBasicPair = ({
     syncSlices?: BareSlice[];
     setupDelay?: number;
     sendDelay?: number;
+    payloadParser?: typeof defaultPayloadParser;
+    payloadSerializer?: typeof defaultPayloadSerializer;
   };
 }) => {
   let sendMessages: SyncMessage[] = [];
@@ -126,6 +143,8 @@ const createBasicPair = ({
       type: 'main',
       replicaStores,
       slices: main.syncSlices || [],
+      payloadParser: main.payloadParser || defaultPayloadParser,
+      payloadSerializer: main.payloadSerializer || defaultPayloadSerializer,
       sendMessage: (message) => {
         sendMessages.push(cleanMessages(message));
         if (main.sendDelay) {
@@ -158,6 +177,9 @@ const createBasicPair = ({
       scheduler: timeoutSchedular(0),
       sync: {
         type: 'replica',
+        payloadParser: replica.payloadParser || defaultPayloadParser,
+        payloadSerializer:
+          replica.payloadSerializer || defaultPayloadSerializer,
         mainStore: replica.mainStore || 'test-main',
         slices: replica.syncSlices || [],
         sendMessage: (message) => {
@@ -257,7 +279,7 @@ describe('basic test', () => {
         replica: {},
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Slices are not unique. Please ensure that slices have unique name."`,
+      `"Sync slices and other slices are not unique. Please ensure that slices have unique name."`,
     );
   });
 
@@ -271,9 +293,10 @@ describe('basic test', () => {
         },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Slices are not unique. Please ensure that slices have unique name."`,
+      `"Sync slices and other slices are not unique. Please ensure that slices have unique name."`,
     );
   });
+
   test('erroring - in replica , a slice is defined in sync and other slice', () => {
     expect(() =>
       createBasicPair({
@@ -290,11 +313,12 @@ describe('basic test', () => {
               beforeSlices: [testSlice1, testSlice1],
             }),
           ],
+
           slices: [testSlice2],
         },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Slices are not unique. Please ensure that slices have unique name."`,
+      `"Duplicate slice keys key_testSlice1"`,
     );
   });
 
@@ -622,7 +646,26 @@ describe('sync queuing', () => {
       counter: 3,
     });
 
-    expect(result.sendMessages).toMatchSnapshot();
+    expect(
+      result.sendMessages.map((r) => {
+        if (r.type === 'tx') {
+          return {
+            ...r,
+            body: {
+              ...r.body,
+              tx: {
+                ...r.body.tx,
+                metadata: {
+                  ...r.body.tx.metadata,
+                  TX_META_DESERIALIZED_FROM: '<txMetaDeserializedFrom>',
+                },
+              },
+            },
+          };
+        }
+        return r;
+      }),
+    ).toMatchSnapshot();
   });
 
   test('both count to 100, with replica starting first', async () => {
@@ -714,7 +757,6 @@ describe('sync queuing', () => {
 
     expect(result.sendMessages.find((r) => r.type === 'tx')).toEqual({
       body: {
-        targetPath: 'testSlice1',
         tx: expect.objectContaining({
           actionId: 'increment',
         }),
@@ -816,7 +858,6 @@ describe('sync queuing', () => {
         tx: expect.objectContaining({
           actionId: 'increment',
         }),
-        targetPath: 'testSlice1',
       },
       from: 'test-main',
       to: 'test-replica-store-1',
@@ -828,11 +869,14 @@ describe('sync queuing', () => {
 describe('SyncManager', () => {
   test('works', () => {
     const result = new SyncManager({
+      storeName: 'test',
       sync: {
         type: 'main',
         slices: [testSlice1],
         replicaStores: [],
         sendMessage: () => {},
+        payloadParser: defaultPayloadParser,
+        payloadSerializer: defaultPayloadSerializer,
       },
       otherSlices: [testSlice2],
     });
@@ -842,7 +886,7 @@ describe('SyncManager', () => {
         "l_testSlice1$",
       ]
     `);
-    expect(result.syncSlicePaths).toMatchInlineSnapshot(`
+    expect(result.syncSliceIds).toMatchInlineSnapshot(`
       [
         "testSlice1",
       ]
@@ -851,7 +895,10 @@ describe('SyncManager', () => {
 
   test('additional slice are expanded', () => {
     const result = new SyncManager({
+      storeName: 'test',
       sync: {
+        payloadParser: defaultPayloadParser,
+        payloadSerializer: defaultPayloadSerializer,
         type: 'main',
         slices: [
           new Slice({
@@ -870,7 +917,7 @@ describe('SyncManager', () => {
       otherSlices: [testSlice2],
     });
 
-    expect(result.syncSlicePaths).toMatchInlineSnapshot(`
+    expect(result.syncSliceIds).toMatchInlineSnapshot(`
       [
         "mySlice1",
         "mySlice1.testSlice1",
@@ -885,6 +932,7 @@ describe('SyncManager', () => {
 
   test('effects are removed in replica', () => {
     const result = new SyncManager({
+      storeName: 'test',
       sync: {
         type: 'replica',
         mainStore: 'main-store',
@@ -900,6 +948,13 @@ describe('SyncManager', () => {
           changeEffect('test-effect-1', {}, () => {}),
         ],
         sendMessage: () => {},
+        payloadSerializer: (p) => p,
+        payloadParser: (p) => {
+          if (Array.isArray(p)) {
+            return p;
+          }
+          throw new Error('invalid payload');
+        },
       },
       otherSlices: [changeEffect('test-effect-2', {}, () => {})],
     });
@@ -931,40 +986,130 @@ describe('SyncManager', () => {
   });
 });
 
-describe('sliceKeyToReplicaStoreLookup', () => {
-  test('works', () => {
-    expect(
-      pathToReplicaStoreLookup({
-        'store-a': {
-          mainStoreName: 'main-store',
-          storeName: 'store-a',
-          syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
-        },
+describe('serialization', () => {
+  test('correctly calls', async () => {
+    const mainParser = jest.fn((p) => p);
+    const mainSerializer = jest.fn((p) => p);
 
-        'store-b': {
-          mainStoreName: 'main-store',
-          storeName: 'store-b',
-          syncSlicePaths: ['key_testSlice1'],
-        },
-      }),
-    ).toEqual({
-      key_testSlice1: ['store-a', 'store-b'],
-      key_testSlice2: ['store-a'],
+    const replicaParser = jest.fn((p) => p);
+    const replicaSerializer = jest.fn((p) => p);
+
+    const result = createBasicPair({
+      main: {
+        slices: [],
+        syncSlices: [testSlice1],
+        payloadParser: mainParser,
+        payloadSerializer: mainSerializer,
+      },
+      replica: {
+        slices: [],
+        syncSlices: [testSlice1],
+        payloadParser: replicaParser,
+        payloadSerializer: replicaSerializer,
+      },
     });
 
-    expect(pathToReplicaStoreLookup({})).toEqual({});
+    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.mainStore.dispatch(testSlice1.actions.update(3));
 
-    expect(
-      pathToReplicaStoreLookup({
-        'store-a': {
-          mainStoreName: 'main-store',
-          storeName: 'store-a',
-          syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
-        },
-      }),
-    ).toEqual({
-      key_testSlice1: ['store-a'],
-      key_testSlice2: ['store-a'],
+    await waitForExpect(() => {
+      expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
+      expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(1);
     });
+
+    // expect(mainParser).toHaveBeenCalledTimes(1);
+    expect(mainSerializer).toHaveBeenCalledTimes(2);
+    expect(mainSerializer).nthCalledWith(1, [], expect.any(Transaction));
+    expect(mainSerializer).nthCalledWith(2, [3], expect.any(Transaction));
+
+    expect(replicaParser).toHaveBeenCalledTimes(2);
+    expect(replicaParser).nthCalledWith(1, [], expect.any(Store));
+    expect(replicaParser).nthCalledWith(2, [3], expect.any(Store));
   });
 });
+
+describe('getReplicaLookup', () => {
+  const syncManager = new SyncManager({
+    storeName: 'test',
+    sync: {
+      type: 'main',
+      slices: [testSlice1],
+      replicaStores: [],
+      sendMessage: () => {},
+      payloadParser: defaultPayloadParser,
+      payloadSerializer: defaultPayloadSerializer,
+    },
+    otherSlices: [testSlice2],
+  });
+
+  const lookup = getReplicaLookup(syncManager, {
+    'store-a': {
+      mainStoreName: 'main-store',
+      storeName: 'store-a',
+      syncSliceIds: [
+        createStableSliceId(testSlice1.name),
+        createStableSliceId(testSlice2.name),
+      ],
+    },
+    'store-b': {
+      mainStoreName: 'main-store',
+      storeName: 'store-b',
+      syncSliceIds: [createStableSliceId(testSlice1.name)],
+    },
+    'store-c': {
+      mainStoreName: 'main-store',
+      storeName: 'store-c',
+      syncSliceIds: [],
+    },
+  });
+
+  expect(lookup).toMatchInlineSnapshot(`
+    {
+      "l_testSlice1$": [
+        "store-a",
+        "store-b",
+      ],
+      "l_testSlice2$": [
+        "store-a",
+      ],
+    }
+  `);
+});
+
+// describe('sliceKeyToReplicaStoreLookup', () => {
+//   test('works', () => {
+//     expect(
+//       pathToReplicaStoreLookup({
+//         'store-a': {
+//           mainStoreName: 'main-store',
+//           storeName: 'store-a',
+//           syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
+//         },
+
+//         'store-b': {
+//           mainStoreName: 'main-store',
+//           storeName: 'store-b',
+//           syncSlicePaths: ['key_testSlice1'],
+//         },
+//       }),
+//     ).toEqual({
+//       key_testSlice1: ['store-a', 'store-b'],
+//       key_testSlice2: ['store-a'],
+//     });
+
+//     expect(pathToReplicaStoreLookup({})).toEqual({});
+
+//     expect(
+//       pathToReplicaStoreLookup({
+//         'store-a': {
+//           mainStoreName: 'main-store',
+//           storeName: 'store-a',
+//           syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
+//         },
+//       }),
+//     ).toEqual({
+//       key_testSlice1: ['store-a'],
+//       key_testSlice2: ['store-a'],
+//     });
+//   });
+// });

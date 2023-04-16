@@ -1,5 +1,7 @@
+import { StoreState } from '.';
 import { uuid } from './helpers';
 import { LineageId } from './internal-types';
+import { Store } from './store';
 
 const contextId = uuid(5);
 let counter = 0;
@@ -13,7 +15,8 @@ export const TX_META_DISPATCH_INFO = 'TX_META_DISPATCH_INFO';
 export const TX_META_STORE_NAME = 'TX_META_STORE_NAME';
 export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
 export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
-export const TX_META_CHANGE_LINEAGE = 'TX_META_CHANGE_LINEAGE';
+
+export type JSONTransaction = ReturnType<Transaction<any, any>['toJSONObj']>;
 
 export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
@@ -24,12 +27,24 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly actionId: string;
   public readonly uid = incrementalId();
 
-  toJSONObj(payloadSerializer: (payload: unknown[]) => string) {
+  toJSONObj(
+    store: Store,
+    payloadSerializer: (payload: unknown[], tx: Transaction<N, P>) => unknown,
+  ) {
     return {
-      sourceSliceLineage: this.sourceSliceLineage,
-      targetSliceLineage: this.targetSliceLineage,
+      // lineage-ids are are not stable across the browser refreshes.
+      // stable slice ids are used instead. They are not foolproof but
+      // should be good enough for most cases.
+      sourceSliceId: StoreState.getStableSliceId(
+        store.state,
+        this.sourceSliceLineage,
+      ),
+      targetSliceId: StoreState.getStableSliceId(
+        store.state,
+        this.targetSliceLineage,
+      ),
       sourceSliceName: this.config.sourceSliceName,
-      payload: payloadSerializer(this.payload),
+      payload: payloadSerializer(this.payload, this),
       actionId: this.actionId,
       uid: this.uid,
       metadata: this.metadata.toJSONObj(),
@@ -37,15 +52,33 @@ export class Transaction<N extends string, P extends unknown[]> {
   }
 
   static fromJSONObj(
-    obj: ReturnType<Transaction<any, any>['toJSONObj']>,
-    payloadParser: (payload: string) => unknown[],
+    store: Store,
+    obj: JSONTransaction,
+    payloadParser: (payload: unknown, store: Store) => unknown[],
     debugInfo?: string,
   ) {
+    // very primitive check to rule out any invalid objects
+    if (
+      obj.uid === undefined ||
+      obj.sourceSliceId === undefined ||
+      obj.targetSliceId === undefined ||
+      obj.sourceSliceName === undefined ||
+      obj.actionId === undefined
+    ) {
+      throw new Error(`Invalid transaction object`);
+    }
+
     let tx = new Transaction({
-      sourceSliceLineage: obj.sourceSliceLineage,
-      targetSliceLineage: obj.targetSliceLineage,
+      sourceSliceLineage: StoreState.getLineageId(
+        store.state,
+        obj.sourceSliceId,
+      ),
+      targetSliceLineage: StoreState.getLineageId(
+        store.state,
+        obj.targetSliceId,
+      ),
       sourceSliceName: obj.sourceSliceName,
-      payload: payloadParser(obj.payload),
+      payload: payloadParser(obj.payload, store),
       actionId: obj.actionId,
     });
     tx.metadata = Metadata.fromJSONObj(obj.metadata);
@@ -80,31 +113,6 @@ export class Transaction<N extends string, P extends unknown[]> {
       config.sourceSliceLineage || config.targetSliceLineage;
     this.payload = config.payload;
     this.actionId = config.actionId;
-  }
-
-  change({
-    targetSliceLineage,
-    sourceSliceLineage,
-  }: {
-    targetSliceLineage: LineageId;
-    sourceSliceLineage?: LineageId;
-  }): Transaction<N, P> {
-    const tx = new Transaction({
-      ...this.config,
-      targetSliceLineage,
-      sourceSliceLineage: sourceSliceLineage,
-    });
-    tx.metadata = this.metadata.fork();
-
-    tx.metadata.appendMetadata(
-      TX_META_CHANGE_LINEAGE,
-      `target ${this.targetSliceLineage} -> ${targetSliceLineage}` +
-        (sourceSliceLineage
-          ? ` source ${this.sourceSliceLineage} -> ${sourceSliceLineage}`
-          : ''),
-    );
-
-    return tx;
   }
 }
 

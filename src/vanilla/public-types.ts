@@ -1,4 +1,4 @@
-import { AnyFn, VoidFn } from './internal-types';
+import { AnyFn, LineageId, VoidFn } from './internal-types';
 import type { BareSlice, Slice } from './slice';
 import type { StoreState } from './state';
 import type { Transaction } from './transaction';
@@ -14,7 +14,10 @@ export type TxCreator<K extends string = any, P extends unknown[] = any> = (
 
 export type ActionBuilder<P extends any[], SS, DS extends BareSlice> = {
   (...payload: P): (sliceState: SS, storeState: StoreState<DS>) => SS;
-  metadata?: Record<string | symbol, any>;
+  setContextDetails?: (opts: {
+    lineageId: LineageId;
+    actionId: string;
+  }) => void;
 };
 
 export type AnySlice = Slice<string, any, any, any, AnyFn>;
