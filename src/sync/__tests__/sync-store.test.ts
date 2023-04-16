@@ -12,6 +12,7 @@ import { BareSlice } from '../../vanilla/slice';
 import { changeEffect, syncChangeEffect } from '../../effects';
 import { abortableSetTimeout, getReplicaLookup, SyncManager } from '../helpers';
 import { createStableSliceId } from '../../vanilla/internal-types';
+import { mergeAll } from '../../merge';
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
@@ -1076,40 +1077,62 @@ describe('getReplicaLookup', () => {
   `);
 });
 
-// describe('sliceKeyToReplicaStoreLookup', () => {
-//   test('works', () => {
-//     expect(
-//       pathToReplicaStoreLookup({
-//         'store-a': {
-//           mainStoreName: 'main-store',
-//           storeName: 'store-a',
-//           syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
-//         },
+describe('works with merged slice', () => {
+  test('nested', async () => {
+    const forwarded1 = mergeAll([testSlice1, testSlice2], {
+      name: 'test-merged',
+    });
 
-//         'store-b': {
-//           mainStoreName: 'main-store',
-//           storeName: 'store-b',
-//           syncSlicePaths: ['key_testSlice1'],
-//         },
-//       }),
-//     ).toEqual({
-//       key_testSlice1: ['store-a', 'store-b'],
-//       key_testSlice2: ['store-a'],
-//     });
+    const result = createBasicPair({
+      main: {
+        syncSlices: [forwarded1],
+        slices: [depOnTestSlice1Slice],
+      },
+      replica: {
+        syncSlices: [forwarded1],
+      },
+    });
 
-//     expect(pathToReplicaStoreLookup({})).toEqual({});
+    result.mainStore.dispatch(forwarded1.actions.increment());
+    result.mainStore.dispatch(forwarded1.actions.padEnd(5, 'padding'));
 
-//     expect(
-//       pathToReplicaStoreLookup({
-//         'store-a': {
-//           mainStoreName: 'main-store',
-//           storeName: 'store-a',
-//           syncSlicePaths: ['key_testSlice1', 'key_testSlice2'],
-//         },
-//       }),
-//     ).toEqual({
-//       key_testSlice1: ['store-a'],
-//       key_testSlice2: ['store-a'],
-//     });
-//   });
-// });
+    expect(testSlice1.getState(result.mainStore.state)).toEqual({
+      counter: 1,
+    });
+
+    expect(forwarded1.resolveState(result.mainStore.state)).toEqual({
+      counter: 1,
+      name: 'kjpad',
+    });
+
+    await waitForExpect(() => {
+      expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
+      expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(1);
+    });
+
+    expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
+      counter: 1,
+    });
+    expect(testSlice2.getState(result.getReplicaStore().state)).toEqual({
+      name: 'kjpad',
+    });
+    expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
+      counter: 1,
+      name: 'kjpad',
+    });
+
+    result.mainStore.dispatch(forwarded1.actions.uppercase());
+
+    expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
+      counter: 1,
+      name: 'KJPAD',
+    });
+
+    await waitForExpect(() => {
+      expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
+        counter: 1,
+        name: 'KJPAD',
+      });
+    });
+  });
+});
