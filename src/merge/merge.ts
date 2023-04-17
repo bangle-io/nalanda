@@ -70,7 +70,8 @@ export function mergeAll<N extends string, SL extends AnySlice>(
 
   const mergedSlice = new Slice({
     name: name,
-    dependencies: slices,
+    // cannot depend on a terminal slice
+    dependencies: slices.filter((slice) => !slice.spec.terminal),
     initState: {},
     actions: ({ lineageId: sourceSliceLineage }) => {
       const result: Record<string, TxCreator<N, any[]>> = Object.fromEntries(

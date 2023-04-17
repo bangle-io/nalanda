@@ -167,18 +167,18 @@ function expandActionBuilders<
   const result: Record<string, TxCreator> = mapObjectValues(
     actions,
     (actionBuilder, actionId): TxCreator => {
+      // this comes in handy to associate a transaction to its
+      // actionBuilder.
+      actionBuilder.setContextDetails?.({
+        lineageId,
+        actionId,
+      });
+
       return (...params) => {
         const tx = new Transaction({
           sourceSliceName: name,
           targetSliceLineage: lineageId,
           payload: params,
-          actionId,
-        });
-
-        // this comes in handy to associate a transaction to its
-        // actionBuilder.
-        actionBuilder.setContextDetails?.({
-          lineageId,
           actionId,
         });
 

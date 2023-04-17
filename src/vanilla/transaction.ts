@@ -17,6 +17,16 @@ export const TX_META_DESERIALIZED_FROM = 'TX_META_DESERIALIZED_FROM';
 export const TX_META_DESERIALIZED_META = 'TX_META_DESERIALIZED_META';
 
 export type JSONTransaction = ReturnType<Transaction<any, any>['toJSONObj']>;
+export type PayloadSerializer<
+  N extends string = string,
+  P extends unknown[] = unknown[],
+> = (payload: unknown[], tx: Transaction<N, P>) => unknown;
+
+export type PayloadParser = (
+  payload: unknown,
+  obj: JSONTransaction,
+  store: Store,
+) => unknown[];
 
 export class Transaction<N extends string, P extends unknown[]> {
   public metadata = new Metadata();
@@ -27,10 +37,7 @@ export class Transaction<N extends string, P extends unknown[]> {
   public readonly actionId: string;
   public readonly uid = incrementalId();
 
-  toJSONObj(
-    store: Store,
-    payloadSerializer: (payload: unknown[], tx: Transaction<N, P>) => unknown,
-  ) {
+  toJSONObj(store: Store, payloadSerializer: PayloadSerializer<N, P>) {
     return {
       // lineage-ids are are not stable across the browser refreshes.
       // stable slice ids are used instead. They are not foolproof but
@@ -54,7 +61,7 @@ export class Transaction<N extends string, P extends unknown[]> {
   static fromJSONObj(
     store: Store,
     obj: JSONTransaction,
-    payloadParser: (payload: unknown, store: Store) => unknown[],
+    payloadParser: PayloadParser,
     debugInfo?: string,
   ) {
     // very primitive check to rule out any invalid objects
@@ -78,7 +85,7 @@ export class Transaction<N extends string, P extends unknown[]> {
         obj.targetSliceId,
       ),
       sourceSliceName: obj.sourceSliceName,
-      payload: payloadParser(obj.payload, store),
+      payload: payloadParser(obj.payload, obj, store),
       actionId: obj.actionId,
     });
     tx.metadata = Metadata.fromJSONObj(obj.metadata);

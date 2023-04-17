@@ -4,7 +4,11 @@ import { LineageId } from '../vanilla/internal-types';
 import { AnySlice } from '../vanilla/public-types';
 import { BareSlice } from '../vanilla/slice';
 import { expandSlices } from '../vanilla/slices-helpers';
-import { JSONTransaction } from '../vanilla/transaction';
+import {
+  JSONTransaction,
+  PayloadParser,
+  PayloadSerializer,
+} from '../vanilla/transaction';
 import type {
   MainStoreInfo,
   ReplicaStoreInfo,
@@ -17,11 +21,8 @@ export interface SyncMainConfig<SbSync extends BareSlice> {
   replicaStores: string[];
   sendMessage: (message: SyncMessage) => void;
   validate?: ({ syncSlices }: { syncSlices: AnySlice[] }) => void;
-  payloadSerializer: (
-    payload: unknown[],
-    tx: Transaction<any, unknown[]>,
-  ) => unknown;
-  payloadParser: (payload: unknown, store: Store) => unknown[];
+  payloadSerializer: PayloadSerializer;
+  payloadParser: PayloadParser;
 }
 
 export interface SyncReplicaConfig<SbSync extends BareSlice> {
@@ -29,11 +30,8 @@ export interface SyncReplicaConfig<SbSync extends BareSlice> {
   mainStore: string;
   slices: SbSync[];
   sendMessage: (message: SyncMessage) => void;
-  payloadSerializer: (
-    payload: unknown[],
-    tx: Transaction<any, unknown[]>,
-  ) => unknown;
-  payloadParser: (payload: unknown, store: Store) => unknown[];
+  payloadSerializer: PayloadSerializer;
+  payloadParser: PayloadParser;
   validate?: ({ syncSlices }: { syncSlices: AnySlice[] }) => void;
 }
 

@@ -13,6 +13,7 @@ import { changeEffect, syncChangeEffect } from '../../effects';
 import { abortableSetTimeout, getReplicaLookup, SyncManager } from '../helpers';
 import { createStableSliceId } from '../../vanilla/internal-types';
 import { mergeAll } from '../../merge';
+import { PayloadParser, PayloadSerializer } from '../../vanilla/transaction';
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
@@ -38,8 +39,8 @@ const testSlice1 = createSlice([], {
 
 let aborter = new AbortController();
 
-const defaultPayloadSerializer = (p: unknown[]): unknown => p;
-const defaultPayloadParser = (p: unknown): unknown[] => {
+const defaultPayloadSerializer: PayloadSerializer = (p) => p;
+const defaultPayloadParser: PayloadParser = (p) => {
   if (Array.isArray(p)) {
     return p;
   }
