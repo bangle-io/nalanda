@@ -2,21 +2,13 @@ import { weakCache } from './helpers';
 import {
   createLineageId,
   createSliceKey,
-  createSliceNameOpaque,
   isSliceKey,
   KEY_PREFIX,
   LineageId,
   NoInfer,
   SliceKey,
-  SliceNameOpaque,
 } from './internal-types';
-import {
-  Effect,
-  SelectorFn,
-  ActionBuilder,
-  AnySlice,
-  TxCreator,
-} from './public-types';
+import { Effect, SelectorFn, AnySlice, TxCreator } from './public-types';
 import { StoreState } from './state';
 import { Transaction } from './transaction';
 import type { Simplify } from 'type-fest';
@@ -98,7 +90,6 @@ export class Slice<
 {
   public readonly initState: SS;
   public readonly name: N;
-  public readonly nameOpaque: SliceNameOpaque;
   public readonly lineageId: LineageId;
   public key: SliceKey;
   public _metadata: Record<string | symbol, any> = {};
@@ -120,6 +111,11 @@ export class Slice<
       lineageId: createLineageId(spec.name),
     },
   ) {
+    if (spec.name.includes('.') || spec.name.includes('_')) {
+      throw new Error(
+        `Slice name cannot contain a period (.) or underscore (_). Please use a different name for slice "${spec.name}"`,
+      );
+    }
     // can only set slice key as a name when forking
     if (config.originalSpec === spec && isSliceKey(spec.name)) {
       throw new Error(
@@ -137,7 +133,6 @@ export class Slice<
 
     this.key = createSliceKey(this.spec.name);
     this.name = config?.originalSpec.name ?? spec.name;
-    this.nameOpaque = createSliceNameOpaque(this.name);
 
     this.resolveSelector = weakCache(this.resolveSelector.bind(this));
     this.resolveState = weakCache(this.resolveState.bind(this));
@@ -155,15 +150,12 @@ export class Slice<
   getState<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, N, SState>,
   ): IfSliceRegistered<SState, N, SS> {
-    return storeState.getSliceState(this as AnySlice);
+    return StoreState.getSliceState(storeState, this as AnySlice) as any;
   }
 
   resolveSelector<SState extends StoreState<any>>(
     storeState: IfSliceRegistered<SState, N, SState>,
   ): ReturnType<SE> {
-    if (typeof this.spec.selector !== 'function') {
-      console.log(this.lineageId, this.spec.selector);
-    }
     return this.spec.selector(this.getState(storeState), storeState);
   }
 
@@ -261,12 +253,3 @@ export class Slice<
     });
   }
 }
-
-export type ActionBuilderToTxCreator<
-  N extends string,
-  A extends Record<string, ActionBuilder<any[], any, any>>,
-> = {
-  [KK in keyof A]: A[KK] extends (...param: infer P) => any
-    ? TxCreator<N, P>
-    : never;
-};

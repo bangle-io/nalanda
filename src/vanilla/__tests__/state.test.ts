@@ -1,8 +1,8 @@
 import { testOverrideDependencies } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
-import { createSliceKey, expectType } from '../internal-types';
+import { createLineageId, expectType } from '../internal-types';
 import { checkUniqueLineage } from '../slices-helpers';
-import { InternalStoreState } from '../state';
+import { StoreState } from '../state';
 import { Transaction } from '../transaction';
 
 const testSlice1 = slice({
@@ -55,7 +55,7 @@ describe('applyTransaction', () => {
       },
     });
 
-    const state = InternalStoreState.create([mySlice]);
+    const state = StoreState.create([mySlice]);
 
     // @ts-expect-error - should error when a field is not defined
     let testVal0 = mySlice.actions.myAction(5).randomValue;
@@ -76,7 +76,7 @@ describe('applyTransaction', () => {
 
     const newState = state.applyTransaction(mySlice.actions.myAction(5))!;
 
-    expect(newState.getSliceState(mySlice)).toEqual({
+    expect(mySlice.getState(newState)).toEqual({
       num: 6,
     });
   });
@@ -113,18 +113,18 @@ describe('applyTransaction', () => {
       },
     });
 
-    const state = InternalStoreState.create([sliceDep1, sliceDep2, mySlice]);
+    const state = StoreState.create([sliceDep1, sliceDep2, mySlice]);
 
     const newState = state.applyTransaction(mySlice.actions.myAction(5));
 
-    const result = newState.getSliceState(mySlice);
+    const result = mySlice.getState(newState);
 
     // @ts-expect-error - should error when a field is not defined
     let testVal0 = result.xyz;
 
     expectType<{ num: number } | undefined>(result);
 
-    expect(newState.getSliceState(mySlice)).toEqual({
+    expect(mySlice.getState(newState)).toEqual({
       num: 50 + 1 + 5 + 3,
     });
   });
@@ -151,7 +151,7 @@ describe('validations', () => {
     });
 
     expect(() => {
-      InternalStoreState.create([mySlice, mySlice2]);
+      StoreState.create([mySlice, mySlice2]);
     }).toThrowErrorMatchingInlineSnapshot(`"Duplicate slice keys key_test"`);
   });
 
@@ -170,9 +170,9 @@ describe('validations', () => {
     });
 
     expect(() => {
-      InternalStoreState.create([mySlice]);
+      StoreState.create([mySlice]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "l_test$4" has a dependency on Slice "l_test-dep$" which is either not registered or is registered after this slice."`,
     );
   });
 
@@ -191,9 +191,9 @@ describe('validations', () => {
     });
 
     expect(() => {
-      InternalStoreState.create([mySlice, sliceDep]);
+      StoreState.create([mySlice, sliceDep]);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"Slice "key_test" has a dependency on Slice "key_test-dep" which is either not registered or is registered after this slice."`,
+      `"Slice "l_test$5" has a dependency on Slice "l_test-dep$1" which is either not registered or is registered after this slice."`,
     );
   });
 
@@ -225,19 +225,19 @@ describe('test override helper', () => {
       actions: {},
     });
 
-    let newState1 = InternalStoreState.create([slice1, slice2], {
-      test2: { num: 99 },
+    let newState1 = StoreState.create([slice1, slice2], {
+      [slice2.lineageId]: { num: 99 },
     });
 
-    expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
-    expect(newState1.getSliceState(slice2)).toEqual({ num: 99 });
+    expect(slice1.getState(newState1)).toEqual({ num: 1 });
+    expect(slice2.getState(newState1)).toEqual({ num: 99 });
 
-    let newState2 = InternalStoreState.create([slice1, slice2], {
-      test1: { num: -1 },
+    let newState2 = StoreState.create([slice1, slice2], {
+      [slice1.lineageId]: { num: -1 },
     });
 
-    expect(newState2.getSliceState(slice1)).toEqual({ num: -1 });
-    expect(newState1.getSliceState(slice1)).toEqual({ num: 1 });
+    expect(slice1.getState(newState2)).toEqual({ num: -1 });
+    expect(slice1.getState(newState1)).toEqual({ num: 1 });
   });
 
   test('overriding effects works', () => {
@@ -273,25 +273,20 @@ describe('test override helper', () => {
 
 describe('State creation', () => {
   test('empty slices', () => {
-    const appState = InternalStoreState.create([]);
+    const appState = StoreState.create([]);
 
-    expect(appState).toMatchInlineSnapshot(
-      {
-        _slices: expect.any(Array),
-        slicesCurrentState: expect.any(Object),
-        sliceLookupByKey: expect.any(Object),
-        slicesLookupByLineage: expect.any(Object),
-      } as any,
-      `
-      {
-        "_slices": Any<Array>,
-        "opts": undefined,
-        "sliceLookupByKey": Any<Object>,
-        "slicesCurrentState": Any<Object>,
-        "slicesLookupByLineage": Any<Object>,
+    expect(appState).toMatchInlineSnapshot(`
+      StoreState {
+        "_slices": [],
+        "config": {
+          "lineageToStable": {},
+          "lookupByLineage": {},
+          "stableToLineage": {},
+        },
+        "opts": {},
+        "slicesCurrentState": {},
       }
-    `,
-    );
+    `);
   });
 
   test('with a slice', () => {
@@ -300,16 +295,23 @@ describe('State creation', () => {
       actions: {},
     });
 
-    const appState = InternalStoreState.create([mySlice]);
+    const appState = StoreState.create([mySlice]);
 
-    expect(appState.getSliceState(mySlice)).toEqual({ val: null });
+    expect(mySlice.getState(appState)).toEqual({ val: null });
     expect(appState).toEqual({
       _slices: expect.any(Array),
-      opts: undefined,
-      sliceLookupByKey: expect.any(Object),
-      slicesLookupByLineage: { [mySlice.lineageId]: expect.any(Object) },
+      opts: {},
+      config: {
+        stableToLineage: { [mySlice.name]: mySlice.lineageId },
+        lineageToStable: {
+          l_mySlice$: 'mySlice',
+        },
+        lookupByLineage: {
+          l_mySlice$: mySlice,
+        },
+      },
       slicesCurrentState: {
-        key_mySlice: {
+        [mySlice.lineageId]: {
           val: null,
         },
       },
@@ -322,7 +324,7 @@ describe('State creation', () => {
       actions: {},
     });
 
-    const appState = InternalStoreState.create([mySlice]);
+    const appState = StoreState.create([mySlice]);
 
     expect(() =>
       appState.applyTransaction(
@@ -351,7 +353,7 @@ describe('State creation', () => {
       },
     });
 
-    const appState = InternalStoreState.create([mySlice, mySlice2]);
+    const appState = StoreState.create([mySlice, mySlice2]);
     expect(mySlice.getState(appState).num).toBe(0);
 
     let newAppState = appState.applyTransaction(mySlice2.actions.updateNum(4));
@@ -421,7 +423,7 @@ describe('State creation', () => {
       actions: {},
     });
 
-    const appState = InternalStoreState.create([mySlice1, mySlice2, mySlice3]);
+    const appState = StoreState.create([mySlice1, mySlice2, mySlice3]);
 
     const result1 = {
       s3: {
@@ -485,8 +487,8 @@ describe('Override init state', () => {
     actions: {},
   });
   test('can override state', () => {
-    const appState = InternalStoreState.create([mySlice1, mySlice2], {
-      mySlice1: { num1: 5 },
+    const appState = StoreState.create([mySlice1, mySlice2], {
+      [mySlice1.lineageId]: { num1: 5 },
     });
 
     expect(mySlice1.getState(appState).num1).toBe(5);
@@ -494,12 +496,12 @@ describe('Override init state', () => {
 
   test('throws error if slice not found', () => {
     expect(() =>
-      InternalStoreState.create([mySlice1, mySlice2], {
-        mySlice1: { num1: 5 },
-        xSlice: { num1: 5 },
+      StoreState.create([mySlice1, mySlice2], {
+        [mySlice1.lineageId]: { num1: 5 },
+        [createLineageId('xSlice')]: { num1: 5 },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Some slice names (xSlice) in initStateOverride were not found in the provided slices"`,
+      `"Some slice names (l_xSlice$) in initStateOverride were not found in the provided slices"`,
     );
   });
 });

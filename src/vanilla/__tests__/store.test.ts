@@ -2,7 +2,7 @@ import { waitUntil } from '../../test-helpers';
 import { createKey, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 
-import { InternalStoreState } from '../state';
+import { StoreState } from '../state';
 import { ReducedStore, Store } from '../store';
 import { TX_META_DISPATCH_INFO, TX_META_STORE_NAME } from '../transaction';
 
@@ -208,7 +208,7 @@ describe('ReducedStore', () => {
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3],
     }) as Store;
-    const reducedStore = myStore.getReducedStore(testSlice1);
+    const reducedStore = Store.getReducedStore(myStore, testSlice1);
 
     reducedStore.destroy();
 
@@ -240,15 +240,15 @@ describe('ReducedStore', () => {
       state: [testSlice1, testSlice2, testSlice3, mySlice],
     });
 
-    const redStore = (myStore as Store).getReducedStore(mySlice);
+    const redStore = Store.getReducedStore(myStore, mySlice);
 
     redStore.dispatch(mySlice.actions.addOne());
 
-    await waitUntil((myStore as Store).getReducedStore(mySlice), (state) => {
+    await waitUntil(Store.getReducedStore(myStore, mySlice), (state) => {
       return mySlice.getState(state).num === 5;
     });
 
-    expect(providedPrevState).toBeInstanceOf(InternalStoreState);
+    expect(providedPrevState).toBeInstanceOf(StoreState);
     expect(mySlice.getState(providedPrevState!)).toMatchInlineSnapshot(`
       {
         "num": 5,

@@ -1,6 +1,6 @@
 import { Slice, StoreState, Transaction } from '../vanilla';
 import { AnyFn, LineageId } from '../vanilla/internal-types';
-import { SelectorFn, TxCreator } from '../vanilla/public-types';
+import { AnySlice, SelectorFn, TxCreator } from '../vanilla/public-types';
 import type { UnionToIntersection } from 'type-fest';
 import { isPlainObject } from '../vanilla/helpers';
 
@@ -15,10 +15,7 @@ type ChangeTxCreatorSourceName<N extends string, A> = {
  * Ensure all the slices to be merged have distinct state, selector, action keys as
  * the function will create a slice with corresponding fields merged.
  */
-export function mergeAll<
-  N extends string,
-  SL extends Slice<string, any, any, any, AnyFn>,
->(
+export function mergeAll<N extends string, SL extends AnySlice>(
   slices: SL[],
   {
     name,
@@ -73,7 +70,8 @@ export function mergeAll<
 
   const mergedSlice = new Slice({
     name: name,
-    dependencies: slices,
+    // cannot depend on a terminal slice
+    dependencies: slices.filter((slice) => !slice.spec.terminal),
     initState: {},
     actions: ({ lineageId: sourceSliceLineage }) => {
       const result: Record<string, TxCreator<N, any[]>> = Object.fromEntries(
@@ -103,9 +101,10 @@ export function mergeAll<
         const sliceState = slice.getState(storeState as StoreState<any>);
 
         let result = selector(sliceState, storeState);
-
         if (isPlainObject(result)) {
           Object.assign(selectorStateRecord, result);
+        } else if (result === undefined) {
+          // ignore undefined
         } else {
           console.warn(
             `The selector of slice "${slice.name}" returned a non-plain object. This is not supported.`,

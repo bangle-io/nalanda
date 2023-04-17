@@ -3,6 +3,7 @@ import { createKey, slice } from '../create';
 import { timeoutSchedular } from '../effect';
 import { expectType } from '../internal-types';
 import { ActionBuilder } from '../public-types';
+import { StoreState } from '../state';
 import { Store } from '../store';
 
 function sleep(t = 20): Promise<void> {
@@ -56,7 +57,7 @@ test('empty store', () => {
   store.dispatch(testSlice1.actions.increment({ increment: true }));
   store.dispatch(testSlice1.actions.increment({ increment: true }));
 
-  store.state.getSliceState(testSlice1);
+  StoreState.getSliceState(store.state, testSlice1);
 
   testSlice1.getState(store.state);
 
@@ -108,7 +109,7 @@ test('custom dispatch', () => {
         return;
       }
 
-      store.updateState(newState, tx);
+      Store.updateState(store, newState, tx);
     },
   });
 
@@ -173,7 +174,7 @@ describe('sync effects', () => {
           return;
         }
 
-        store.updateState(newState, tx);
+        Store.updateState(store, newState, tx);
 
         callOrder.push(`afterUpdate[${tx.sourceSliceLineage}]`);
       },
@@ -633,7 +634,7 @@ describe('effects', () => {
           return;
         }
 
-        store.updateState(newState, tx);
+        Store.updateState(store, newState, tx);
 
         callOrder.push(`afterUpdate[${tx.sourceSliceLineage}]`);
       },

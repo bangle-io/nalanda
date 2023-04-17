@@ -6,6 +6,7 @@ import type { Transaction } from './transaction';
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
 export type AnyFn = (...args: any[]) => any;
+export type UnknownFn = (...args: unknown[]) => unknown;
 export type VoidFn = (...args: any[]) => void;
 
 export const expectType = <Type>(_: Type): void => void 0;
@@ -72,7 +73,11 @@ export type Brand<T, K> = T & { [__brand]: K };
 
 export type SliceKey = Brand<string, 'SliceKey'>;
 export type LineageId = Brand<string, 'LineageId'>;
-export type SliceNameOpaque = Brand<string, 'SliceName'>;
+export type StableSliceId = Brand<string, 'StableSliceId'>;
+
+export function createStableSliceId(id: string): StableSliceId {
+  return id as StableSliceId;
+}
 
 export const KEY_PREFIX = 'key_';
 
@@ -105,8 +110,4 @@ export function isLineageId(id: unknown): id is LineageId {
 export function isSliceKey(key: unknown): key is SliceKey {
   // TODO make this string by prefixing with `key_`
   return typeof key === 'string' && key.startsWith(KEY_PREFIX);
-}
-
-export function createSliceNameOpaque(name: string): SliceNameOpaque {
-  return name as SliceNameOpaque;
 }

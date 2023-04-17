@@ -1,7 +1,6 @@
-import { LineageId, SliceKey, VoidFn } from './internal-types';
-import type { ActionBuilder, AnySlice, BareStore } from './public-types';
-import type { BareSlice, Slice } from './slice';
-import type { Store } from './store';
+import { LineageId } from './internal-types';
+import type { AnySlice } from './public-types';
+import type { BareSlice } from './slice';
 
 export function mapObjectValues<T, U>(
   obj: Record<string, T>,
@@ -93,7 +92,7 @@ export function flattenReverseDependencies(
 export function calcReverseDependencies(
   slices: BareSlice[],
 ): Record<LineageId, Set<LineageId>> {
-  let reverseDependencies: Record<LineageId, Set<LineageId>> = {};
+  const reverseDependencies: Record<LineageId, Set<LineageId>> = {};
 
   for (const slice of slices) {
     for (const dep of slice.spec.dependencies) {
@@ -119,26 +118,6 @@ export function changeBareSlice<SL extends BareSlice>(
   return cb(slice as unknown as AnySlice) as unknown as SL;
 }
 
-export function getSliceByKey(
-  store: BareStore<any> | Store,
-  key: SliceKey,
-): AnySlice | undefined {
-  return (store as Store).state.sliceLookupByKey[key] as AnySlice;
-}
-
-export function getActionBuilderByKey(
-  store: BareStore<any> | Store,
-  key: SliceKey,
-  actionId: string,
-): undefined | ActionBuilder<any[], any, any> {
-  const slice: undefined | Slice<string, any, any, any, VoidFn> = getSliceByKey(
-    store,
-    key,
-  );
-
-  return slice?.a?.[actionId];
-}
-
 export function isPlainObject(value: any) {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -153,4 +132,12 @@ export function isPlainObject(value: any) {
     !(Symbol.toStringTag in value) &&
     !(Symbol.iterator in value)
   );
+}
+
+export function reverseMap<K, V>(map: Map<K, V>): Map<V, K> {
+  const reversed = new Map<V, K>();
+  for (const [key, value] of map) {
+    reversed.set(value, key);
+  }
+  return reversed;
 }

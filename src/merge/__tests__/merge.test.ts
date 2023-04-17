@@ -420,20 +420,20 @@ describe('nested forwarding', () => {
 
       expect((store.state as any).slicesCurrentState).toMatchInlineSnapshot(`
         {
-          "key_g1": {
+          "l_g1$": {
             "g1": "g",
           },
-          "key_r1": {
+          "l_r1$": {
             "r1": "r",
           },
-          "key_s1": {
+          "l_s1$": {
             "s1": 0,
           },
-          "key_t1": {
+          "l_t1$": {
             "t1": "tt",
           },
-          "key_x0": {},
-          "key_z0": {},
+          "l_x0$": {},
+          "l_z0$": {},
         }
       `);
 

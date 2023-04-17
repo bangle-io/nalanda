@@ -1,5 +1,5 @@
 import type { AnySlice, BareStore } from '../vanilla/public-types';
-import { DispatchTx } from '../vanilla/store';
+import { DispatchTx, Store } from '../vanilla/store';
 import {
   LogItem,
   Transaction,
@@ -55,7 +55,7 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
     let newState = store.state.applyTransaction(tx);
     fn?.(tx);
     txs.push(tx);
-    store.updateState(newState, tx);
+    Store.updateState(store, newState, tx);
   };
   let logItems: LogItem[] = [];
   return {

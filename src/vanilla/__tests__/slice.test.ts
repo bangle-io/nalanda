@@ -1,11 +1,11 @@
 import { assertNotUndefined } from '../../sync/helpers';
 import { testOverrideDependencies } from '../../test-helpers';
 import { createKey, createSlice, slice } from '../create';
-import { createSliceKey, expectType, rejectAny } from '../internal-types';
-import { AnyEffect, AnySlice, Effect, TxCreator } from '../public-types';
+import { expectType, rejectAny } from '../internal-types';
+import { AnyEffect, AnySlice, TxCreator } from '../public-types';
 import { Slice } from '../slice';
 import { expandSlices } from '../slices-helpers';
-import { InternalStoreState, StoreState } from '../state';
+import { StoreState } from '../state';
 import { Transaction } from '../transaction';
 
 const testSliceKey1 = createKey('test-1', [], { num: 4 });
@@ -91,7 +91,7 @@ describe('dependencies', () => {
       },
     });
 
-    const state = InternalStoreState.create([testSlice1, testSlice2, mySlice]);
+    const state = StoreState.create([testSlice1, testSlice2, mySlice]);
 
     test('unknown slice should error', () => {
       expect(() =>
@@ -102,8 +102,7 @@ describe('dependencies', () => {
       );
 
       expect(() =>
-        // @ts-expect-error - slice does not exist should always error
-        state.getSliceState(unknownSlice),
+        StoreState.getSliceState(state, unknownSlice),
       ).toThrowErrorMatchingInlineSnapshot(
         `"Slice "unknown-test" not found in store"`,
       );
@@ -136,7 +135,7 @@ describe('dependencies', () => {
       });
 
       expect(() =>
-        InternalStoreState.create([
+        StoreState.create([
           testOverrideDependencies(testSlice1, {
             dependencies: [mySlice2],
           }),
@@ -145,7 +144,7 @@ describe('dependencies', () => {
           mySlice2,
         ]),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Circular dependency detected in slice "key_test-1" with path key_test-1 ->key_my-slice-2 ->key_my-slice-1 ->key_test-1"`,
+        `"Circular dependency detected in slice "l_test-1$" with path l_test-1$ ->l_my-slice-2$ ->l_my-slice-1$ ->l_test-1$"`,
       );
     });
 
@@ -167,9 +166,9 @@ describe('dependencies', () => {
       modifyDeps(sl4, [sl0, sl2]);
 
       expect(() =>
-        InternalStoreState.create([sl0, sl1, sl2, sl3, sl4]),
+        StoreState.create([sl0, sl1, sl2, sl3, sl4]),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Circular dependency detected in slice "key_sl0" with path key_sl0 ->key_sl1 ->key_sl3 ->key_sl4 ->key_sl0"`,
+        `"Circular dependency detected in slice "l_sl0$" with path l_sl0$ ->l_sl1$ ->l_sl3$ ->l_sl4$ ->l_sl0$"`,
       );
     });
   });
@@ -332,7 +331,7 @@ describe('selector', () => {
       (state: { num: number }, storeState: any) => { numSquared: number }
     >(mySlice.selector);
 
-    const state = InternalStoreState.create([mySlice]);
+    const state = StoreState.create([mySlice]);
 
     let sliceState = mySlice.getState(state);
 
@@ -407,7 +406,7 @@ describe('selector', () => {
       ) => { numSquared: number }
     >(mySlice.selector);
 
-    const state = InternalStoreState.create([testSlice1, myTestSlice, mySlice]);
+    const state = StoreState.create([testSlice1, myTestSlice, mySlice]);
 
     let resolvedSelectors = mySlice.resolveSelector(state);
 
@@ -489,12 +488,7 @@ describe('selector', () => {
       actions: {},
     });
 
-    const state = InternalStoreState.create([
-      testSlice1,
-      sliceA,
-      sliceB,
-      mySliceZ,
-    ]);
+    const state = StoreState.create([testSlice1, sliceA, sliceB, mySliceZ]);
 
     expectType<{ count: number }>(sliceA.getState(state));
     expectType<{ numSquared: number }>(sliceA.resolveSelector(state));
@@ -534,11 +528,14 @@ describe('selector', () => {
           // @ts-expect-error - should error when a slice is not a dependency
           slice5.getState(storeState);
           // @ts-expect-error - should error when a slice is not a dependency
-          storeState.getSliceState(testSlice2);
+          testSlice2.getState(storeState);
 
           let depState2 = testSlice1.getState(storeState);
 
-          let depState1 = storeState.getSliceState(testSlice1);
+          let depState1 = StoreState.getSliceState(
+            storeState,
+            testSlice1,
+          ) as typeof depState2;
 
           expect(depState1).toEqual(depState2);
 
@@ -594,7 +591,7 @@ describe('selector', () => {
       }
     >(mySlice.selector);
 
-    const state = InternalStoreState.create([
+    const state = StoreState.create([
       testSlice1,
       mySlice,
       slice4,
@@ -611,7 +608,7 @@ describe('selector', () => {
   });
 
   test('no selectors', () => {
-    const state = InternalStoreState.create([testSlice1]);
+    const state = StoreState.create([testSlice1]);
     expect(testSlice1.resolveState(state)).toEqual({
       num: 4,
     });
@@ -700,7 +697,7 @@ test('throws error if name starts with key_', () => {
       actions: {},
     }),
   ).toThrowErrorMatchingInlineSnapshot(
-    `"Slice name cannot start with "key_". Please use a different name for slice "key_my-test-slice""`,
+    `"Slice name cannot contain a period (.) or underscore (_). Please use a different name for slice "key_my-test-slice""`,
   );
 });
 
@@ -825,7 +822,7 @@ describe('rolling up slices', () => {
       'l_test-3$',
     ]);
 
-    expect(expandSlices([sliceC]).map((r) => r.lineageId)).toEqual([
+    expect(expandSlices([sliceC]).slices.map((r) => r.lineageId)).toEqual([
       'l_sliceA$1',
       'l_test-1$',
       'l_test-2$',
@@ -833,5 +830,15 @@ describe('rolling up slices', () => {
       'l_sliceC$',
       'l_sliceB$1',
     ]);
+    expect(expandSlices([sliceC]).pathMap).toMatchInlineSnapshot(`
+      {
+        "l_sliceA$1": "sliceC.sliceA",
+        "l_sliceB$1": "sliceC.sliceB",
+        "l_sliceC$": "sliceC",
+        "l_test-1$": "sliceC.sliceA.test-3.test-1",
+        "l_test-2$": "sliceC.sliceA.test-3.test-2",
+        "l_test-3$": "sliceC.sliceA.test-3",
+      }
+    `);
   });
 });

@@ -1,5 +1,4 @@
 import { createSlice } from '../create';
-import { getActionBuilderByKey, getSliceByKey } from '../helpers';
 import { isLineageId } from '../internal-types';
 import { Store } from '../store';
 
@@ -20,30 +19,6 @@ const testSlice1 = createSlice([], {
     },
     decrement: testSlice1Decrement,
   },
-});
-
-describe('getSliceByKey', () => {
-  const store = Store.create({
-    storeName: 'test-store',
-    state: [testSlice1],
-  });
-
-  test('works', () => {
-    expect(getSliceByKey(store, testSlice1.key)).toEqual(testSlice1);
-  });
-});
-
-describe.skip('getActionBuilderByKey', () => {
-  const store = Store.create({
-    storeName: 'test-store',
-    state: [testSlice1],
-  });
-
-  test('works', () => {
-    expect(getActionBuilderByKey(store, testSlice1.key, 'decrement')).toBe(
-      testSlice1Decrement,
-    );
-  });
 });
 
 describe('lineage id is geneated correctly', () => {

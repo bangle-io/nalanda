@@ -2,8 +2,8 @@ import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
 import { LineageId } from './internal-types';
 import { AnyEffect, AnySlice } from './public-types';
 import type { BareSlice } from './slice';
-import type { InternalStoreState } from './state';
-import type { Store } from './store';
+import type { StoreState } from './state';
+import { Store } from './store';
 import { DebugFunc } from './transaction';
 
 export interface Scheduler {
@@ -55,7 +55,7 @@ export class SideEffectsManager {
     }
   }
 
-  destroy(state: InternalStoreState) {
+  destroy(state: StoreState) {
     for (const effectHandler of this._effectHandlerEntries()) {
       effectHandler.destroy?.(state);
     }
@@ -63,7 +63,7 @@ export class SideEffectsManager {
 
   constructor(
     slices: BareSlice[],
-    initState: InternalStoreState,
+    initState: StoreState,
     private _schedular: Scheduler = idleCallbackScheduler(15),
     _debug?: DebugFunc,
   ) {
@@ -231,8 +231,8 @@ export class SideEffectsManager {
 }
 
 export class EffectHandler {
-  private _syncPrevState: InternalStoreState;
-  private _deferredPrevState: InternalStoreState;
+  private _syncPrevState: StoreState;
+  private _deferredPrevState: StoreState;
 
   public debugSyncLastRanBy: { lineageId: LineageId; actionId: string }[] = [];
   public debugDeferredLastRanBy: { lineageId: LineageId; actionId: string }[] =
@@ -241,7 +241,7 @@ export class EffectHandler {
 
   constructor(
     public effect: AnyEffect,
-    public readonly initStoreState: InternalStoreState,
+    public readonly initStoreState: StoreState,
     protected _slice: BareSlice,
     private _debug?: DebugFunc,
   ) {
@@ -288,12 +288,12 @@ export class EffectHandler {
   runInit(store: Store) {
     this.effect.init?.(
       this._slice as AnySlice,
-      store.getReducedStore(this._slice),
+      Store.getReducedStore(store, this._slice),
       this._ref,
     );
   }
 
-  destroy(state: InternalStoreState) {
+  destroy(state: StoreState) {
     this.effect.destroy?.(this._slice as AnySlice, state, this._ref);
     this._ref = {};
   }
@@ -312,7 +312,7 @@ export class EffectHandler {
       // TODO error handling
       this.effect.updateSync(
         this._slice as AnySlice,
-        store.getReducedStore(this._slice),
+        Store.getReducedStore(store, this._slice),
         previouslySeenState,
         this._ref,
       );
@@ -329,7 +329,7 @@ export class EffectHandler {
       // TODO error handling
       this.effect.update(
         this._slice as AnySlice,
-        store.getReducedStore(this._slice),
+        Store.getReducedStore(store, this._slice),
         previouslySeenState,
         this._ref,
       );
