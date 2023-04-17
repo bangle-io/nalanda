@@ -1025,8 +1025,18 @@ describe('serialization', () => {
     expect(mainSerializer).nthCalledWith(2, [3], expect.any(Transaction));
 
     expect(replicaParser).toHaveBeenCalledTimes(2);
-    expect(replicaParser).nthCalledWith(1, [], expect.any(Store));
-    expect(replicaParser).nthCalledWith(2, [3], expect.any(Store));
+    expect(replicaParser).nthCalledWith(
+      1,
+      [],
+      expect.anything(),
+      expect.any(Store),
+    );
+    expect(replicaParser).nthCalledWith(
+      2,
+      [3],
+      expect.anything(),
+      expect.any(Store),
+    );
   });
 });
 
