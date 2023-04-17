@@ -27,7 +27,7 @@ export const todoSlice = createSlice([], {
     }
 
     return {
-      filteredTodos: result,
+      filteredTodos: result as Todo[],
     };
   },
   actions: {

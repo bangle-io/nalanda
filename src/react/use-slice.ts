@@ -3,24 +3,13 @@ import useSyncExternalStoreExports from 'use-sync-external-store/shim';
 import { AnySlice, BareStore } from '../vanilla/public-types';
 
 import { StoreState } from '../vanilla/state';
-import type { Store } from '../vanilla/store';
 
 const { useSyncExternalStore } = useSyncExternalStoreExports;
 
-export function createUseSliceHook<SSL extends AnySlice>(
-  store: BareStore<SSL>,
-) {
+export function createUseSliceHook(store: BareStore<any>) {
   function useSlice<SL extends AnySlice>(
-    sl: SL['name'] extends SSL['name'] ? SL : never,
-  ): [ReturnType<SL['resolveState']>, BareStore<SSL>['dispatch']];
-  function useSlice<SL extends AnySlice, SLS>(
-    sl: SL['name'] extends SSL['name'] ? SL : never,
-    selector: (state: ReturnType<SL['resolveState']>) => SLS,
-  ): [SLS, BareStore<SSL>['dispatch']];
-  function useSlice<SL extends AnySlice, SLS>(
-    sl: SL['name'] extends SSL['name'] ? SL : never,
-    selector?: (p: SL['spec']['initState']) => SLS,
-  ): [SLS, BareStore<SSL>['dispatch']] {
+    sl: SL,
+  ): [ReturnType<SL['resolveState']>, BareStore<SL>['dispatch']] {
     const [subscribe] = useState(() => {
       return (cb: () => void) => {
         return (store as any)._tempRegisterOnSyncChange(sl, cb);
@@ -29,10 +18,7 @@ export function createUseSliceHook<SSL extends AnySlice>(
 
     const [snap] = useState(() => {
       return () => {
-        const result = sl.resolveState(store.state as StoreState<any>);
-        if (selector) {
-          return selector(result);
-        }
+        const result = sl.resolveState(store.state);
         return result;
       };
     });
@@ -41,7 +27,7 @@ export function createUseSliceHook<SSL extends AnySlice>(
 
     useDebugValue(data);
 
-    return [data, store.dispatch];
+    return [data as any, store.dispatch];
   }
 
   return useSlice;

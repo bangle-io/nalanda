@@ -13,6 +13,7 @@ const TodoItem = ({ todoItem }: { todoItem: Todo }) => {
   const toggleCompleted = () => {
     dispatch(todoSlice.actions.toggleCompleted(todoItem));
   };
+
   return (
     <>
       <input
@@ -26,7 +27,7 @@ const TodoItem = ({ todoItem }: { todoItem: Todo }) => {
         {todoItem.title}
       </span>
       <button
-        onClick={() => {
+        onClick={(e) => {
           dispatch(todoSlice.actions.removeTodo(todoItem));
         }}
       >
@@ -55,13 +56,13 @@ const Filter = () => {
 const Filtered = () => {
   const [{ filteredTodos }] = useSlice(todoSlice);
 
-  console.log({ filteredTodos });
   const transitions = useTransition(filteredTodos, {
-    keys: (todo) => todo.toString(),
+    keys: (todo) => todo.title,
     from: { opacity: 0, height: 0 },
     enter: { opacity: 1, height: 40 },
     leave: { opacity: 0, height: 0 },
   });
+
   return transitions((style, item) => (
     <a.div className="item" style={style}>
       <TodoItem todoItem={item} />
@@ -72,20 +73,23 @@ const Filtered = () => {
 const TodoList = () => {
   const [, dispatch] = useSlice(todoSlice);
 
-  const add = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const title = e.currentTarget.inputTitle.value;
-    e.currentTarget.inputTitle.value = '';
-
-    dispatch(todoSlice.actions.addTodo({ title, completed: false }));
-  };
-
   return (
-    <form onSubmit={add}>
+    <>
       <Filter />
-      <input name="inputTitle" placeholder="Type ..." />
+      <input
+        name="inputTitle"
+        placeholder="Type ..."
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const title = e.currentTarget.value;
+            dispatch(todoSlice.actions.addTodo({ title, completed: false }));
+            return;
+          }
+        }}
+      />
       <Filtered />
-    </form>
+    </>
   );
 };
 
