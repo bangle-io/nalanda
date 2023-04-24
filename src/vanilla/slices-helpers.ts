@@ -1,16 +1,17 @@
-import { findDuplications, reverseMap } from './helpers';
-import {
-  createStableSliceId,
-  LineageId,
-  StableSliceId,
-} from './internal-types';
-import { BareSlice } from './slice';
+import { createStableSliceId, findDuplications, reverseMap } from './helpers';
 
-export function expandSlices(slices: BareSlice[] = []): {
-  slices: BareSlice[];
+import type { UnknownSlice } from './slice';
+import { LineageId, StableSliceId } from './types';
+
+export interface ExpandSlice<SL extends UnknownSlice> {
+  slices: SL[];
   pathMap: Record<LineageId, StableSliceId>;
   reversePathMap: Record<StableSliceId, LineageId>;
-} {
+}
+
+export function expandSlices<SL extends UnknownSlice>(
+  slices: SL[] = [],
+): ExpandSlice<SL> {
   // TODO improve the stability of StableSliceID by
   // accounting for slice dependencies, state and anything else
   // so that the same source code will always produce the same in different
@@ -22,12 +23,12 @@ export function expandSlices(slices: BareSlice[] = []): {
   const pathMap = new Map<LineageId, StableSliceId>();
 
   const expand = (
-    slices: BareSlice[] = [],
+    slices: UnknownSlice[] = [],
     parentPrefix: string,
-  ): BareSlice[] => {
+  ): UnknownSlice[] => {
     return slices.flatMap((slice) => {
-      const prefix = createStableSliceId(parentPrefix + slice.name);
-      pathMap.set(slice.lineageId, prefix);
+      const prefix = createStableSliceId(parentPrefix + slice.spec.name);
+      pathMap.set(slice.spec.lineageId, prefix);
 
       return [
         ...expand(slice.spec.beforeSlices, prefix + '.'),
@@ -38,15 +39,14 @@ export function expandSlices(slices: BareSlice[] = []): {
   };
 
   return {
-    slices: expand(slices, ''),
+    slices: expand(slices, '') as SL[],
     pathMap: Object.fromEntries(pathMap.entries()),
     reversePathMap: Object.fromEntries(reverseMap(pathMap).entries()),
   };
 }
 
-export function validateSlices(slices: BareSlice[]) {
+export function validateSlices(slices: UnknownSlice[]) {
   checkUniqDependency(slices);
-  checkUniqueKeys(slices);
   checkUniqueLineage(slices);
   circularCheck(slices);
   checkDependencyOrder(slices);
@@ -61,15 +61,8 @@ export function validatePathMap(
   }
 }
 
-export function checkUniqueKeys(slices: BareSlice[]) {
-  const dups = checkUnique(slices.map((s) => s.key));
-  if (dups) {
-    throw new Error('Duplicate slice keys ' + dups.join(', '));
-  }
-}
-
-export function checkUniqueLineage(slices: BareSlice[]) {
-  const dups = checkUnique(slices.map((s) => s.lineageId));
+export function checkUniqueLineage(slices: UnknownSlice[]) {
+  const dups = checkUnique(slices.map((s) => s.spec.lineageId));
   if (dups) {
     throw new Error('Duplicate slice lineageIds ' + dups.join(', '));
   }
@@ -86,45 +79,46 @@ function checkUnique<T>(entities: T[]): T[] | undefined {
 }
 
 // TODO add test
-function checkUniqDependency(slices: BareSlice[]) {
+function checkUniqDependency(slices: UnknownSlice[]) {
   for (const slice of slices) {
     const dependencies = slice.spec.dependencies;
     if (
-      new Set(dependencies.map((d) => d.lineageId)).size !== dependencies.length
+      new Set(dependencies.map((d) => d.spec.lineageId)).size !==
+      dependencies.length
     ) {
       throw new Error(
-        `Slice "${slice.name}" has duplicate dependencies: ${dependencies
-          .map((d) => d.lineageId)
+        `Slice "${slice.spec.name}" has duplicate dependencies: ${dependencies
+          .map((d) => d.spec.lineageId)
           .join(', ')}`,
       );
     }
   }
 }
 
-function checkDependencyOrder(slices: BareSlice[]) {
+function checkDependencyOrder(slices: UnknownSlice[]) {
   let seenLineageIds = new Set<string>();
   for (const slice of slices) {
     const dependencies = slice.spec.dependencies;
     if (dependencies !== undefined) {
-      const depKeys = dependencies.map((d) => d.lineageId);
+      const depKeys = dependencies.map((d) => d.spec.lineageId);
       for (const depKey of depKeys) {
         if (!seenLineageIds.has(depKey)) {
           throw new Error(
-            `Slice "${slice.lineageId}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
+            `Slice "${slice.spec.lineageId}" has a dependency on Slice "${depKey}" which is either not registered or is registered after this slice.`,
           );
         }
       }
     }
-    seenLineageIds.add(slice.lineageId);
+    seenLineageIds.add(slice.spec.lineageId);
   }
 }
 
-function circularCheck(slices: BareSlice[]) {
+function circularCheck(slices: UnknownSlice[]) {
   const stack = new Set<string>();
   const visited = new Set<string>();
 
-  const checkCycle = (slice: BareSlice): boolean => {
-    const lineageId = slice.lineageId;
+  const checkCycle = (slice: UnknownSlice): boolean => {
+    const lineageId = slice.spec.lineageId;
     if (stack.has(lineageId)) return true;
     if (visited.has(lineageId)) return false;
 
@@ -144,13 +138,77 @@ function circularCheck(slices: BareSlice[]) {
     const cycle = checkCycle(slice);
     if (cycle) {
       const path = [...stack];
-      path.push(slice.lineageId);
+      path.push(slice.spec.lineageId);
 
       throw new Error(
         `Circular dependency detected in slice "${
-          slice.lineageId
+          slice.spec.lineageId
         }" with path ${path.join(' ->')}`,
       );
     }
   }
+}
+
+export const createSliceLineageLookup = (
+  slices: UnknownSlice[],
+): Record<LineageId, UnknownSlice> => {
+  return Object.fromEntries(slices.map((s) => [s.spec.lineageId, s]));
+};
+
+export function flattenReverseDependencies(
+  reverseDep: Record<LineageId, Set<LineageId>>,
+) {
+  const result: Record<LineageId, Set<LineageId>> = {};
+
+  const recurse = (key: LineageId) => {
+    let vals = result[key];
+
+    if (vals) {
+      return vals;
+    }
+
+    vals = new Set<LineageId>();
+    result[key] = vals;
+
+    const deps = reverseDep[key];
+
+    if (deps) {
+      for (const dep of deps) {
+        vals.add(dep);
+        for (const v of recurse(dep)) {
+          vals.add(v);
+        }
+      }
+    }
+
+    return vals;
+  };
+
+  for (const key of Object.keys(reverseDep)) {
+    recurse(key as LineageId);
+  }
+
+  return result;
+}
+
+// TODO: move this to be an internal method as we only use flattenReverseDependencies
+export function calcReverseDependencies(
+  slices: UnknownSlice[],
+): Record<LineageId, Set<LineageId>> {
+  const reverseDependencies: Record<LineageId, Set<LineageId>> = {};
+
+  for (const slice of slices) {
+    for (const dep of slice.spec.dependencies) {
+      let result = reverseDependencies[dep.spec.lineageId];
+
+      if (!result) {
+        result = new Set();
+        reverseDependencies[dep.spec.lineageId] = result;
+      }
+
+      result.add(slice.spec.lineageId);
+    }
+  }
+
+  return reverseDependencies;
 }

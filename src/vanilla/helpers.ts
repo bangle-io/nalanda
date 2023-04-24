@@ -1,33 +1,22 @@
-import { LineageId } from './internal-types';
-import type { AnySlice } from './public-types';
-import type { BareSlice } from './slice';
+import { LineageId, StableSliceId } from './types';
 
-export function mapObjectValues<T, U>(
-  obj: Record<string, T>,
-  fn: (v: T, k: string) => U,
-): Record<string, U> {
-  const newObj: Record<string, U> = Object.create(null);
-
-  for (const [key, value] of Object.entries(obj)) {
-    newObj[key] = fn(value, key);
-  }
-
-  return newObj;
+const lineages: Record<string, number> = Object.create(null);
+export function createLineageId(name: string): LineageId {
+  if (name in lineages) return `l_${name}$${++lineages[name]}` as LineageId;
+  lineages[name] = 0;
+  return `l_${name}$` as LineageId;
 }
 
-export function findDuplications<T>(arr: T[]): T[] {
-  const seen = new Set<T>();
-  const dupes = new Set<T>();
+export function createStableSliceId(id: string): StableSliceId {
+  return id as StableSliceId;
+}
 
-  for (const item of arr) {
-    if (seen.has(item)) {
-      dupes.add(item);
-    } else {
-      seen.add(item);
-    }
-  }
+export function isLineageId(id: unknown): id is LineageId {
+  return typeof id === 'string' && id.startsWith('l_') && /\$\d*$/.test(id);
+}
 
-  return [...dupes];
+export function uuid(len = 10) {
+  return Math.random().toString(36).substring(2, 15).slice(0, len);
 }
 
 export function weakCache<T extends object, R>(
@@ -48,90 +37,19 @@ export function weakCache<T extends object, R>(
   return res;
 }
 
-export function uuid(len = 10) {
-  return Math.random().toString(36).substring(2, 15).slice(0, len);
-}
+export function findDuplications<T>(arr: T[]): T[] {
+  const seen = new Set<T>();
+  const dupes = new Set<T>();
 
-export function flattenReverseDependencies(
-  reverseDep: Record<LineageId, Set<LineageId>>,
-) {
-  const result: Record<LineageId, Set<LineageId>> = {};
-
-  const recurse = (key: LineageId) => {
-    let vals = result[key];
-
-    if (vals) {
-      return vals;
-    }
-
-    vals = new Set<LineageId>();
-    result[key] = vals;
-
-    const deps = reverseDep[key];
-
-    if (deps) {
-      for (const dep of deps) {
-        vals.add(dep);
-        for (const v of recurse(dep)) {
-          vals.add(v);
-        }
-      }
-    }
-
-    return vals;
-  };
-
-  for (const key of Object.keys(reverseDep)) {
-    recurse(key as LineageId);
-  }
-
-  return result;
-}
-
-// TODO: move this to be an internal method as we only use flattenReverseDependencies
-export function calcReverseDependencies(
-  slices: BareSlice[],
-): Record<LineageId, Set<LineageId>> {
-  const reverseDependencies: Record<LineageId, Set<LineageId>> = {};
-
-  for (const slice of slices) {
-    for (const dep of slice.spec.dependencies) {
-      let result = reverseDependencies[dep.lineageId];
-
-      if (!result) {
-        result = new Set();
-        reverseDependencies[dep.lineageId] = result;
-      }
-
-      result.add(slice.lineageId);
+  for (const item of arr) {
+    if (seen.has(item)) {
+      dupes.add(item);
+    } else {
+      seen.add(item);
     }
   }
 
-  return reverseDependencies;
-}
-
-// internal method for changing the type and accessing some methods
-export function changeBareSlice<SL extends BareSlice>(
-  slice: SL,
-  cb: (sl: AnySlice) => AnySlice,
-): SL {
-  return cb(slice as unknown as AnySlice) as unknown as SL;
-}
-
-export function isPlainObject(value: any) {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const prototype = Object.getPrototypeOf(value);
-
-  return (
-    (prototype === null ||
-      prototype === Object.prototype ||
-      Object.getPrototypeOf(prototype) === null) &&
-    !(Symbol.toStringTag in value) &&
-    !(Symbol.iterator in value)
-  );
+  return [...dupes];
 }
 
 export function reverseMap<K, V>(map: Map<K, V>): Map<V, K> {
@@ -140,4 +58,13 @@ export function reverseMap<K, V>(map: Map<K, V>): Map<V, K> {
     reversed.set(value, key);
   }
   return reversed;
+}
+
+export function assertNotUndefined(
+  value: unknown,
+  message: string,
+): asserts value {
+  if (value === undefined) {
+    throw new Error(`assertion failed: ${message}`);
+  }
 }

@@ -1,6 +1,4 @@
-export type { StableSliceId, LineageId } from './internal-types';
-
-export { createDispatchSpy } from '../test-helpers';
+export type { StableSliceId, LineageId } from './types';
 
 export { timeoutSchedular, idleCallbackScheduler } from './effect';
 

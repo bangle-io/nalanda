@@ -1,11 +1,11 @@
-import { testOverrideDependencies } from '../../test-helpers';
+import { testOverrideDependencies } from '../../test-helpers/test-helpers';
+import { createBaseSlice } from '../create';
+import { AnySlice, Slice } from '../slice';
 import {
   calcReverseDependencies,
   flattenReverseDependencies,
-} from '../helpers';
-import { rejectAny } from '../internal-types';
-import { AnySlice } from '../public-types';
-import { BareSlice, Slice } from '../slice';
+} from '../slices-helpers';
+import { rejectAny } from '../types';
 
 test('reject any', () => {
   let _control: any = {};
@@ -23,29 +23,26 @@ test('reject any', () => {
   expect(true).toBe(true);
 });
 
-const createAnySliceBase = (name: string, deps: string[]): BareSlice => {
-  return new Slice({
-    name: name,
-    initState: {},
-    dependencies: deps.map((dep) => {
-      return createAnySliceBase(dep, []) as AnySlice;
+const createAnySliceBase = (name: string, deps: string[]): AnySlice => {
+  return createBaseSlice(
+    deps.map((dep) => {
+      return createAnySliceBase(dep, []);
     }),
-    actions: {},
-    selector: () => {},
-    reducer: (s) => s,
-  });
+    {
+      name: name,
+      initState: {},
+      derivedState: () => () => ({}),
+    },
+  );
 };
 
 let register = new Map<string, AnySlice>();
 
 const createSlice = (name: string): AnySlice => {
-  let slice = new Slice({
-    name,
+  const slice = createBaseSlice([], {
+    name: name,
     initState: {},
-    dependencies: [],
-    actions: {},
-    selector: () => {},
-    reducer: (s) => s,
+    derivedState: () => () => ({}),
   });
 
   register.set(name, slice);
@@ -76,8 +73,10 @@ const slX = createSlice('X');
 const slY = createSlice('Y');
 
 const setDeps = (slice: AnySlice, deps: string[]) => {
-  return testOverrideDependencies(slice, {
-    dependencies: deps.map((r) => {
+  slice = Slice._fork(slice);
+  return testOverrideDependencies(
+    slice,
+    deps.map((r) => {
       let dep = register.get(r);
 
       if (!dep) {
@@ -86,7 +85,8 @@ const setDeps = (slice: AnySlice, deps: string[]) => {
 
       return dep;
     }),
-  });
+    true,
+  );
 };
 
 describe('calcReverseDependencies', () => {

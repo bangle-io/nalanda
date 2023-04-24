@@ -1,5 +1,5 @@
 import { Store, Transaction } from '../vanilla';
-import { BareSlice } from '../vanilla/slice';
+import { AnySlice } from '../vanilla/slice';
 import { DispatchTx } from '../vanilla/store';
 import { abortableSetTimeout, SyncManager, SyncReplicaConfig } from './helpers';
 import type {
@@ -10,8 +10,8 @@ import type {
 } from './sync-store';
 
 export class SyncStoreReplica<
-  SbSync extends BareSlice,
-  SbOther extends BareSlice,
+  SbSync extends AnySlice,
+  SbOther extends AnySlice,
 > {
   public readonly store: Store;
 
@@ -22,6 +22,35 @@ export class SyncStoreReplica<
   private syncManager: SyncManager;
   private storeInfo: ReplicaStoreInfo;
 
+  private syncedDispatch: DispatchTx<Transaction<any, any>> = (store, tx) => {
+    if (!this.syncManager.isSyncLineageId(tx.targetSliceLineage)) {
+      this.config.dispatchTx(store, tx);
+      return;
+    }
+
+    if (!this.isReady) {
+      this.queuedTx.push(tx);
+      return;
+    }
+
+    if (this.mainSyncError) {
+      console.warn(
+        `Replica store "${this.config.storeName}" was not able to sync with main store. Transaction "${tx.uid}" was not sent to main store.`,
+      );
+      return;
+    }
+
+    // send it to the main store
+    // and wait on the main store to send it back via `receiveMessage`
+    this.config.sync.sendMessage({
+      type: 'tx',
+      body: {
+        tx: tx.toJSONObj(store, this.config.sync.payloadSerializer),
+      },
+      from: this.config.storeName,
+      to: this.config.sync.mainStore,
+    });
+  };
   constructor(
     private config: StoreConfig<SbOther> & {
       sync: SyncReplicaConfig<SbSync>;
@@ -74,36 +103,20 @@ export class SyncStoreReplica<
     );
   }
 
-  private syncedDispatch: DispatchTx<Transaction<any, any>> = (store, tx) => {
-    if (!this.syncManager.isSyncLineageId(tx.targetSliceLineage)) {
-      this.config.dispatchTx(store, tx);
+  private onReady() {
+    if (!this.mainInfo || this.isReady) {
       return;
     }
 
-    if (!this.isReady) {
-      this.queuedTx.push(tx);
-      return;
+    this.isReady = true;
+
+    for (const tx of this.queuedTx) {
+      this.syncedDispatch(this.store, tx);
     }
 
-    if (this.mainSyncError) {
-      console.warn(
-        `Replica store "${this.config.storeName}" was not able to sync with main store. Transaction "${tx.uid}" was not sent to main store.`,
-      );
-      return;
-    }
-
-    // send it to the main store
-    // and wait on the main store to send it back via `receiveMessage`
-    this.config.sync.sendMessage({
-      type: 'tx',
-      body: {
-        tx: tx.toJSONObj(store, this.config.sync.payloadSerializer),
-      },
-      from: this.config.storeName,
-      to: this.config.sync.mainStore,
-    });
-  };
-
+    this.queuedTx = [];
+    this.config.onSyncReady?.();
+  }
   public receiveMessage(m: SyncMessage) {
     const type = m.type;
     switch (type) {
@@ -165,21 +178,6 @@ export class SyncStoreReplica<
         throw new Error(`Unknown message type "${_exhaustiveCheck}"`);
       }
     }
-  }
-
-  private onReady() {
-    if (!this.mainInfo || this.isReady) {
-      return;
-    }
-
-    this.isReady = true;
-
-    for (const tx of this.queuedTx) {
-      this.syncedDispatch(this.store, tx);
-    }
-
-    this.queuedTx = [];
-    this.config.onSyncReady?.();
   }
 }
 

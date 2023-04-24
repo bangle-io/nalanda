@@ -1,4 +1,10 @@
-import { Store, createUseSliceHook, Slice, createSlice } from 'nalanda';
+import {
+  Store,
+  createUseSliceHook,
+  Slice,
+  createSliceWithSelectors,
+  createSelector,
+} from 'nalanda';
 
 type Todo = {
   title: string;
@@ -13,44 +19,77 @@ const todosInitState: {
   filter: 'incompleted',
 };
 
-export const todoSlice = createSlice([], {
+export const todoSlice = createSliceWithSelectors([], {
   name: 'todo-slice',
   initState: todosInitState,
-  selector: (state) => {
-    let result: any;
-    if (state.filter === 'all') {
-      result = state.todos;
-    } else if (state.filter === 'completed') {
-      result = state.todos.filter((t) => t.completed);
-    } else {
-      result = state.todos.filter((t) => !t.completed);
-    }
+  selectors: {
+    filteredTodos: createSelector(
+      {
+        todos: (state) => {
+          return state.todos;
+        },
+        filter: (state) => state.filter,
+      },
+      ({ todos, filter }) => {
+        let result: any;
+        if (filter === 'all') {
+          result = todos;
+        } else if (filter === 'completed') {
+          result = todos.filter((t) => t.completed);
+        } else {
+          result = todos.filter((t) => !t.completed);
+        }
 
-    return {
-      filteredTodos: result as Todo[],
-    };
+        return result as Todo[];
+      },
+    ),
   },
-  actions: {
-    addTodo: (todo: Todo) => (state) => {
+});
+
+export const addTodo = Slice.createAction(
+  todoSlice,
+  'addTodo',
+  (todo: Todo) => {
+    return (state) => {
       return {
         ...state,
         todos: [...state.todos, todo],
       };
-    },
-    removeTodo: (todo: Todo) => (state) => {
+    };
+  },
+);
+
+export const removeTodo = Slice.createAction(
+  todoSlice,
+  'removeTodo',
+  (todo: Todo) => {
+    return (state) => {
       return {
         ...state,
         todos: state.todos.filter((t) => t !== todo),
       };
-    },
-    setFilterValue:
-      (filter: 'all' | 'completed' | 'incompleted') => (state) => {
-        return {
-          ...state,
-          filter,
-        };
-      },
-    toggleCompleted: (todo: Todo) => (state) => {
+    };
+  },
+);
+
+export const setFilterValue = Slice.createAction(
+  todoSlice,
+  'setFilterValue',
+  (filter: 'all' | 'completed' | 'incompleted') => {
+    return (state) => {
+      return {
+        ...state,
+        filter,
+      };
+    };
+  },
+);
+
+export const toggleCompleted = Slice.createAction(
+  todoSlice,
+  'toggleCompleted',
+  (todo: Todo) => {
+    return (state) => {
       return {
         ...state,
         todos: state.todos.map((t) => {
@@ -63,9 +102,9 @@ export const todoSlice = createSlice([], {
           return t;
         }),
       };
-    },
+    };
   },
-});
+);
 
 const myStore = Store.create({
   storeName: 'myStore',

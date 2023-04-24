@@ -1,6 +1,5 @@
 import { createSlice } from '../create';
-import { isLineageId } from '../internal-types';
-import { Store } from '../store';
+import { isLineageId } from '../helpers';
 
 const testSlice1InitState = {
   num: 0,
@@ -11,7 +10,6 @@ const testSlice1Decrement =
   };
 const testSlice1 = createSlice([], {
   name: 'test-1',
-  selector: () => {},
   initState: testSlice1InitState,
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
@@ -27,25 +25,22 @@ describe('lineage id is geneated correctly', () => {
       name: 'slice1',
       actions: {},
       initState: { num: 1 },
-      selector: () => {},
     });
 
     const sliceWithSameName = createSlice([], {
       name: 'slice1',
       actions: {},
       initState: { num: 1 },
-      selector: () => {},
     });
     const sliceWithSameName2 = createSlice([], {
       name: 'slice1',
       actions: {},
       initState: { num: 1 },
-      selector: () => {},
     });
 
-    expect(slice1.lineageId).toBe('l_slice1$');
-    expect(sliceWithSameName.lineageId).toBe('l_slice1$1');
-    expect(sliceWithSameName2.lineageId).toBe('l_slice1$2');
+    expect(slice1.spec.lineageId).toBe('l_slice1$');
+    expect(sliceWithSameName.spec.lineageId).toBe('l_slice1$1');
+    expect(sliceWithSameName2.spec.lineageId).toBe('l_slice1$2');
   });
 
   test('isLineageId', () => {

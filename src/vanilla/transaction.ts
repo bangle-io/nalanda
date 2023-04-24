@@ -1,7 +1,7 @@
-import { StoreState } from '.';
 import { uuid } from './helpers';
-import { LineageId } from './internal-types';
-import { Store } from './store';
+import { StoreState } from './state';
+import type { Store } from './store';
+import type { LineageId } from './types';
 
 const contextId = uuid(5);
 let counter = 0;
@@ -29,35 +29,6 @@ export type PayloadParser = (
 ) => unknown[];
 
 export class Transaction<N extends string, P extends unknown[]> {
-  public metadata = new Metadata();
-
-  public readonly sourceSliceLineage: LineageId;
-  public readonly targetSliceLineage: LineageId;
-  public readonly payload: P;
-  public readonly actionId: string;
-  public readonly uid = incrementalId();
-
-  toJSONObj(store: Store, payloadSerializer: PayloadSerializer<N, P>) {
-    return {
-      // lineage-ids are are not stable across the browser refreshes.
-      // stable slice ids are used instead. They are not foolproof but
-      // should be good enough for most cases.
-      sourceSliceId: StoreState.getStableSliceId(
-        store.state,
-        this.sourceSliceLineage,
-      ),
-      targetSliceId: StoreState.getStableSliceId(
-        store.state,
-        this.targetSliceLineage,
-      ),
-      sourceSliceName: this.config.sourceSliceName,
-      payload: payloadSerializer(this.payload, this),
-      actionId: this.actionId,
-      uid: this.uid,
-      metadata: this.metadata.toJSONObj(),
-    };
-  }
-
   static fromJSONObj(
     store: Store,
     obj: JSONTransaction,
@@ -97,6 +68,13 @@ export class Transaction<N extends string, P extends unknown[]> {
 
     return tx;
   }
+  public metadata = new Metadata();
+
+  public readonly sourceSliceLineage: LineageId;
+  public readonly targetSliceLineage: LineageId;
+  public readonly payload: P;
+  public readonly actionId: string;
+  public readonly uid = incrementalId();
 
   constructor(
     public readonly config: {
@@ -121,38 +99,53 @@ export class Transaction<N extends string, P extends unknown[]> {
     this.payload = config.payload;
     this.actionId = config.actionId;
   }
+  toJSONObj(store: Store, payloadSerializer: PayloadSerializer<N, P>) {
+    return {
+      // lineage-ids are are not stable across the browser refreshes.
+      // stable slice ids are used instead. They are not foolproof but
+      // should be good enough for most cases.
+      sourceSliceId: StoreState.getStableSliceId(
+        store.state,
+        this.sourceSliceLineage,
+      ),
+      targetSliceId: StoreState.getStableSliceId(
+        store.state,
+        this.targetSliceLineage,
+      ),
+      sourceSliceName: this.config.sourceSliceName,
+      payload: payloadSerializer(this.payload, this),
+      actionId: this.actionId,
+      uid: this.uid,
+      metadata: this.metadata.toJSONObj(),
+    };
+  }
 }
 
 export class Metadata {
-  private _metadata: Record<string, string> = Object.create(null);
-
   static fromJSONObj(obj: Record<string, string>) {
     let meta = new Metadata();
     meta._metadata = { ...obj };
     return meta;
   }
-
-  toJSONObj() {
-    return { ...this._metadata };
-  }
+  private _metadata: Record<string, string> = Object.create(null);
 
   appendMetadata(key: string, val: string) {
     let existing = this.getMetadata(key);
     this.setMetadata(key, existing ? existing + ',' + val : val);
   }
-
-  getMetadata(key: string) {
-    return this._metadata[key];
-  }
-
-  setMetadata(key: string, val: string) {
-    this._metadata[key] = val;
-  }
-
   fork(): Metadata {
     const meta = new Metadata();
     meta._metadata = { ...this._metadata };
     return meta;
+  }
+  getMetadata(key: string) {
+    return this._metadata[key];
+  }
+  setMetadata(key: string, val: string) {
+    this._metadata[key] = val;
+  }
+  toJSONObj() {
+    return { ...this._metadata };
   }
 }
 

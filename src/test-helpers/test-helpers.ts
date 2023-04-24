@@ -1,39 +1,34 @@
-import type { AnySlice, BareStore } from '../vanilla/public-types';
-import { DispatchTx, Store } from '../vanilla/store';
-import {
-  LogItem,
-  Transaction,
-  TX_META_DISPATCHER,
-} from '../vanilla/transaction';
+import { Transaction } from '../vanilla';
+import { AnySlice } from '../vanilla/slice';
+import { DispatchTx, ReducedStore, Store } from '../vanilla/store';
+import { LogItem, TX_META_DISPATCHER } from '../vanilla/transaction';
 
-/**
- * To be only used for testing scenarios. In production, slices should never be able
- * to override their dependencies.
- */
 export function testOverrideDependencies<SL extends AnySlice>(
   slice: SL,
-  {
-    dependencies = slice.spec.dependencies,
-  }: {
-    // since this is for testing, we can allow any slice
-    dependencies?: AnySlice[];
-  },
+  dependencies: AnySlice[] = slice.spec.dependencies,
+  cloneSpec = false,
 ): SL {
-  return slice._fork({
-    dependencies,
-  }) as any;
+  let spec = slice.spec;
+  if (cloneSpec) {
+    spec = { ...spec };
+  }
+  (spec as any).dependencies = dependencies;
+
+  (slice as any).spec = spec;
+
+  return slice;
 }
 
-export function waitUntil<B extends BareStore<any>>(
-  store: B,
-  condition: (state: B['state']) => boolean,
+export function waitUntil<TStore extends ReducedStore<any> | Store<any>>(
+  store: TStore,
+  condition: (state: TStore['state']) => boolean,
   waitUntil = 100,
   pollFrequency = 5,
-): Promise<B['state']> {
+): Promise<TStore['state']> {
   let interval: ReturnType<typeof setInterval> | undefined;
   let timeout: ReturnType<typeof setTimeout> | undefined;
 
-  return new Promise<B['state']>((resolve, reject) => {
+  return new Promise<TStore['state']>((resolve, reject) => {
     timeout = setTimeout(() => {
       clearInterval(interval);
       reject(new Error('Timeout condition not met'));
@@ -86,7 +81,7 @@ export function createDispatchSpy(fn?: (tx: Transaction<any, any>) => void) {
             ? true
             : [filterBySource]
                 .flatMap((s) => s)
-                .some((s) => r.sourceSliceLineage == s.lineageId);
+                .some((s) => r.sourceSliceLineage == s.spec.lineageId);
         })
         .map(
           ({
