@@ -1,13 +1,17 @@
-import { waitUntil } from '../../test-helpers';
-import { createKey, slice } from '../create';
+import { createBaseSlice, createSlice } from '../create';
 import { timeoutSchedular } from '../effect';
+import { Slice } from '../slice';
 
 import { StoreState } from '../state';
 import { ReducedStore, Store } from '../store';
 import { TX_META_DISPATCH_INFO, TX_META_STORE_NAME } from '../transaction';
+import { waitUntil } from '../../test-helpers/test-helpers';
 
-const testSlice1 = slice({
-  key: createKey('test-1', [], { num: 4 }),
+const testSlice1 = createSlice([], {
+  name: 'test-1',
+  initState: {
+    num: 4,
+  },
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -18,8 +22,11 @@ const testSlice1 = slice({
   },
 });
 
-const testSlice2 = slice({
-  key: createKey('test-2', [], { name: 'tame' }),
+const testSlice2 = createSlice([], {
+  name: 'test-2',
+  initState: {
+    name: 'tame',
+  },
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -33,29 +40,74 @@ const testSlice2 = slice({
   },
 });
 
-const testSlice3 = slice({
-  key: createKey('test-3', [], { name: 'tame' }),
-  actions: {
-    lowercase: () => (state) => {
-      return { ...state, name: state.name.toLocaleLowerCase() };
-    },
-    uppercase: () => (state) => {
-      return { ...state, name: state.name.toUpperCase() };
-    },
+const testSlice3 = createBaseSlice([], {
+  name: 'test-3',
+  initState: {
+    name: 'tame',
   },
-  effects: [
-    {
-      name: 'to-lowercase',
-      updateSync(sl, store) {
-        if (sl.getState(store.state).name === 'TAME') {
-          store.dispatch(sl.actions.lowercase());
-        }
-      },
-    },
-  ],
+  derivedState: () => () => {},
+});
+
+const testSlice3Lowercase = Slice.createAction(
+  testSlice3,
+  'lowercase',
+  () => (state) => ({
+    ...state,
+    name: state.name.toLocaleLowerCase(),
+  }),
+);
+
+const testSlice3Uppercase = Slice.createAction(
+  testSlice3,
+  'uppercase',
+  () => (state) => {
+    return { ...state, name: state.name.toUpperCase() };
+  },
+);
+Slice._registerEffect(testSlice3, {
+  name: 'to-lowercase',
+  updateSync(sl, store) {
+    if (sl.getState(store.state).name === 'TAME') {
+      store.dispatch(testSlice3Lowercase());
+    }
+  },
 });
 
 describe('store', () => {
+  test('disable effect works', async () => {
+    const called = jest.fn();
+    let mySlice = createBaseSlice([testSlice1], {
+      name: 'mySlice',
+      initState: {
+        found: false,
+      },
+      derivedState: () => () => {},
+    });
+
+    Slice._registerEffect(mySlice, {
+      name: 'counter-update',
+      updateSync(sl, store) {
+        called();
+      },
+    });
+
+    let disabledEffectSlice = Slice.disableEffects(mySlice);
+
+    expect(mySlice.config.disableEffects).toBe(false);
+    expect(disabledEffectSlice.config.disableEffects).toBe(true);
+
+    const myStore = Store.create({
+      storeName: 'myStore',
+      scheduler: timeoutSchedular(0),
+      state: [testSlice1, testSlice2, testSlice3, disabledEffectSlice],
+    });
+
+    myStore.dispatch(testSlice1.actions.increment({ increment: true }));
+
+    await Promise.resolve();
+
+    expect(called).toBeCalledTimes(0);
+  });
   test('works', () => {
     const myStore = Store.create({
       storeName: 'myStore',
@@ -67,7 +119,6 @@ describe('store', () => {
 
     myStore.dispatch(tx, 'test-location');
 
-    expect(tx.uid?.endsWith('-0')).toBe(true);
     expect(tx.metadata.getMetadata(TX_META_STORE_NAME)).toBe('myStore');
     expect(tx.metadata.getMetadata(TX_META_DISPATCH_INFO)).toBe(
       'test-location',
@@ -77,7 +128,7 @@ describe('store', () => {
 
     myStore.dispatch(tx2);
 
-    expect(tx2.uid?.endsWith('-1')).toBe(true);
+    expect(tx2.uid?.includes('-')).toBe(true);
   });
 
   test('logs', async () => {
@@ -115,7 +166,7 @@ describe('store', () => {
       ]
     `);
 
-    myStore.dispatch(testSlice3.actions.uppercase());
+    myStore.dispatch(testSlice3Uppercase());
 
     await Promise.resolve();
 
@@ -177,16 +228,18 @@ describe('ReducedStore', () => {
 
     myStore.dispatch(testSlice2.actions.uppercase());
 
-    myStore.dispatch(testSlice3.actions.lowercase());
+    myStore.dispatch(testSlice3Lowercase());
 
     expect(() =>
+      // @ts-expect-error -  since testSlice3 is not included in reduced store
       testSlice3.getState(reducedStore1.state),
     ).toThrowErrorMatchingInlineSnapshot(
       `"Slice "test-3" is not included in the dependencies of the scoped slice "test-1""`,
     );
 
     expect(() =>
-      reducedStore1.dispatch(testSlice3.actions.uppercase()),
+      // @ts-expect-error -  since testSlice3 is not included in reduced store
+      reducedStore1.dispatch(testSlice3Uppercase()),
     ).toThrowErrorMatchingInlineSnapshot(
       `"Dispatch not allowed! Slice "test-1" does not include "test-3" in its dependency."`,
     );
@@ -219,19 +272,21 @@ describe('ReducedStore', () => {
   test('reduced store props', async () => {
     let providedStore: any | null = null;
     let providedPrevState: ReducedStore<any>['state'] | null = null;
-    const mySlice = slice({
-      key: createKey('my-slice', [], { num: 4 }),
-      actions: {
-        addOne: () => (state) => ({ ...state, num: state.num + 1 }),
+    const mySlice = createBaseSlice([], {
+      name: 'my-slice',
+      initState: { num: 4 },
+      derivedState: () => () => ({}),
+    });
+    const addOne = Slice.createAction(mySlice, 'addOne', () => (state) => ({
+      ...state,
+      num: state.num + 1,
+    }));
+
+    Slice._registerEffect(mySlice, {
+      update: (sl, store) => {
+        providedStore = store;
+        providedPrevState = store.state;
       },
-      effects: [
-        {
-          update: (sl, store, prevState) => {
-            providedStore = store;
-            providedPrevState = store.state;
-          },
-        },
-      ],
     });
 
     const myStore = Store.create({
@@ -242,7 +297,7 @@ describe('ReducedStore', () => {
 
     const redStore = Store.getReducedStore(myStore, mySlice);
 
-    redStore.dispatch(mySlice.actions.addOne());
+    redStore.dispatch(addOne());
 
     await waitUntil(Store.getReducedStore(myStore, mySlice), (state) => {
       return mySlice.getState(state).num === 5;

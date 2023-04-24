@@ -1,10 +1,12 @@
-import { calcReverseDependencies, flattenReverseDependencies } from './helpers';
-import { LineageId } from './internal-types';
-import { AnyEffect, AnySlice } from './public-types';
-import type { BareSlice } from './slice';
+import type { UnknownSlice } from './slice';
+import {
+  calcReverseDependencies,
+  flattenReverseDependencies,
+} from './slices-helpers';
 import type { StoreState } from './state';
 import { Store } from './store';
-import { DebugFunc } from './transaction';
+import type { DebugFunc } from './transaction';
+import { UnknownEffect, LineageId } from './types';
 
 export interface Scheduler {
   schedule: (cb: () => void) => void;
@@ -47,26 +49,16 @@ export class SideEffectsManager {
 
   private _flatReverseDep: Record<LineageId, Set<LineageId>>;
 
-  private *_effectHandlerEntries(): Iterable<EffectHandler> {
-    for (const handlers of Object.values(this._effects.record)) {
-      for (const handler of handlers) {
-        yield handler;
-      }
-    }
-  }
-
-  destroy(state: StoreState) {
-    for (const effectHandler of this._effectHandlerEntries()) {
-      effectHandler.destroy?.(state);
-    }
-  }
-
+  // TODO: this will be removed once we have better way of adding dynamic slices
+  private _tempOnSyncChange = new Map<string, Set<() => void>>();
   constructor(
-    slices: BareSlice[],
-    initState: StoreState,
+    slices: UnknownSlice[],
+    initState: StoreState<string>,
     private _schedular: Scheduler = idleCallbackScheduler(15),
     _debug?: DebugFunc,
   ) {
+    slices = slices.filter((slice) => !slice.config.disableEffects);
+
     // TODO ensure deps are valid and don't have circular dependencies
     // nice to have if reverse dep are sorted in the order slice are defined
     this._flatReverseDep = flattenReverseDependencies(
@@ -76,40 +68,22 @@ export class SideEffectsManager {
     // fill in record of effects
     slices.forEach((slice) => {
       if (slice.spec.effects) {
-        this._effects.record[slice.lineageId] = slice.spec.effects.map(
+        this._effects.record[slice.spec.lineageId] = slice.spec.effects.map(
           (effect) => new EffectHandler(effect, initState, slice, _debug),
         );
       }
     });
   }
-
-  // TODO: this will be removed once we have better way of adding dynamic slices
-  _tempRegisterOnSyncChange(lineageId: LineageId, cb: () => void) {
-    let set = this._tempOnSyncChange.get(lineageId);
-
-    if (!set) {
-      set = new Set();
-      this._tempOnSyncChange.set(lineageId, set);
+  destroy(state: StoreState<string>) {
+    for (const effectHandler of this._effectHandlerEntries()) {
+      effectHandler.destroy?.(state);
     }
-
-    set.add(cb);
-
-    return () => {
-      set?.delete(cb);
-      if (set?.size === 0) {
-        this._tempOnSyncChange.delete(lineageId);
-      }
-    };
   }
-  // TODO: this will be removed once we have better way of adding dynamic slices
-  private _tempOnSyncChange = new Map<string, Set<() => void>>();
-
   initEffects(store: Store) {
     for (const effectHandler of this._effectHandlerEntries()) {
       effectHandler.runInit(store);
     }
   }
-
   queueSideEffectExecution(
     store: Store,
     {
@@ -171,6 +145,13 @@ export class SideEffectsManager {
       });
     }
   }
+  private *_effectHandlerEntries(): Iterable<EffectHandler> {
+    for (const handlers of Object.values(this._effects.record)) {
+      for (const handler of handlers) {
+        yield handler;
+      }
+    }
+  }
 
   private _runLoop(store: Store) {
     if (store.destroyed) {
@@ -187,7 +168,6 @@ export class SideEffectsManager {
       });
     }
   }
-
   private _runSyncUpdateEffects(store: Store) {
     const { queue } = this._effects;
 
@@ -206,7 +186,6 @@ export class SideEffectsManager {
       }
     }
   }
-
   private _runUpdateEffect(store: Store, onDone: () => void) {
     this._schedular.schedule(() => {
       const { queue } = this._effects;
@@ -228,33 +207,101 @@ export class SideEffectsManager {
       }
     });
   }
+  // TODO: this will be removed once we have better way of adding dynamic slices
+  _tempRegisterOnSyncChange(lineageId: LineageId, cb: () => void) {
+    let set = this._tempOnSyncChange.get(lineageId);
+
+    if (!set) {
+      set = new Set();
+      this._tempOnSyncChange.set(lineageId, set);
+    }
+
+    set.add(cb);
+
+    return () => {
+      set?.delete(cb);
+      if (set?.size === 0) {
+        this._tempOnSyncChange.delete(lineageId);
+      }
+    };
+  }
 }
 
 export class EffectHandler {
-  private _syncPrevState: StoreState;
-  private _deferredPrevState: StoreState;
-
   public debugSyncLastRanBy: { lineageId: LineageId; actionId: string }[] = [];
   public debugDeferredLastRanBy: { lineageId: LineageId; actionId: string }[] =
     [];
+  private _deferredPrevState: StoreState<string>;
   private _ref = {};
+  private _syncPrevState: StoreState<string>;
 
   constructor(
-    public effect: AnyEffect,
-    public readonly initStoreState: StoreState,
-    protected _slice: BareSlice,
+    public effect: UnknownEffect,
+    public readonly initStoreState: StoreState<string>,
+    protected _slice: UnknownSlice,
     private _debug?: DebugFunc,
   ) {
     this._deferredPrevState = this.initStoreState;
     this._syncPrevState = this.initStoreState;
   }
 
+  get lineageId() {
+    return this._slice.spec.lineageId;
+  }
   public addDebugInfo(payload: { lineageId: LineageId; actionId: string }) {
     if (!this._debug) {
       return;
     }
     this.debugSyncLastRanBy.push(payload);
     this.debugDeferredLastRanBy.push(payload);
+  }
+
+  destroy(state: StoreState<string>) {
+    this.effect.destroy?.(this._slice, state, this._ref);
+    this._ref = {};
+  }
+  runDeferredUpdate(store: Store) {
+    const previouslySeenState = this._deferredPrevState;
+    this._deferredPrevState = store.state;
+
+    if (this.effect.update) {
+      this._sendDebugInfo('deferred');
+
+      // TODO error handling
+      this.effect.update(
+        this._slice,
+        Store.getReducedStore(store, this._slice),
+        previouslySeenState,
+        this._ref,
+      );
+    }
+  }
+  runInit(store: Store) {
+    this.effect.init?.(
+      this._slice,
+      Store.getReducedStore(store, this._slice),
+      this._ref,
+    );
+  }
+  runSyncUpdate(store: Store) {
+    // Note: if it is the first time an effect is running this
+    // the previouslySeenState would be the initial state
+    const previouslySeenState = this._syncPrevState;
+    // `previouslySeenState` needs to always be the one that the effect.update has seen before or the initial state.
+    // Here we are saving the store.state before calling update, because an update can dispatch an action and
+    // causing another run of of effects, and giving a stale previouslySeen to those effect update calls.
+    this._syncPrevState = store.state;
+    if (this.effect.updateSync) {
+      this._sendDebugInfo('sync');
+
+      // TODO error handling
+      this.effect.updateSync(
+        this._slice,
+        Store.getReducedStore(store, this._slice),
+        previouslySeenState,
+        this._ref,
+      );
+    }
   }
 
   private _sendDebugInfo(type: 'sync' | 'deferred') {
@@ -278,61 +325,6 @@ export class EffectHandler {
         source: this.debugDeferredLastRanBy,
       });
       this.debugDeferredLastRanBy = [];
-    }
-  }
-
-  get lineageId() {
-    return this._slice.lineageId;
-  }
-
-  runInit(store: Store) {
-    this.effect.init?.(
-      this._slice as AnySlice,
-      Store.getReducedStore(store, this._slice),
-      this._ref,
-    );
-  }
-
-  destroy(state: StoreState) {
-    this.effect.destroy?.(this._slice as AnySlice, state, this._ref);
-    this._ref = {};
-  }
-
-  runSyncUpdate(store: Store) {
-    // Note: if it is the first time an effect is running this
-    // the previouslySeenState would be the initial state
-    const previouslySeenState = this._syncPrevState;
-    // `previouslySeenState` needs to always be the one that the effect.update has seen before or the initial state.
-    // Here we are saving the store.state before calling update, because an update can dispatch an action and
-    // causing another run of of effects, and giving a stale previouslySeen to those effect update calls.
-    this._syncPrevState = store.state;
-    if (this.effect.updateSync) {
-      this._sendDebugInfo('sync');
-
-      // TODO error handling
-      this.effect.updateSync(
-        this._slice as AnySlice,
-        Store.getReducedStore(store, this._slice),
-        previouslySeenState,
-        this._ref,
-      );
-    }
-  }
-
-  runDeferredUpdate(store: Store) {
-    const previouslySeenState = this._deferredPrevState;
-    this._deferredPrevState = store.state;
-
-    if (this.effect.update) {
-      this._sendDebugInfo('deferred');
-
-      // TODO error handling
-      this.effect.update(
-        this._slice as AnySlice,
-        Store.getReducedStore(store, this._slice),
-        previouslySeenState,
-        this._ref,
-      );
     }
   }
 }

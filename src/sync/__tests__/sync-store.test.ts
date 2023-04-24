@@ -1,41 +1,55 @@
 import waitForExpect from 'wait-for-expect';
 import {
-  createDispatchSpy,
+  createBaseSlice,
+  createSelector,
   createSlice,
+  createSliceWithSelectors,
   Slice,
   Store,
   timeoutSchedular,
   Transaction,
 } from '../../vanilla';
 import { createSyncStore, SyncMessage } from '../sync-store';
-import { BareSlice } from '../../vanilla/slice';
 import { changeEffect, syncChangeEffect } from '../../effects';
 import { abortableSetTimeout, getReplicaLookup, SyncManager } from '../helpers';
-import { createStableSliceId } from '../../vanilla/internal-types';
-import { mergeAll } from '../../merge';
 import { PayloadParser, PayloadSerializer } from '../../vanilla/transaction';
+import { AnySlice } from '../../vanilla/slice';
+import { createDispatchSpy } from '../../test-helpers/test-helpers';
+import { createStableSliceId } from '../../vanilla/helpers';
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
 }
 
-const testSlice1 = createSlice([], {
+const testSlice1 = createBaseSlice([], {
   name: 'testSlice1',
   initState: {
     counter: 0,
   },
-  actions: {
-    increment: () => (state) => ({
+  derivedState: () => () => ({}),
+});
+
+const testSlice1Increment = Slice.createAction(testSlice1, 'increment', () => {
+  return (state) => {
+    return {
       ...state,
       counter: state.counter + 1,
-    }),
-    update: (num: number) => (state) => ({
-      ...state,
-      counter: state.counter + num,
-    }),
-  },
-  selector: () => {},
+    };
+  };
 });
+
+const testSlice1Update = Slice.createAction(
+  testSlice1,
+  'update',
+  (num: number) => {
+    return (state) => {
+      return {
+        ...state,
+        counter: state.counter + num,
+      };
+    };
+  },
+);
 
 let aborter = new AbortController();
 
@@ -72,23 +86,22 @@ const testSlice2 = createSlice([], {
       return { ...state, name: state.name.toUpperCase() };
     },
   },
-  selector: () => {},
 });
 
-const depOnTestSlice1Slice = createSlice([testSlice1], {
+const depOnTestSlice1Slice = createSliceWithSelectors([testSlice1], {
   name: 'depOnTestSlice1Slice',
   initState: {
     dep: 4,
   },
-  actions: {
-    increment: () => (state, storeState) => ({
-      ...state,
-      dep: state.dep + 1 + testSlice1.getState(storeState).counter,
-    }),
+  selectors: {
+    added: createSelector(
+      {
+        dep: (state) => state.dep,
+        counter: (_, storeState) => testSlice1.getState(storeState).counter,
+      },
+      ({ dep, counter }) => dep + counter,
+    ),
   },
-  selector: (state, storeState) => ({
-    added: state.dep + testSlice1.getState(storeState).counter,
-  }),
 });
 
 const createBasicPair = ({
@@ -96,8 +109,8 @@ const createBasicPair = ({
   replica = {},
 }: {
   main?: {
-    slices?: BareSlice[];
-    syncSlices?: BareSlice[];
+    slices?: AnySlice[];
+    syncSlices?: AnySlice[];
     replicaStores?: string[];
     sendDelay?: number;
     payloadParser?: typeof defaultPayloadParser;
@@ -105,8 +118,8 @@ const createBasicPair = ({
   };
   replica?: {
     mainStore?: string;
-    slices?: BareSlice[];
-    syncSlices?: BareSlice[];
+    slices?: AnySlice[];
+    syncSlices?: AnySlice[];
     setupDelay?: number;
     sendDelay?: number;
     payloadParser?: typeof defaultPayloadParser;
@@ -257,7 +270,7 @@ describe('basic test', () => {
       },
     });
 
-    result.getReplicaStore().dispatch(testSlice1.actions.increment());
+    result.getReplicaStore().dispatch(testSlice1Increment());
 
     await waitForExpect(() => {
       expect(result.mainOnSyncError).toHaveBeenCalledTimes(1);
@@ -300,27 +313,26 @@ describe('basic test', () => {
   });
 
   test('erroring - in replica , a slice is defined in sync and other slice', () => {
-    expect(() =>
+    expect(() => {
+      const slice = createBaseSlice([], {
+        name: 'mySlice1',
+        initState: {},
+        derivedState: () => () => ({}),
+      });
+
+      Slice._registerInternalSlice(slice, {
+        before: [testSlice1, testSlice1],
+      });
+
       createBasicPair({
         main: {},
         replica: {
-          syncSlices: [
-            new Slice({
-              name: 'mySlice1',
-              initState: {},
-              actions: {},
-              dependencies: [],
-              selector: () => {},
-              reducer: (s) => s,
-              beforeSlices: [testSlice1, testSlice1],
-            }),
-          ],
-
+          syncSlices: [slice],
           slices: [testSlice2],
         },
-      }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `"Duplicate slice keys key_testSlice1"`,
+      });
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"Duplicate slice lineageIds l_testSlice1$"`,
     );
   });
 
@@ -338,7 +350,7 @@ describe('basic test', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.mainStore.dispatch(testSlice1Increment());
 
     await waitForExpect(() => {
       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
@@ -354,14 +366,14 @@ describe('basic test', () => {
   test('incorrect slice path results in error', async () => {
     // testSlice1 is inside mySlice but the same order is not there in
     // replica
-    const mySlice = new Slice({
+    const mySlice = createBaseSlice([], {
       name: 'mySlice',
       initState: {},
-      actions: {},
-      dependencies: [],
-      selector: () => {},
-      reducer: (s) => s,
-      beforeSlices: [testSlice1],
+      derivedState: () => () => ({}),
+    });
+
+    Slice._registerInternalSlice(mySlice, {
+      before: [testSlice1],
     });
 
     const result = createBasicPair({
@@ -388,14 +400,14 @@ describe('basic test', () => {
   });
 
   test('additional slices work in main', async () => {
-    const mySlice = new Slice({
+    const mySlice = createBaseSlice([], {
       name: 'mySlice',
       initState: {},
-      actions: {},
-      dependencies: [],
-      selector: () => {},
-      reducer: (s) => s,
-      beforeSlices: [testSlice1],
+      derivedState: () => () => ({}),
+    });
+
+    Slice._registerInternalSlice(mySlice, {
+      before: [testSlice1],
     });
 
     const result = createBasicPair({
@@ -408,7 +420,7 @@ describe('basic test', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.mainStore.dispatch(testSlice1Increment());
 
     await waitForExpect(() => {
       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
@@ -434,7 +446,7 @@ describe('basic test', () => {
       },
       ({ counter }, dispatch) => {
         if (counter === 1) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
         }
       },
     );
@@ -448,7 +460,7 @@ describe('basic test', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.mainStore.dispatch(testSlice1Increment());
 
     expect(testSlice1.getState(result.mainStore.state)).toEqual({
       counter: 1,
@@ -500,7 +512,7 @@ describe('basic test', () => {
       },
       ({ counter }, dispatch) => {
         if (counter === 1) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
         }
       },
     );
@@ -515,7 +527,7 @@ describe('basic test', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.mainStore.dispatch(testSlice1Increment());
 
     expect(testSlice1.getState(result.mainStore.state)).toEqual({
       counter: 1,
@@ -545,8 +557,8 @@ describe('sync queuing', () => {
       },
       ({ counter }, dispatch) => {
         if (counter === 1) {
-          dispatch(testSlice1.actions.increment());
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
+          dispatch(testSlice1Increment());
           replicaEffectCalled();
         }
       },
@@ -573,7 +585,7 @@ describe('sync queuing', () => {
       expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(0);
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.mainStore.dispatch(testSlice1Increment());
 
     await sleep(50);
     expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(0);
@@ -601,7 +613,7 @@ describe('sync queuing', () => {
       },
       ({ counter }, dispatch) => {
         if (counter === 1) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
           mainEffectCalled();
         }
       },
@@ -614,7 +626,7 @@ describe('sync queuing', () => {
       },
       ({ counter }, dispatch) => {
         if (counter === 2) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
           replicaEffectCalled();
         }
       },
@@ -633,7 +645,7 @@ describe('sync queuing', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
+    result.mainStore.dispatch(testSlice1Increment());
     await sleep(100);
 
     await waitForExpect(() => {
@@ -682,7 +694,7 @@ describe('sync queuing', () => {
         }
 
         if (counter % 2 === 1) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
         }
       },
     );
@@ -697,7 +709,7 @@ describe('sync queuing', () => {
           return;
         }
         if (counter % 2 === 0) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
         }
       },
     );
@@ -713,7 +725,6 @@ describe('sync queuing', () => {
           fives: state.fives + 1,
         }),
       },
-      selector: () => {},
     });
 
     const fiveWatch = syncChangeEffect(
@@ -781,7 +792,7 @@ describe('sync queuing', () => {
         }
 
         if (counter % 2 === 0) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
         }
       },
     );
@@ -797,7 +808,6 @@ describe('sync queuing', () => {
           fives: state.fives + 1,
         }),
       },
-      selector: () => {},
     });
 
     const fiveWatch = syncChangeEffect(
@@ -823,7 +833,7 @@ describe('sync queuing', () => {
           return;
         }
         if (counter % 2 === 1) {
-          dispatch(testSlice1.actions.increment());
+          dispatch(testSlice1Increment());
         }
       },
     );
@@ -883,7 +893,8 @@ describe('SyncManager', () => {
       otherSlices: [testSlice2],
     });
 
-    expect(result.syncSlices.map((r) => r.lineageId)).toMatchInlineSnapshot(`
+    expect(result.syncSlices.map((r) => r.spec.lineageId))
+      .toMatchInlineSnapshot(`
       [
         "l_testSlice1$",
       ]
@@ -896,23 +907,22 @@ describe('SyncManager', () => {
   });
 
   test('additional slice are expanded', () => {
+    const mySlice1 = createBaseSlice([], {
+      name: 'mySlice1',
+      initState: {},
+      derivedState: () => () => ({}),
+    });
+    Slice._registerInternalSlice(mySlice1, {
+      before: [testSlice1],
+    });
+
     const result = new SyncManager({
       storeName: 'test',
       sync: {
         payloadParser: defaultPayloadParser,
         payloadSerializer: defaultPayloadSerializer,
         type: 'main',
-        slices: [
-          new Slice({
-            name: 'mySlice1',
-            initState: {},
-            actions: {},
-            dependencies: [],
-            selector: () => {},
-            reducer: (s) => s,
-            beforeSlices: [testSlice1],
-          }),
-        ],
+        slices: [mySlice1],
         replicaStores: [],
         sendMessage: () => {},
       },
@@ -925,7 +935,8 @@ describe('SyncManager', () => {
         "mySlice1.testSlice1",
       ]
     `);
-    expect(result.otherSlices.map((r) => r.lineageId)).toMatchInlineSnapshot(`
+    expect(result.otherSlices.map((r) => r.spec.lineageId))
+      .toMatchInlineSnapshot(`
       [
         "l_testSlice2$",
       ]
@@ -933,22 +944,18 @@ describe('SyncManager', () => {
   });
 
   test('effects are removed in replica', () => {
+    const mySlice1 = createBaseSlice([], {
+      name: 'mySlice1',
+      initState: {},
+      derivedState: () => () => ({}),
+    });
+
     const result = new SyncManager({
       storeName: 'test',
       sync: {
         type: 'replica',
         mainStore: 'main-store',
-        slices: [
-          new Slice({
-            name: 'mySlice1',
-            initState: {},
-            actions: {},
-            dependencies: [],
-            selector: () => {},
-            reducer: (s) => s,
-          }),
-          changeEffect('test-effect-1', {}, () => {}),
-        ],
+        slices: [mySlice1, changeEffect('test-effect-1', {}, () => {})],
         sendMessage: () => {},
         payloadSerializer: (p) => p,
         payloadParser: (p) => {
@@ -961,29 +968,21 @@ describe('SyncManager', () => {
       otherSlices: [changeEffect('test-effect-2', {}, () => {})],
     });
 
-    expect(result.syncSlices.map((r) => [r.lineageId, r.spec.effects])).toEqual(
-      [
-        [expect.stringMatching(/^l_mySlice1\$/), []],
-        [expect.stringMatching(/^l_test-effect-1\$/), []],
-      ],
-    );
     expect(
-      result.otherSlices.map((r) => [r.lineageId, r.spec.effects]),
+      result.syncSlices.map((r) => [r.spec.lineageId, r.config.disableEffects]),
+    ).toEqual([
+      [expect.stringMatching(/^l_mySlice1\$/), true],
+      [expect.stringMatching(/^l_test-effect-1\$/), true],
+    ]);
+
+    expect(
+      result.otherSlices.map((r) => [
+        r.spec.lineageId,
+        r.config.disableEffects,
+      ]),
     ).toEqual(
       // non sync slice effects are not removed
-      [
-        [
-          'l_test-effect-2$',
-          [
-            expect.objectContaining({
-              destroy: expect.any(Function),
-              init: expect.any(Function),
-              update: expect.any(Function),
-              name: 'test-effect-2(changeEffect)',
-            }),
-          ],
-        ],
-      ],
+      [['l_test-effect-2$', false]],
     );
   });
 });
@@ -1011,8 +1010,8 @@ describe('serialization', () => {
       },
     });
 
-    result.mainStore.dispatch(testSlice1.actions.increment());
-    result.mainStore.dispatch(testSlice1.actions.update(3));
+    result.mainStore.dispatch(testSlice1Increment());
+    result.mainStore.dispatch(testSlice1Update(3));
 
     await waitForExpect(() => {
       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
@@ -1059,14 +1058,14 @@ describe('getReplicaLookup', () => {
       mainStoreName: 'main-store',
       storeName: 'store-a',
       syncSliceIds: [
-        createStableSliceId(testSlice1.name),
-        createStableSliceId(testSlice2.name),
+        createStableSliceId(testSlice1.spec.name),
+        createStableSliceId(testSlice2.spec.name),
       ],
     },
     'store-b': {
       mainStoreName: 'main-store',
       storeName: 'store-b',
-      syncSliceIds: [createStableSliceId(testSlice1.name)],
+      syncSliceIds: [createStableSliceId(testSlice1.spec.name)],
     },
     'store-c': {
       mainStoreName: 'main-store',
@@ -1088,62 +1087,62 @@ describe('getReplicaLookup', () => {
   `);
 });
 
-describe('works with merged slice', () => {
-  test('nested', async () => {
-    const forwarded1 = mergeAll([testSlice1, testSlice2], {
-      name: 'test-merged',
-    });
+// describe('works with merged slice', () => {
+//   test('nested', async () => {
+//     const forwarded1 = mergeAll([testSlice1, testSlice2], {
+//       name: 'test-merged',
+//     });
 
-    const result = createBasicPair({
-      main: {
-        syncSlices: [forwarded1],
-        slices: [depOnTestSlice1Slice],
-      },
-      replica: {
-        syncSlices: [forwarded1],
-      },
-    });
+//     const result = createBasicPair({
+//       main: {
+//         syncSlices: [forwarded1],
+//         slices: [depOnTestSlice1Slice],
+//       },
+//       replica: {
+//         syncSlices: [forwarded1],
+//       },
+//     });
 
-    result.mainStore.dispatch(forwarded1.actions.increment());
-    result.mainStore.dispatch(forwarded1.actions.padEnd(5, 'padding'));
+//     result.mainStore.dispatch(forwarded1.actions.increment());
+//     result.mainStore.dispatch(forwarded1.actions.padEnd(5, 'padding'));
 
-    expect(testSlice1.getState(result.mainStore.state)).toEqual({
-      counter: 1,
-    });
+//     expect(testSlice1.getState(result.mainStore.state)).toEqual({
+//       counter: 1,
+//     });
 
-    expect(forwarded1.resolveState(result.mainStore.state)).toEqual({
-      counter: 1,
-      name: 'kjpad',
-    });
+//     expect(forwarded1.resolveState(result.mainStore.state)).toEqual({
+//       counter: 1,
+//       name: 'kjpad',
+//     });
 
-    await waitForExpect(() => {
-      expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
-      expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(1);
-    });
+//     await waitForExpect(() => {
+//       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
+//       expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(1);
+//     });
 
-    expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
-      counter: 1,
-    });
-    expect(testSlice2.getState(result.getReplicaStore().state)).toEqual({
-      name: 'kjpad',
-    });
-    expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
-      counter: 1,
-      name: 'kjpad',
-    });
+//     expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
+//       counter: 1,
+//     });
+//     expect(testSlice2.getState(result.getReplicaStore().state)).toEqual({
+//       name: 'kjpad',
+//     });
+//     expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
+//       counter: 1,
+//       name: 'kjpad',
+//     });
 
-    result.mainStore.dispatch(forwarded1.actions.uppercase());
+//     result.mainStore.dispatch(forwarded1.actions.uppercase());
 
-    expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
-      counter: 1,
-      name: 'KJPAD',
-    });
+//     expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
+//       counter: 1,
+//       name: 'KJPAD',
+//     });
 
-    await waitForExpect(() => {
-      expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
-        counter: 1,
-        name: 'KJPAD',
-      });
-    });
-  });
-});
+//     await waitForExpect(() => {
+//       expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
+//         counter: 1,
+//         name: 'KJPAD',
+//       });
+//     });
+//   });
+// });

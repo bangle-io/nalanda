@@ -1,8 +1,11 @@
-import { StableSliceId, Store, StoreState, Transaction } from '../vanilla';
-import { changeBareSlice } from '../vanilla/helpers';
-import { LineageId } from '../vanilla/internal-types';
-import { AnySlice } from '../vanilla/public-types';
-import { BareSlice } from '../vanilla/slice';
+import {
+  LineageId,
+  StableSliceId,
+  Store,
+  StoreState,
+  Transaction,
+} from '../vanilla';
+import { AnySlice, Slice, UnknownSlice } from '../vanilla/slice';
 import { expandSlices } from '../vanilla/slices-helpers';
 import {
   JSONTransaction,
@@ -15,24 +18,24 @@ import type {
   SyncMessage,
 } from './sync-store';
 
-export interface SyncMainConfig<SbSync extends BareSlice> {
+export interface SyncMainConfig<SbSync extends AnySlice> {
   type: 'main';
   slices: SbSync[];
   replicaStores: string[];
   sendMessage: (message: SyncMessage) => void;
-  validate?: ({ syncSlices }: { syncSlices: AnySlice[] }) => void;
+  validate?: ({ syncSlices }: { syncSlices: UnknownSlice[] }) => void;
   payloadSerializer: PayloadSerializer;
   payloadParser: PayloadParser;
 }
 
-export interface SyncReplicaConfig<SbSync extends BareSlice> {
+export interface SyncReplicaConfig<SbSync extends AnySlice> {
   type: 'replica';
   mainStore: string;
   slices: SbSync[];
   sendMessage: (message: SyncMessage) => void;
   payloadSerializer: PayloadSerializer;
   payloadParser: PayloadParser;
-  validate?: ({ syncSlices }: { syncSlices: AnySlice[] }) => void;
+  validate?: ({ syncSlices }: { syncSlices: UnknownSlice[] }) => void;
 }
 
 export function abortableSetTimeout(
@@ -61,21 +64,21 @@ export function assertNotUndefined(
 
 export class SyncManager {
   // The expanded (flattens out the deeply nested slices) slices that need to be synced
-  public readonly syncSlices: BareSlice[];
+  public readonly syncSlices: UnknownSlice[];
   public readonly syncSliceIds: StableSliceId[];
   public readonly syncSliceIdSet: Set<StableSliceId>;
   private readonly syncLineageIds: Set<LineageId>;
 
   // The expanded slices that need are not syced
-  public readonly otherSlices: BareSlice[];
+  public readonly otherSlices: UnknownSlice[];
 
-  public readonly initStoreState: StoreState;
+  public readonly initStoreState: StoreState<any>;
 
   constructor(
     public config: {
       storeName: string;
-      sync: SyncMainConfig<BareSlice> | SyncReplicaConfig<BareSlice>;
-      otherSlices: BareSlice[];
+      sync: SyncMainConfig<AnySlice> | SyncReplicaConfig<AnySlice>;
+      otherSlices: AnySlice[];
     },
   ) {
     let syncExpanded = expandSlices(config.sync.slices);
@@ -104,21 +107,27 @@ export class SyncManager {
     if (config.sync.type === 'replica') {
       // Replica slices cannot have side effects running, since main store will also
       // run the side effects and we donot want them to compete with each other.
-      expandedSyncSlices = expandedSyncSlices.map((slice) =>
-        changeBareSlice(slice, (sl) => sl.withoutEffects()),
-      );
+      expandedSyncSlices = expandedSyncSlices.map((slice) => {
+        return Slice.disableEffects(slice);
+      });
     }
 
     config.sync.validate?.({
-      syncSlices: expandedSyncSlices as AnySlice[],
+      syncSlices: expandedSyncSlices,
     });
 
     this.syncSlices = expandedSyncSlices;
     this.otherSlices = otherExpanded.slices;
 
-    this.syncLineageIds = new Set(expandedSyncSlices.map((s) => s.lineageId));
+    this.syncLineageIds = new Set(
+      expandedSyncSlices.map((s) => s.spec.lineageId),
+    );
     this.syncSliceIdSet = new Set(Object.values(syncExpanded.pathMap));
     this.syncSliceIds = [...this.syncSliceIdSet];
+  }
+
+  getStableId(lineage: LineageId): StableSliceId {
+    return StoreState.getStableSliceId(this.initStoreState, lineage);
   }
 
   isSyncLineageId(lineageId: LineageId): boolean {
@@ -129,19 +138,6 @@ export class SyncManager {
     return this.syncSliceIdSet.has(path);
   }
 
-  getStableId(lineage: LineageId): StableSliceId {
-    return StoreState.getStableSliceId(this.initStoreState, lineage);
-  }
-
-  pathToLineageId(stableId: StableSliceId): LineageId {
-    return StoreState.getLineageId(this.initStoreState, stableId);
-  }
-
-  // TODO implement
-  serializeTxn(store: Store, tx: Transaction<any, any[]>): JSONTransaction {
-    return tx.toJSONObj(store, this.config.sync.payloadSerializer);
-  }
-
   // TODO implement
   parseTxn(store: Store, txObj: JSONTransaction): Transaction<any, any[]> {
     return Transaction.fromJSONObj(
@@ -149,6 +145,14 @@ export class SyncManager {
       txObj,
       this.config.sync.payloadParser,
     );
+  }
+  pathToLineageId(stableId: StableSliceId): LineageId {
+    return StoreState.getLineageId(this.initStoreState, stableId);
+  }
+
+  // TODO implement
+  serializeTxn(store: Store, tx: Transaction<any, any[]>): JSONTransaction {
+    return tx.toJSONObj(store, this.config.sync.payloadSerializer);
   }
 }
 function validateExpandedSlices({
@@ -189,10 +193,6 @@ export class MainCommunicator {
     interimInfos: {},
   };
 
-  get isReplicaInfoComplete() {
-    return this.replica.complete;
-  }
-
   constructor(
     private readonly config: {
       storeName: string;
@@ -201,14 +201,8 @@ export class MainCommunicator {
       sendMessage: (message: SyncMessage) => void;
     },
   ) {}
-
-  setupReplicaData(replicaInfos: Record<string, ReplicaStoreInfo>) {
-    const lookup = getReplicaLookup(this.config.syncManager, replicaInfos);
-    this.replica = {
-      complete: true,
-      lookup,
-      infos: replicaInfos,
-    };
+  get isReplicaInfoComplete() {
+    return this.replica.complete;
   }
 
   registerReplica(replicaInfo: ReplicaStoreInfo) {
@@ -225,7 +219,21 @@ export class MainCommunicator {
       this.setupReplicaData(this.replica.interimInfos);
     }
   }
-
+  sendHandshakeError(to: string) {
+    this.config.sendMessage({
+      type: 'handshake-error',
+      from: this.config.storeName,
+      to,
+    });
+  }
+  sendMainInfo(to: string, storeInfo: MainStoreInfo) {
+    this.config.sendMessage({
+      type: 'main-info',
+      body: storeInfo,
+      from: this.config.storeName,
+      to: to,
+    });
+  }
   sendTxn(store: Store, tx: Transaction<any, any[]>) {
     if (!this.replica.complete) {
       throw new Error('Replica not setup');
@@ -250,22 +258,13 @@ export class MainCommunicator {
       });
     }
   }
-
-  sendHandshakeError(to: string) {
-    this.config.sendMessage({
-      type: 'handshake-error',
-      from: this.config.storeName,
-      to,
-    });
-  }
-
-  sendMainInfo(to: string, storeInfo: MainStoreInfo) {
-    this.config.sendMessage({
-      type: 'main-info',
-      body: storeInfo,
-      from: this.config.storeName,
-      to: to,
-    });
+  setupReplicaData(replicaInfos: Record<string, ReplicaStoreInfo>) {
+    const lookup = getReplicaLookup(this.config.syncManager, replicaInfos);
+    this.replica = {
+      complete: true,
+      lookup,
+      infos: replicaInfos,
+    };
   }
 }
 

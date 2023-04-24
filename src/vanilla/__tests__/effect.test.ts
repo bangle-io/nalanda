@@ -1,7 +1,8 @@
-import { createKey, createSlice, slice } from '../create';
+import { createSlice } from '../create';
 import { EffectHandler, timeoutSchedular } from '../effect';
 import { Store } from '../store';
 import waitForExpect from 'wait-for-expect';
+import { Slice, UnknownSlice } from '../slice';
 waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
 
@@ -10,7 +11,6 @@ const testSlice1 = createSlice([], {
     num: 4,
   },
   name: 'test-1',
-  selector: () => {},
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -26,7 +26,6 @@ const testSlice2 = createSlice([], {
   initState: {
     name: 'tame',
   },
-  selector: () => {},
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -45,7 +44,6 @@ const testSlice3 = createSlice([], {
   initState: {
     name: 'tame',
   },
-  selector: () => {},
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };
@@ -65,7 +63,7 @@ test('EffectHandler works', () => {
       updateSync: () => {},
     },
     store.state,
-    testSlice1,
+    testSlice1 as UnknownSlice,
   );
 });
 
@@ -73,15 +71,18 @@ describe('init and destroy ', () => {
   test('init and destroy are called', async () => {
     const init = jest.fn();
     const onDestroy = jest.fn();
-    const mySlice = slice({
-      key: createKey('myslice', [testSlice1], { name: 'tame' }),
+    const mySlice = createSlice([testSlice1], {
+      name: 'mySlice',
+      initState: {
+        name: 'tame',
+      },
       actions: {},
-      effects: [
-        {
-          init,
-          destroy: onDestroy,
-        },
-      ],
+      freeze: false,
+    });
+
+    Slice._registerEffect(mySlice, {
+      init,
+      destroy: onDestroy,
     });
 
     const store = Store.create({
@@ -115,21 +116,25 @@ describe('init and destroy ', () => {
     const onDestroy = jest.fn(() => {
       order.push('destroy');
     });
-    const mySlice = slice({
-      key: createKey('myslice', [testSlice1], { name: 'tame' }),
+
+    const mySlice = createSlice([testSlice1], {
+      name: 'myslice',
+      initState: {
+        name: 'tame',
+      },
       actions: {
         lowercase: () => (state) => {
           return { ...state, name: state.name.toLocaleLowerCase() };
         },
       },
-      effects: [
-        {
-          init,
-          update: update,
-          updateSync,
-          destroy: onDestroy,
-        },
-      ],
+      freeze: false,
+    });
+
+    Slice._registerEffect(mySlice, {
+      init,
+      update: update,
+      updateSync,
+      destroy: onDestroy,
     });
 
     const store = Store.create({
@@ -156,14 +161,18 @@ describe('init and destroy ', () => {
 });
 
 test('EffectHandler with deps', () => {
-  const mySlice = slice({
-    key: createKey('myslice', [testSlice1, testSlice2], { name: 'tame' }),
+  const mySlice = createSlice([testSlice1, testSlice2], {
+    name: 'myslice',
+    initState: {
+      name: 'tame',
+    },
     actions: {
       lowercase: () => (state) => {
         return { ...state, name: state.name.toLocaleLowerCase() };
       },
     },
   });
+
   const store = Store.create({
     storeName: 'test-store',
     state: [testSlice1, testSlice2, mySlice],
@@ -174,8 +183,8 @@ test('EffectHandler with deps', () => {
       updateSync: () => {},
     },
     store.state,
-    mySlice,
+    mySlice as UnknownSlice,
   );
 
-  expect(effect.lineageId).toMatchInlineSnapshot(`"l_myslice$2"`);
+  expect(effect.lineageId).toBe(mySlice.spec.lineageId);
 });

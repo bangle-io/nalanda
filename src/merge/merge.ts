@@ -1,22 +1,31 @@
-import { Slice, StoreState, Transaction } from '../vanilla';
-import { AnyFn, LineageId } from '../vanilla/internal-types';
-import { AnySlice, SelectorFn, TxCreator } from '../vanilla/public-types';
-import type { UnionToIntersection } from 'type-fest';
-import { isPlainObject } from '../vanilla/helpers';
+import { createBaseSlice, Slice } from '../vanilla';
+import type { Merge, UnionToIntersection } from 'type-fest';
+import { AnySlice, AnySliceWithName } from '../vanilla/slice';
+import { expandSlices } from '../vanilla/slices-helpers';
 
-type ChangeTxCreatorSourceName<N extends string, A> = {
-  [K in keyof A]: A[K] extends TxCreator<any, infer P>
-    ? TxCreator<N, P>
-    : never;
-};
+type InferState<TSlice extends AnySlice> = TSlice extends Slice<
+  any,
+  infer T,
+  any,
+  any
+>
+  ? T
+  : never;
 
+type InferDerivedState<TSlice extends AnySlice> = TSlice extends Slice<
+  any,
+  any,
+  any,
+  infer T
+>
+  ? T
+  : never;
 /**
  * Produces a new slice which serves as the proxy to access any of the merged slices.
- * Ensure all the slices to be merged have distinct state, selector, action keys as
- * the function will create a slice with corresponding fields merged.
+ * Ensure all the slices to be merged have distinct state, selector,
  */
-export function mergeAll<N extends string, SL extends AnySlice>(
-  slices: SL[],
+export function mergeAll<N extends string, TSlice extends AnySlice>(
+  slices: TSlice[],
   {
     name,
   }: {
@@ -25,109 +34,54 @@ export function mergeAll<N extends string, SL extends AnySlice>(
 ): Slice<
   N,
   {},
-  SL,
-  ChangeTxCreatorSourceName<N, UnionToIntersection<SL['actions']>>,
-  SelectorFn<
-    any,
-    any,
-    UnionToIntersection<SL['initState']> &
-      UnionToIntersection<ReturnType<SL['selector']>>
+  TSlice extends AnySliceWithName<infer TDependency> ? TDependency : never,
+  Merge<
+    UnionToIntersection<InferState<TSlice>>,
+    UnionToIntersection<InferDerivedState<TSlice>>
   >
 > {
-  const seenActions = new Set<string>();
-  const seenStateKeys = new Set<string>();
-  const forwardEntries: [string, LineageId][] = [];
-
-  for (const sl of slices) {
-    for (const actionId of Object.keys(sl.actions)) {
-      if (seenActions.has(actionId)) {
+  const expandedSlices = expandSlices(slices);
+  slices.forEach((slice) => {
+    slice.spec.dependencies.forEach((dep) => {
+      if (!expandedSlices.pathMap[dep.spec.lineageId]) {
         throw new Error(
-          `Action "${actionId}" is already defined in the slice ${sl.name}`,
+          `Merge slice "${name}", must include slice "${dep.spec.name}" as slice "${slice.spec.name}" depends on it`,
         );
       }
-      seenActions.add(actionId);
+    });
+  });
 
-      const nestedForward = sl.spec.forwardMap?.[actionId];
+  // // TODO add a test to make sure terminal slices are ignored properly
+  const nonTerminalSlices = slices.filter((sl) => !sl.spec.terminal);
 
-      forwardEntries.push([actionId, nestedForward || sl.lineageId]);
-    }
-
-    if (!isPlainObject(sl.initState)) {
-      throw new Error(
-        `The slice "${sl.name}" has a non-plain object as its initial state. This is not supported.`,
-      );
-    }
-
-    for (const key of Object.keys(sl.initState)) {
-      if (seenStateKeys.has(key)) {
-        throw new Error(
-          `Merge slices must have unique state keys. The slice "${sl.name}" has a state key "${key}" that conflicts with another selector or state of a slice.`,
-        );
-      }
-      seenStateKeys.add(key);
-    }
-  }
-
-  const mergedSlice = new Slice({
+  let mergedSlice = createBaseSlice(nonTerminalSlices, {
     name: name,
-    // cannot depend on a terminal slice
-    dependencies: slices.filter((slice) => !slice.spec.terminal),
     initState: {},
-    actions: ({ lineageId: sourceSliceLineage }) => {
-      const result: Record<string, TxCreator<N, any[]>> = Object.fromEntries(
-        forwardEntries.map(([actionId, targetSliceLineage]) => {
-          const txCreator: TxCreator<N, any[]> = (...payload) => {
-            return new Transaction({
-              sourceSliceName: name,
-              sourceSliceLineage: sourceSliceLineage,
-              targetSliceLineage: targetSliceLineage,
-              payload,
-              actionId: actionId,
-            });
-          };
-          return [actionId, txCreator];
-        }),
-      );
-
-      return result;
-    },
-    selector: (_, storeState) => {
-      const selectorStateRecord: Record<string, any> = {};
-      const sliceStateRecord: Record<string, any> = {};
-
-      for (const slice of slices) {
-        const selector: SelectorFn<any, any, any> = slice.spec.selector;
-
-        const sliceState = slice.getState(storeState as StoreState<any>);
-
-        let result = selector(sliceState, storeState);
-        if (isPlainObject(result)) {
-          Object.assign(selectorStateRecord, result);
-        } else if (result === undefined) {
-          // ignore undefined
-        } else {
-          console.warn(
-            `The selector of slice "${slice.name}" returned a non-plain object. This is not supported.`,
-          );
-        }
-
-        if (isPlainObject(sliceState)) {
-          Object.assign(sliceStateRecord, sliceState);
-        } else {
-          console.warn(
-            `The slice "${slice.name}" has a non-plain object as its state. This is not supported.`,
-          );
-        }
-      }
-
-      return {
-        ...sliceStateRecord,
-        ...selectorStateRecord,
+    derivedState: () => {
+      return (storeState) => {
+        let seenKeys = new Set<string>();
+        return Object.fromEntries(
+          nonTerminalSlices.flatMap((slice) => {
+            const res = slice.resolveState(storeState);
+            const entries = Object.entries(res);
+            for (const [key] of entries) {
+              if (seenKeys.has(key)) {
+                throw new Error(
+                  `Merge slices must have unique state keys. The slice "${slice.spec.name}" has a state key "${key}" that conflicts with another selector or state of a slice.`,
+                );
+              }
+              seenKeys.add(key);
+            }
+            return entries;
+          }),
+        );
       };
     },
-    reducer: (state) => state,
-    forwardMap: Object.fromEntries(forwardEntries),
-  }).rollupSlices({ before: slices });
+  });
+
+  Slice._registerInternalSlice(mergedSlice, {
+    before: slices,
+  });
 
   return mergedSlice as any;
 }

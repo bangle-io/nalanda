@@ -1,5 +1,5 @@
 import { Store, Transaction } from '../vanilla';
-import { BareSlice } from '../vanilla/slice';
+import { AnySlice } from '../vanilla/slice';
 import { MainCommunicator, SyncMainConfig, SyncManager } from './helpers';
 import type {
   MainStoreInfo,
@@ -8,10 +8,7 @@ import type {
   SyncMessage,
 } from './sync-store';
 
-export class SyncStoreMain<
-  SbSync extends BareSlice,
-  SbOther extends BareSlice,
-> {
+export class SyncStoreMain<SbSync extends AnySlice, SbOther extends AnySlice> {
   public readonly store: Store;
 
   private isReady = false;
@@ -87,6 +84,24 @@ export class SyncStoreMain<
     );
   }
 
+  private onReady() {
+    if (
+      this.isReady ||
+      !this.comms.isReplicaInfoComplete ||
+      this.readyReplicas.size !== this.totalReplicas ||
+      this.replicaSyncError
+    ) {
+      return;
+    }
+
+    for (const tx of this.queuedTx) {
+      this.comms.sendTxn(this.store, tx);
+    }
+
+    this.isReady = true;
+    this.queuedTx = [];
+    this.config.onSyncReady?.();
+  }
   public receiveMessage(m: SyncMessage) {
     const type = m.type;
     switch (type) {
@@ -150,25 +165,6 @@ export class SyncStoreMain<
         throw new Error(`Unknown message type "${_exhaustiveCheck}"`);
       }
     }
-  }
-
-  private onReady() {
-    if (
-      this.isReady ||
-      !this.comms.isReplicaInfoComplete ||
-      this.readyReplicas.size !== this.totalReplicas ||
-      this.replicaSyncError
-    ) {
-      return;
-    }
-
-    for (const tx of this.queuedTx) {
-      this.comms.sendTxn(this.store, tx);
-    }
-
-    this.isReady = true;
-    this.queuedTx = [];
-    this.config.onSyncReady?.();
   }
 }
 

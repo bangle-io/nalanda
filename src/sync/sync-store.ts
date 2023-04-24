@@ -1,6 +1,6 @@
 import { StableSliceId, Store } from '../vanilla';
 import { Scheduler } from '../vanilla/effect';
-import { BareSlice } from '../vanilla/slice';
+import { AnySlice } from '../vanilla/slice';
 import { DispatchTx } from '../vanilla/store';
 import {
   Transaction,
@@ -56,7 +56,7 @@ export interface MainStoreInfo {
   replicaStoreNames: string[];
 }
 
-export interface StoreConfig<SL extends BareSlice> {
+export interface StoreConfig<SL extends AnySlice> {
   dispatchTx: DispatchTx<Transaction<any, any>>;
   scheduler: Scheduler;
   slices: SL[];
@@ -72,8 +72,8 @@ const defaultDispatchTx: DispatchTx<Transaction<any, any>> = (store, tx) => {
 };
 
 export function createSyncStore<
-  SbSync extends BareSlice,
-  SbOther extends BareSlice,
+  SbSync extends AnySlice,
+  SbOther extends AnySlice,
 >({
   sync,
   ...config

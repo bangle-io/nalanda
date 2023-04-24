@@ -1,15 +1,23 @@
 import { useDebugValue, useState } from 'react';
 import useSyncExternalStoreExports from 'use-sync-external-store/shim';
-import { AnySlice, BareStore } from '../vanilla/public-types';
-
-import { StoreState } from '../vanilla/state';
+import { Store } from '../vanilla';
+import { AnySlice, AnySliceWithName } from '../vanilla/slice';
 
 const { useSyncExternalStore } = useSyncExternalStoreExports;
 
-export function createUseSliceHook(store: BareStore<any>) {
-  function useSlice<SL extends AnySlice>(
-    sl: SL,
-  ): [ReturnType<SL['resolveState']>, BareStore<SL>['dispatch']] {
+export function createUseSliceHook<TAllSliceName extends string>(
+  store: Store<TAllSliceName>,
+) {
+  function useSlice<TSlice extends AnySlice>(
+    sl: TSlice extends AnySliceWithName<infer N>
+      ? N extends TAllSliceName
+        ? TSlice
+        : never
+      : never,
+  ): [
+    ReturnType<TSlice['resolveState']>,
+    Store<TSlice extends AnySliceWithName<infer N> ? N : never>['dispatch'],
+  ] {
     const [subscribe] = useState(() => {
       return (cb: () => void) => {
         return (store as any)._tempRegisterOnSyncChange(sl, cb);
@@ -18,7 +26,7 @@ export function createUseSliceHook(store: BareStore<any>) {
 
     const [snap] = useState(() => {
       return () => {
-        const result = sl.resolveState(store.state);
+        const result = sl.resolveState(store.state as any);
         return result;
       };
     });
@@ -27,7 +35,7 @@ export function createUseSliceHook(store: BareStore<any>) {
 
     useDebugValue(data);
 
-    return [data as any, store.dispatch];
+    return [data, store.dispatch];
   }
 
   return useSlice;

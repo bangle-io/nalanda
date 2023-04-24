@@ -1,7 +1,14 @@
 import type { FormEvent } from 'react';
 import { a, useTransition } from '@react-spring/web';
 import { Radio } from 'antd';
-import { todoSlice, useSlice } from './store';
+import {
+  addTodo,
+  removeTodo,
+  setFilterValue,
+  todoSlice,
+  toggleCompleted,
+  useSlice,
+} from './store';
 type Todo = {
   title: string;
   completed: boolean;
@@ -10,8 +17,8 @@ type Todo = {
 const TodoItem = ({ todoItem }: { todoItem: Todo }) => {
   const [, dispatch] = useSlice(todoSlice);
 
-  const toggleCompleted = () => {
-    dispatch(todoSlice.actions.toggleCompleted(todoItem));
+  const toggleCompletedChange = () => {
+    dispatch(toggleCompleted(todoItem));
   };
 
   return (
@@ -19,7 +26,7 @@ const TodoItem = ({ todoItem }: { todoItem: Todo }) => {
       <input
         type="checkbox"
         checked={todoItem.completed}
-        onChange={toggleCompleted}
+        onChange={toggleCompletedChange}
       />
       <span
         style={{ textDecoration: todoItem.completed ? 'line-through' : '' }}
@@ -28,7 +35,7 @@ const TodoItem = ({ todoItem }: { todoItem: Todo }) => {
       </span>
       <button
         onClick={(e) => {
-          dispatch(todoSlice.actions.removeTodo(todoItem));
+          dispatch(removeTodo(todoItem));
         }}
       >
         ❌
@@ -41,9 +48,7 @@ const Filter = () => {
   const [{ filter }, dispatch] = useSlice(todoSlice);
   return (
     <Radio.Group
-      onChange={(e) =>
-        dispatch(todoSlice.actions.setFilterValue(e.target.value))
-      }
+      onChange={(e) => dispatch(setFilterValue(e.target.value))}
       value={filter}
     >
       <Radio value="all">All</Radio>
@@ -55,7 +60,6 @@ const Filter = () => {
 
 const Filtered = () => {
   const [{ filteredTodos }] = useSlice(todoSlice);
-
   const transitions = useTransition(filteredTodos, {
     keys: (todo) => todo.title,
     from: { opacity: 0, height: 0 },
@@ -83,7 +87,7 @@ const TodoList = () => {
           if (e.key === 'Enter') {
             e.preventDefault();
             const title = e.currentTarget.value;
-            dispatch(todoSlice.actions.addTodo({ title, completed: false }));
+            dispatch(addTodo({ title, completed: false }));
             return;
           }
         }}

@@ -1,198 +1,235 @@
-import { weakCache } from './helpers';
-import {
-  createLineageId,
-  createSliceKey,
-  isSliceKey,
-  KEY_PREFIX,
-  LineageId,
-  NoInfer,
-  SliceKey,
-} from './internal-types';
-import { Effect, SelectorFn, AnySlice, TxCreator } from './public-types';
+import { createLineageId } from './helpers';
 import { StoreState } from './state';
 import { Transaction } from './transaction';
-import type { Simplify } from 'type-fest';
+import type {
+  ActionBuilder,
+  DerivedStateFn,
+  Effect,
+  LineageId,
+  PickOpts,
+  TransactionBuilder,
+  UnknownEffect,
+} from './types';
 
-type IfSliceRegistered<
-  SState extends StoreState<any>,
+export type UnknownSlice = Slice<string, unknown, string, unknown>;
+export type AnySlice = Slice<string, any, string, any>;
+export type AnySliceWithName<N extends string> = Slice<N, any, string, any>;
+export type UnknownSliceWithName<N extends string> = Slice<
+  N,
+  unknown,
+  any,
+  unknown
+>;
+
+export type SliceReducer<
   N extends string,
-  Result,
-> = SState extends StoreState<infer SL>
-  ? N extends SL['name']
-    ? Result
-    : never
-  : never;
+  TState,
+  TDependency extends string,
+  TDerivedState,
+> = (
+  sliceState: TState,
+  tx: Transaction<N, any[]>,
+  action: ActionBuilder<any, TState, TDependency>,
+  storeState: StoreState<N | TDependency>,
+  slice: Slice<N, TState, TDependency, TDerivedState>,
+) => TState;
 
-export type PickOpts = {
-  ignoreChanges?: boolean;
-};
-
-export interface BareSlice<K extends string = string, SS = unknown> {
-  readonly name: K;
-  readonly key: SliceKey;
-  readonly lineageId: LineageId;
-  //   Duplicated for ease of doing BareSlice['initState'] type
-  readonly initState: SS;
-
-  readonly spec: {
-    name: K;
-    dependencies: BareSlice[];
-    // Adding effects breaks everything
-    effects?: any[];
-    beforeSlices?: BareSlice[];
-    afterSlices?: BareSlice[];
-  };
-
-  applyTx(
-    sliceState: SS,
-    storeState: StoreState<any>,
-    tx: Transaction<K, unknown[]>,
-  ): SS;
-}
-
-interface SliceConfig {
-  lineageId: LineageId;
-  originalSpec: SliceSpec<any, any, any, any, any>;
-}
-
-export interface SliceSpec<
+export interface SliceInputSpec<
   N extends string,
-  SS,
-  DS extends AnySlice,
-  A extends Record<string, TxCreator<N, any[]>>,
-  SE extends SelectorFn<SS, DS, any>,
+  TState,
+  TDependency extends string,
+  TDerivedState,
 > {
-  name: N;
-  dependencies: DS[];
-  initState: SS;
-  actions: A | ((obj: { lineageId: LineageId }) => A);
-  reducer: (
-    sliceState: NoInfer<SS>,
-    storeState: StoreState<NoInfer<DS>>,
-    // adding N breaks things
-    tx: Transaction<string, any[]>,
-  ) => NoInfer<SS>;
-  selector: SE;
-  terminal?: boolean;
-  forwardMap?: Record<string, LineageId>;
-  effects?: Effect<N, SS, DS, A, SE>[];
-  beforeSlices?: AnySlice[];
-  afterSlices?: AnySlice[];
+  readonly name: N;
+  readonly initState: TState;
+  readonly dependencies: Slice<TDependency, unknown, never, unknown>[];
+  readonly terminal?: boolean;
+  // TODO: Adding generics here messes up things
+  readonly derivedState: DerivedStateFn<any, any, any, any>;
+  // TODO: Adding generics here messes up things
+  readonly reducer: SliceReducer<any, any, any, any>;
+  readonly lineageId: LineageId;
+  effects: UnknownEffect[];
+  actionBuilders: Record<string, ActionBuilder<any, TState, TDependency>>;
+  beforeSlices?: UnknownSlice[];
+  afterSlices?: UnknownSlice[];
+}
+
+export interface SliceConfig {
+  /**
+   * Freeze the slice so that no more transaction builders or effects can be registered.
+   */
+  frozen: boolean;
+  disableEffects: boolean;
 }
 
 export class Slice<
   N extends string,
-  SS,
-  DS extends AnySlice,
-  A extends Record<string, TxCreator<N, any[]>>,
-  SE extends SelectorFn<SS, DS, any>,
-> implements BareSlice<N, SS>
-{
-  public readonly initState: SS;
-  public readonly name: N;
-  public readonly lineageId: LineageId;
-  public key: SliceKey;
-  public _metadata: Record<string | symbol, any> = {};
+  TState,
+  TDependency extends string,
+  TDerivedState,
+> {
+  // internal note: the name can be confusing as it is actually creating
+  // a transaction builder. But this is just for the convenience of the user.
+  static createAction<
+    N extends string,
+    TState,
+    TDependency extends string,
+    TDerivedState,
+    TActionParam extends unknown[],
+  >(
+    slice: Slice<N, TState, TDependency, TDerivedState>,
+    actionId: string,
+    action: ActionBuilder<TActionParam, TState, TDependency>,
+  ): TransactionBuilder<N, TActionParam> {
+    // register the action so we can use it later
+    // when applying transactions
+    Slice.registerAction(slice, actionId, action);
 
-  actions: A;
-
-  get a() {
-    return this.actions;
-  }
-
-  get selector(): SE {
-    return this.spec.selector;
-  }
-
-  constructor(
-    public readonly spec: SliceSpec<N, SS, DS, A, SE>,
-    public readonly config: SliceConfig = {
-      originalSpec: spec,
-      lineageId: createLineageId(spec.name),
-    },
-  ) {
-    if (spec.name.includes('.') || spec.name.includes('_')) {
-      throw new Error(
-        `Slice name cannot contain a period (.) or underscore (_). Please use a different name for slice "${spec.name}"`,
-      );
-    }
-    // can only set slice key as a name when forking
-    if (config.originalSpec === spec && isSliceKey(spec.name)) {
-      throw new Error(
-        `Slice name cannot start with "${KEY_PREFIX}". Please use a different name for slice "${spec.name}"`,
-      );
-    }
-
-    if (spec.dependencies.some((dep) => dep.spec.terminal)) {
-      throw new Error(
-        `A slice cannot have a dependency on a terminal slice. Remove "${
-          spec.dependencies.find((dep) => dep.spec.terminal)?.spec.name
-        }" from the dependencies of "${spec.name}".`,
-      );
-    }
-
-    this.key = createSliceKey(this.spec.name);
-    this.name = config?.originalSpec.name ?? spec.name;
-
-    this.resolveSelector = weakCache(this.resolveSelector.bind(this));
-    this.resolveState = weakCache(this.resolveState.bind(this));
-
-    this.initState = spec.initState;
-
-    this.lineageId = this.config.lineageId;
-
-    this.actions =
-      typeof spec.actions === 'function'
-        ? spec.actions({ lineageId: this.lineageId })
-        : spec.actions;
-  }
-
-  getState<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, N, SState>,
-  ): IfSliceRegistered<SState, N, SS> {
-    return StoreState.getSliceState(storeState, this as AnySlice) as any;
-  }
-
-  resolveSelector<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, N, SState>,
-  ): ReturnType<SE> {
-    return this.spec.selector(this.getState(storeState), storeState);
-  }
-
-  resolveState<SState extends StoreState<any>>(
-    storeState: IfSliceRegistered<SState, N, SState>,
-  ): Simplify<SS & ReturnType<SE>> {
-    // TODO this can fail if the selector returns not an object
-    return {
-      ...this.getState(storeState),
-      ...this.resolveSelector(storeState),
+    return (...params) => {
+      return new Transaction({
+        sourceSliceName: slice.spec.name,
+        targetSliceLineage: slice.spec.lineageId,
+        payload: params,
+        actionId,
+      });
     };
   }
 
-  applyTx(
-    sliceState: SS,
-    storeState: StoreState<any>,
-    tx: Transaction<N, unknown[]>,
-  ): SS {
-    return this.spec.reducer(sliceState, storeState, tx);
+  static disableEffects<
+    N extends string,
+    TState,
+    TDependency extends string,
+    TDerivedState,
+  >(
+    sl: Slice<N, TState, TDependency, TDerivedState>,
+  ): Slice<N, TState, TDependency, TDerivedState> {
+    return sl.fork({
+      ...sl.config,
+      disableEffects: true,
+    });
   }
+  static registerAction<
+    N extends string,
+    TState,
+    TDependency extends string,
+    TDerivedState,
+    TActionParam extends unknown[],
+  >(
+    slice: Slice<N, TState, TDependency, TDerivedState>,
+    actionId: string,
+    action: ActionBuilder<TActionParam, TState, TDependency>,
+  ): void {
+    if (slice.config.frozen) {
+      throw new Error(
+        `Slice "${slice.spec.lineageId}" is frozen. Cannot register action "${actionId}"`,
+      );
+    }
 
+    // set context detail to share some details with the action builder
+    // Some uses: it uses thing information to serialize/parse the action
+    action.setContextDetails?.({
+      lineageId: slice.spec.lineageId,
+      actionId,
+    });
+
+    slice.spec.actionBuilders[actionId] = action;
+  }
+  static registerEffectSlice(slice: AnySlice, effectSlices: AnySlice[]): void {
+    if (slice.config.frozen) {
+      throw new Error(
+        `Slice "${slice.spec.lineageId}" is frozen. Cannot register new effect slices`,
+      );
+    }
+
+    if (!effectSlices.every((s) => s.spec.terminal)) {
+      throw new Error(`All effect slices must be terminal slices.`);
+    }
+
+    Slice._registerInternalSlice(slice, {
+      after: effectSlices,
+    });
+  }
+  public readonly spec: SliceInputSpec<N, TState, TDependency, TDerivedState>;
+  public readonly config: SliceConfig;
+  constructor(
+    inputSpec: SliceInputSpec<N, TState, TDependency, TDerivedState>,
+    config: Partial<SliceConfig> = {},
+  ) {
+    if (inputSpec.dependencies.some((dep) => dep.spec.terminal)) {
+      throw new Error(
+        `A slice cannot have a dependency on a terminal slice. Remove "${
+          inputSpec.dependencies.find((dep) => dep.spec.terminal)?.spec.name
+        }" from the dependencies of "${inputSpec.name}".`,
+      );
+    }
+
+    // spec stays the same across forks
+    this.spec = inputSpec;
+
+    // config can be changed across forks
+    this.config = {
+      frozen: false,
+      disableEffects: false,
+      ...config,
+    };
+  }
+  applyTx(
+    sliceState: TState,
+    storeState: StoreState<N>,
+    tx: Transaction<N, unknown[]>,
+  ): TState {
+    const action = this.spec.actionBuilders[tx.actionId];
+
+    if (!action) {
+      throw new Error(
+        `Action "${tx.actionId}" not found in Slice "${this.spec.name}"`,
+      );
+    }
+
+    return this.spec.reducer(sliceState, tx, action, storeState, this);
+  }
+  /**
+   * Freeze the slice so that no more transaction builders or effects can be registered.
+   */
+  finalize(): Slice<N, TState, TDependency, TDerivedState> {
+    this.config.frozen = true;
+    // Should we fork here?
+    return this;
+  }
+  /**
+   * @internal
+   */
+  protected fork(
+    config: Partial<SliceConfig> = {},
+  ): Slice<N, TState, TDependency, TDerivedState> {
+    return new Slice(this.spec, { ...this.config, ...config });
+  }
+  getDerivedState(storeState: StoreState<N>): TDerivedState {
+    return StoreState.getDerivedState(storeState, this) as TDerivedState;
+  }
+  getState(storeState: StoreState<N>): TState {
+    return StoreState.getSliceState(storeState, this) as TState;
+  }
   /**
    * Ignore running the callback if this value changes. This is useful
    * when you want to just read the value and not trigger the effect if
    * it changes.
    */
-  passivePick<T>(cb: (resolvedState: Simplify<SS & ReturnType<SE>>) => T) {
+  passivePick<T>(cb: (resolvedState: TState & TDerivedState) => T) {
     const opts: PickOpts = {
       ignoreChanges: true,
     };
     return this.pick(cb, opts);
   }
-
   pick<T>(
-    cb: (resolvedState: Simplify<SS & ReturnType<SE>>) => T,
+    cb: (resolvedState: TState & TDerivedState) => T,
     _opts: PickOpts = {},
-  ): [Slice<N, SS, DS, A, SE>, (storeState: StoreState<any>) => T, PickOpts] {
+  ): [
+    Slice<N, TState, TDependency, TDerivedState>,
+    (storeState: StoreState<any>) => T,
+    PickOpts,
+  ] {
     return [
       this,
       (storeState: StoreState<any>) => {
@@ -201,55 +238,52 @@ export class Slice<
       _opts,
     ];
   }
-
-  _fork(
-    spec: Partial<SliceSpec<any, any, any, any, any>>,
-  ): Slice<N, SS, DS, A, SE> {
-    let metadata = this._metadata;
-    let newSlice = new Slice(
-      {
-        ...this.spec,
-        ...spec,
-      },
-      this.config,
-    );
-
-    newSlice._metadata = metadata;
-
-    return newSlice;
+  resolveState(storeState: StoreState<N>): TState & TDerivedState {
+    return {
+      ...this.getState(storeState),
+      ...this.getDerivedState(storeState),
+    };
+  }
+  static _fork<TSlice extends AnySlice>(
+    slice: TSlice,
+    config?: Partial<SliceConfig>,
+  ) {
+    return slice.fork(config);
   }
 
-  withoutEffects() {
-    return this._fork({
-      effects: [],
-    });
-  }
+  // TODO should be discouraged
+  static _registerEffect<
+    N extends string,
+    TState,
+    TDependency extends string,
+    TDerivedState,
+  >(
+    slice: Slice<N, TState, TDependency, TDerivedState>,
+    effect: Effect<N, TState, TDependency, TDerivedState>,
+  ): void {
+    if (slice.config.frozen) {
+      throw new Error(
+        `Slice "${slice.spec.lineageId}" is frozen. Cannot register new effect "${effect.name}"`,
+      );
+    }
 
-  addEffect(effects: Effect<N, SS, DS, A, SE> | Effect<N, SS, DS, A, SE>[]) {
-    return this._fork({
-      effects: [
-        ...(this.spec.effects || []),
-        ...(Array.isArray(effects) ? effects : [effects]),
-      ],
-    });
+    slice.spec.effects.push(effect as any);
   }
 
   /**
-   * Allows for registering of numerous slices in a way where they will be registered before/after the current slice in the store.
-   * This is an advanced functionality to bundle misc slices which are self contained (externally not exposed)
-   * and are not meant to be used directly by the user.
-   * @returns
+   * @internal
    */
-  rollupSlices({
-    before = [],
-    after = [],
-  }: {
-    before?: AnySlice[];
-    after?: AnySlice[];
-  }) {
-    return this._fork({
-      beforeSlices: [...(this.spec.beforeSlices || []), ...before],
-      afterSlices: [...(this.spec.afterSlices || []), ...after],
-    });
+  static _registerInternalSlice(
+    slice: AnySlice,
+    {
+      before = [],
+      after = [],
+    }: {
+      before?: AnySlice[];
+      after?: AnySlice[];
+    },
+  ): void {
+    slice.spec.afterSlices = [...(slice.spec.afterSlices || []), ...after];
+    slice.spec.beforeSlices = [...(slice.spec.beforeSlices || []), ...before];
   }
 }

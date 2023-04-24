@@ -1,17 +1,24 @@
-import { waitUntil } from '../../test-helpers';
-import { createKey, slice } from '../create';
+import { waitUntil } from '../../test-helpers/test-helpers';
+import {
+  createBaseSlice,
+  createSlice,
+  createSliceWithSelectors,
+} from '../create';
 import { timeoutSchedular } from '../effect';
-import { expectType } from '../internal-types';
-import { ActionBuilder } from '../public-types';
+import { Slice } from '../slice';
 import { StoreState } from '../state';
 import { Store } from '../store';
+import { expectType } from '../types';
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
 }
 
-const testSlice1 = slice({
-  key: createKey('test-1', [], { num: 4 }),
+const testSlice1 = createSlice([], {
+  name: 'test-1',
+  initState: {
+    num: 4,
+  },
   actions: {
     increment: (opts: { increment: boolean }) => (state) => {
       return { ...state, num: state.num + (opts.increment ? 1 : 0) };
@@ -22,8 +29,11 @@ const testSlice1 = slice({
   },
 });
 
-const testSlice2 = slice({
-  key: createKey('test-2', [], { name: 'tame' }),
+const testSlice2 = createSlice([], {
+  name: 'test-2',
+  initState: {
+    name: 'tame',
+  },
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -37,8 +47,11 @@ const testSlice2 = slice({
   },
 });
 
-const testSlice3 = slice({
-  key: createKey('test-3', [], { name: 'tame' }),
+const testSlice3 = createSlice([], {
+  name: 'test-3',
+  initState: {
+    name: 'tame',
+  },
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };
@@ -121,42 +134,48 @@ test('custom dispatch', () => {
 
 describe('sync effects', () => {
   test('sync update call ordering should be correct', async () => {
-    const e1Key = createKey('e1', [], { num: 4 });
     let callOrder: string[] = [];
-    const e1 = slice({
-      key: e1Key,
+    const e1 = createSlice([], {
+      name: 'e1',
+      initState: {
+        num: 4,
+      },
       actions: {
         increment: () => (state) => {
           return { ...state, num: state.num + 2 };
         },
       },
-      effects: [
-        {
-          updateSync(sl, store, prevStore) {
-            callOrder.push('s1');
-            sl.getState(store.state);
-          },
-        },
-      ],
+      freeze: false,
     });
 
-    const e2 = slice({
-      key: createKey('e2', [e1], { num: 4 }),
+    Slice._registerEffect(e1, {
+      updateSync(sl, store, prevState) {
+        callOrder.push('s1');
+        sl.getState(store.state);
+      },
+    });
+
+    const e2 = createSlice([e1], {
+      name: 'e2',
+      initState: {
+        num: 4,
+      },
       actions: {
         increment: () => (state) => {
           return { ...state, num: state.num + 1 };
         },
       },
-      effects: [
-        {
-          updateSync(sl, store, prevStore) {
-            callOrder.push('s2');
-
-            sl.getState(store.state);
-          },
-        },
-      ],
+      freeze: false,
     });
+
+    Slice._registerEffect(e2, {
+      updateSync(sl, store, prevState) {
+        callOrder.push('s2');
+
+        sl.getState(store.state);
+      },
+    });
+
     const store = Store.create({
       scheduler: timeoutSchedular(0),
       storeName: 'test-store',
@@ -220,23 +239,26 @@ describe('sync effects', () => {
 
   test('effect gets prev state', async () => {
     const called: Array<{ prev: number; cur: number }> = [];
-    const e1 = slice({
-      key: createKey('e1', [], { num: 4 }),
+    const e1 = createSlice([], {
+      name: 'e1',
+      initState: {
+        num: 4,
+      },
       actions: {
         increment: () => (state) => {
           return { ...state, num: state.num + 2 };
         },
       },
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            called.push({
-              cur: sl.getState(store.state).num,
-              prev: sl.getState(prevState).num,
-            });
-          },
-        },
-      ],
+      freeze: false,
+    });
+
+    Slice._registerEffect(e1, {
+      updateSync(sl, store, prevState) {
+        called.push({
+          cur: sl.getState(store.state).num,
+          prev: sl.getState(prevState).num,
+        });
+      },
     });
 
     const store = Store.create({
@@ -276,48 +298,54 @@ describe('sync effects', () => {
       e1: { prev: number; cur: number };
       e2: { prev: number; cur: number };
     }> = [];
-    const e1 = slice({
-      key: createKey('e1', [], { num: 4 }),
+    const e1 = createSlice([], {
+      name: 'e1',
+      initState: {
+        num: 4,
+      },
       actions: {
         increment: () => (state) => {
           return { ...state, num: state.num + 2 };
         },
       },
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            called1.push({
-              cur: sl.getState(store.state).num,
-              prev: sl.getState(prevState).num,
-            });
-          },
-        },
-      ],
+      freeze: false,
     });
 
-    const e2 = slice({
-      key: createKey('e2', [e1], { num: 4 }),
+    Slice._registerEffect(e1, {
+      updateSync(sl, store, prevState) {
+        called1.push({
+          cur: sl.getState(store.state).num,
+          prev: sl.getState(prevState).num,
+        });
+      },
+    });
+
+    const e2 = createSlice([e1], {
+      name: 'e2',
+      initState: {
+        num: 4,
+      },
       actions: {
         increment: () => (state) => {
           return { ...state, num: state.num + 5 };
         },
       },
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            called2.push({
-              e1: {
-                cur: e1.getState(store.state).num,
-                prev: e1.getState(prevState).num,
-              },
-              e2: {
-                cur: sl.getState(store.state).num,
-                prev: sl.getState(prevState).num,
-              },
-            });
+      freeze: false,
+    });
+
+    Slice._registerEffect(e2, {
+      updateSync(sl, store, prevState) {
+        called2.push({
+          e1: {
+            cur: e1.getState(store.state).num,
+            prev: e1.getState(prevState).num,
           },
-        },
-      ],
+          e2: {
+            cur: sl.getState(store.state).num,
+            prev: sl.getState(prevState).num,
+          },
+        });
+      },
     });
 
     const store = Store.create({
@@ -353,8 +381,12 @@ describe('sync effects', () => {
   });
 
   test('one effect triggering other effects', async () => {
-    const e1 = slice({
-      key: createKey('e1', [], { num: 1, two: 0 }),
+    const e1 = createSlice([], {
+      name: 'e1',
+      initState: {
+        num: 1,
+        two: 0,
+      },
       actions: {
         increment: () => (state) => {
           return { ...state, num: state.num + 1 };
@@ -363,24 +395,27 @@ describe('sync effects', () => {
           return { ...state, two: state.two + 1 };
         },
       },
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            const cur = sl.getState(store.state).num;
-            const prev = sl.getState(prevState).num;
-
-            if (cur !== prev) {
-              if (cur % 2 === 0) {
-                store.dispatch(sl.actions.sawTwo());
-              }
-            }
-          },
-        },
-      ],
+      freeze: false,
     });
 
-    const e2 = slice({
-      key: createKey('e2', [e1], { info: [] as string[] }),
+    Slice._registerEffect(e1, {
+      updateSync(sl, store, prevState) {
+        const cur = sl.getState(store.state).num;
+        const prev = sl.getState(prevState).num;
+
+        if (cur !== prev) {
+          if (cur % 2 === 0) {
+            store.dispatch(e1.actions.sawTwo());
+          }
+        }
+      },
+    });
+
+    const e2 = createSlice([e1], {
+      name: 'e2',
+      initState: {
+        info: [] as string[],
+      },
       actions: {
         save: (info: string) => (state) => {
           return { ...state, info: [...state.info, info] };
@@ -388,16 +423,17 @@ describe('sync effects', () => {
       },
     });
 
-    const e3 = slice({
-      key: createKey('e3', [e1, e2], {}),
+    const e3 = createSlice([e1, e2], {
+      name: 'e3',
+      initState: {},
       actions: {},
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            store.dispatch(e2.actions.save('two'));
-          },
-        },
-      ],
+      freeze: false,
+    });
+
+    Slice._registerEffect(e3, {
+      updateSync(sl, store, prevState) {
+        store.dispatch(e2.actions.save('two'));
+      },
     });
 
     const store = Store.create({
@@ -441,68 +477,72 @@ describe('sync effects', () => {
     const ef2 = jest.fn();
     const ef3 = jest.fn();
     let callOrder: any[] = [];
-    const e1 = slice({
-      key: createKey('e1', [], { num: 0 }),
+    const e1 = createSlice([], {
+      name: 'e1',
+      initState: { num: 0 },
       actions: {
         increment: () => (state) => {
           return { ...state, num: state.num + 2 };
         },
       },
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            ef1();
-            callOrder.push([
-              'e1',
-              sl.getState(store.state).num,
-              sl.getState(prevState).num,
-            ]);
+      freeze: false,
+    });
 
-            if (sl.getState(store.state).num < 16) {
-              store.dispatch(sl.actions.increment());
-            }
-          },
-        },
-      ],
+    Slice._registerEffect(e1, {
+      updateSync(sl, store, prevState) {
+        ef1();
+        callOrder.push([
+          'e1',
+          sl.getState(store.state).num,
+          sl.getState(prevState).num,
+        ]);
+
+        if (sl.getState(store.state).num < 16) {
+          store.dispatch(e1.actions.increment());
+        }
+      },
     });
 
     let e2PrevSeen: any = undefined;
-    const e2 = slice({
-      key: createKey('e2', [e1], {}),
+
+    const e2 = createSlice([e1], {
+      name: 'e2',
+      initState: {},
       actions: {},
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            if (e2PrevSeen === undefined) {
-              e2PrevSeen = store.state;
-            } else {
-              // if (e2PrevSeen !== prevState) {
-              //   throw new Error('e2 should have seen the same prev state');
-              // }
-              e2PrevSeen = store.state;
-            }
-            ef2();
-            callOrder.push([
-              'e2',
-              e1.getState(store.state).num,
-              e1.getState(prevState).num,
-            ]);
-          },
-        },
-      ],
+      freeze: false,
     });
 
-    const e3 = slice({
-      key: createKey('e3', [e2], {}),
+    Slice._registerEffect(e2, {
+      updateSync(sl, store, prevState) {
+        if (e2PrevSeen === undefined) {
+          e2PrevSeen = store.state;
+        } else {
+          // if (e2PrevSeen !== prevState) {
+          //   throw new Error('e2 should have seen the same prev state');
+          // }
+          e2PrevSeen = store.state;
+        }
+        ef2();
+        callOrder.push([
+          'e2',
+          e1.getState(store.state).num,
+          e1.getState(prevState).num,
+        ]);
+      },
+    });
+
+    const e3 = createSlice([e2], {
+      name: 'e3',
+      initState: {},
       actions: {},
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            ef3();
-            callOrder.push(['e3']);
-          },
-        },
-      ],
+      freeze: false,
+    });
+
+    Slice._registerEffect(e3, {
+      updateSync(sl, store, prevState) {
+        ef3();
+        callOrder.push(['e3']);
+      },
     });
 
     const store = Store.create({
@@ -540,25 +580,27 @@ describe('sync effects', () => {
 });
 
 describe('effects', () => {
-  const actions: { increment: ActionBuilder<any[], any, any> } = {
-    increment: () => (state) => {
-      return { ...state, num: state.num + 2 };
-    },
-  };
-
   test('after destroy effects are not run', async () => {
     const callCheck = jest.fn();
-    const e1 = slice({
-      key: createKey('e1', [], { num: 0 }),
-      actions: actions,
-      effects: [
-        {
-          update(sl, store, prevState) {
-            sl.actions.increment();
-            callCheck();
-          },
-        },
-      ],
+    const e1 = createBaseSlice([], {
+      name: 'e1',
+      initState: { num: 0 },
+      derivedState: () => () => ({}),
+    });
+
+    const incrementAction = Slice.createAction(
+      e1,
+      'increment',
+      () => (state) => {
+        return { ...state, num: state.num + 2 };
+      },
+    );
+
+    Slice._registerEffect(e1, {
+      update(sl, store, prevState) {
+        incrementAction();
+        callCheck();
+      },
     });
 
     const store = Store.create({
@@ -567,7 +609,7 @@ describe('effects', () => {
       state: [e1],
     });
 
-    store.dispatch(e1.actions.increment());
+    store.dispatch(incrementAction());
 
     await waitUntil(store, (state) => e1.getState(state).num > 0);
 
@@ -575,7 +617,7 @@ describe('effects', () => {
 
     const lastState = store.state;
     store.destroy();
-    store.dispatch(e1.actions.increment());
+    store.dispatch(incrementAction());
 
     await sleep(5);
     expect(callCheck).toBeCalledTimes(1);
@@ -584,44 +626,62 @@ describe('effects', () => {
   });
 
   test('works', async () => {
-    const e1Key = createKey('e1', [], { num: 0 });
     let callOrder: string[] = [];
 
-    const e1 = slice({
-      key: e1Key,
-      actions: actions,
-      effects: [
-        {
-          update(sl, store, prevState) {
-            callOrder.push(
-              's1= ' +
-                [sl.getState(store.state).num, sl.getState(prevState).num].join(
-                  ',',
-                ),
-            );
-            sl.getState(store.state);
-            store.dispatch(sl.actions.increment());
-          },
-        },
-      ],
+    const e1 = createBaseSlice([], {
+      name: 'e1',
+      initState: {
+        num: 0,
+      },
+      derivedState: () => () => ({}),
     });
 
-    const e2 = slice({
-      key: createKey('e2', [e1], { num: 0 }),
-      actions,
-      effects: [
-        {
-          update(sl, store, prevState) {
-            callOrder.push(
-              's2= ' +
-                [e1.getState(store.state).num, e1.getState(prevState).num].join(
-                  ',',
-                ),
-            );
-          },
-        },
-      ],
+    Slice._registerEffect(e1, {
+      update(sl, store, prevState) {
+        callOrder.push(
+          's1= ' +
+            [sl.getState(store.state).num, sl.getState(prevState).num].join(
+              ',',
+            ),
+        );
+        sl.getState(store.state);
+        store.dispatch(incrementActionE1());
+      },
     });
+
+    const incrementActionE1 = Slice.createAction(
+      e1,
+      'increment',
+      () => (state) => {
+        return { ...state, num: state.num + 2 };
+      },
+    );
+
+    const e2 = createBaseSlice([e1], {
+      name: 'e2',
+      initState: {
+        num: 0,
+      },
+      derivedState: () => () => ({}),
+    });
+
+    const incrementActionE2 = Slice.createAction(e2, 'increment', () => {
+      return (state) => {
+        return { ...state, num: state.num + 2 };
+      };
+    });
+
+    Slice._registerEffect(e1, {
+      update(sl, store, prevState) {
+        callOrder.push(
+          's2= ' +
+            [e1.getState(store.state).num, e1.getState(prevState).num].join(
+              ',',
+            ),
+        );
+      },
+    });
+
     const store = Store.create({
       scheduler: timeoutSchedular(1),
       storeName: 'test-store',
@@ -640,7 +700,7 @@ describe('effects', () => {
       },
     });
 
-    store.dispatch(e1.actions.increment());
+    store.dispatch(incrementActionE1());
 
     await waitUntil(store, (s) => {
       return e1.getState(s).num > 50;
@@ -676,64 +736,75 @@ describe('effects', () => {
   test('runs sync effects on a priority', async () => {
     let callOrder: string[] = [];
 
-    const e1 = slice({
-      key: createKey('e1', [], { num: 0 }),
-      actions: actions,
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            callOrder.push(
-              's1-sync= ' +
-                [sl.getState(store.state).num, sl.getState(prevState).num].join(
-                  ',',
-                ),
-            );
-          },
-          update(sl, store, prevState) {
-            callOrder.push(
-              's1= ' +
-                [sl.getState(store.state).num, sl.getState(prevState).num].join(
-                  ',',
-                ),
-            );
-            sl.getState(store.state);
-            store.dispatch(sl.actions.increment());
-          },
-        },
-      ],
+    const e1 = createBaseSlice([], {
+      name: 'e1',
+      initState: { num: 0 },
+      derivedState: () => () => ({}),
     });
 
-    const e2 = slice({
-      key: createKey('e2', [e1], { num: 0 }),
-      actions,
-      effects: [
-        {
-          updateSync(sl, store, prevState) {
-            callOrder.push(
-              's2-sync= ' +
-                [e1.getState(store.state).num, e1.getState(prevState).num].join(
-                  ',',
-                ),
-            );
-          },
-          update(sl, store, prevState) {
-            callOrder.push(
-              's2= ' +
-                [e1.getState(store.state).num, e1.getState(prevState).num].join(
-                  ',',
-                ),
-            );
-          },
-        },
-      ],
+    const incrementActionE1 = Slice.createAction(
+      e1,
+      'increment',
+      () => (state) => {
+        return { ...state, num: state.num + 2 };
+      },
+    );
+
+    Slice._registerEffect(e1, {
+      updateSync(sl, store, prevState) {
+        callOrder.push(
+          's1-sync= ' +
+            [sl.getState(store.state).num, sl.getState(prevState).num].join(
+              ',',
+            ),
+        );
+      },
+      update(sl, store, prevState) {
+        callOrder.push(
+          's1= ' +
+            [sl.getState(store.state).num, sl.getState(prevState).num].join(
+              ',',
+            ),
+        );
+        sl.getState(store.state);
+        store.dispatch(incrementActionE1());
+      },
     });
+
+    const e2 = createBaseSlice([e1], {
+      name: 'e2',
+      initState: {
+        num: 0,
+      },
+      derivedState: () => () => ({}),
+    });
+
+    Slice._registerEffect(e1, {
+      updateSync(sl, store, prevState) {
+        callOrder.push(
+          's2-sync= ' +
+            [e1.getState(store.state).num, e1.getState(prevState).num].join(
+              ',',
+            ),
+        );
+      },
+      update(sl, store, prevState) {
+        callOrder.push(
+          's2= ' +
+            [e1.getState(store.state).num, e1.getState(prevState).num].join(
+              ',',
+            ),
+        );
+      },
+    });
+
     const store = Store.create({
       scheduler: timeoutSchedular(1),
       storeName: 'test-store',
       state: [e1, e2],
     });
 
-    store.dispatch(e1.actions.increment());
+    store.dispatch(incrementActionE1());
 
     await waitUntil(store, (s) => {
       return e1.getState(s).num > 50;

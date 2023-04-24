@@ -1,34 +1,47 @@
 import waitForExpect from 'wait-for-expect';
-import { createDispatchSpy, waitUntil } from '../test-helpers';
-import { createSlice } from '../vanilla';
+import { syncChangeEffect } from '../effects';
+import { createDispatchSpy, waitUntil } from '../test-helpers/test-helpers';
+import { createSelector, createSliceWithSelectors, Slice } from '../vanilla';
 import { timeoutSchedular } from '../vanilla/effect';
 import { Store } from '../vanilla/store';
 
 describe('Single slice', () => {
-  const testSlice = createSlice([], {
+  const testSlice = createSliceWithSelectors([], {
     name: 'test',
     initState: {
       val: 'apple',
     },
-    actions: {
-      testAction: (val: string) => (state) => {
-        return {
-          ...state,
-          val,
-        };
-      },
-    },
-    selector: (state) => state.val.toLocaleUpperCase(),
-  }).addEffect({
-    name: 'testEffect',
-    updateSync(slice, store, prevStoreState) {
-      if (!slice.getState(store.state).val.endsWith('Effect')) {
-        store.dispatch(
-          slice.actions.testAction(slice.getState(store.state).val + 'Effect'),
-        );
-      }
+    selectors: {
+      computedVal: createSelector({ val: (state) => state.val }, (state) =>
+        state.val.toLocaleUpperCase(),
+      ),
     },
   });
+
+  const testAction = Slice.createAction(
+    testSlice,
+    'testAction',
+    (val: string) => {
+      return (state) => ({
+        ...state,
+        val,
+      });
+    },
+  );
+
+  Slice.registerEffectSlice(testSlice, [
+    syncChangeEffect(
+      'testEffect',
+      {
+        val: testSlice.pick((state) => state.val),
+      },
+      ({ val }, dispatch) => {
+        if (!val.endsWith('Effect')) {
+          dispatch(testAction(val + 'Effect'));
+        }
+      },
+    ),
+  ]);
 
   test('works', async () => {
     const dispatchSpy = createDispatchSpy();
@@ -44,7 +57,7 @@ describe('Single slice', () => {
       val: 'apple',
     });
 
-    testStore.dispatch(testSlice.actions.testAction('banana'));
+    testStore.dispatch(testAction('banana'));
 
     expect(testSlice.getState(testStore.state)).toEqual({
       val: 'banana',
@@ -54,15 +67,16 @@ describe('Single slice', () => {
       testSlice.getState(state).val.startsWith('bananaEffect'),
     );
 
-    expect(testSlice.getState(testStore.state)).toEqual({
+    expect(testSlice.resolveState(testStore.state)).toEqual({
       val: 'bananaEffect',
+      computedVal: 'BANANAEFFECT',
     });
 
     await waitForExpect(() => {
-      expect(dispatchSpy.getSimplifiedTransactions({})).toHaveLength(2);
+      expect(dispatchSpy.getSimplifiedTransactions()).toHaveLength(3);
     });
 
-    expect(dispatchSpy.getSimplifiedTransactions({})).toMatchInlineSnapshot(`
+    expect(dispatchSpy.getSimplifiedTransactions()).toMatchInlineSnapshot(`
       [
         {
           "actionId": "testAction",
@@ -74,8 +88,15 @@ describe('Single slice', () => {
           "targetSliceLineage": "l_test$",
         },
         {
+          "actionId": "ready",
+          "dispatchSource": "l_testEffect$",
+          "payload": [],
+          "sourceSliceLineage": "l_testEffect$",
+          "targetSliceLineage": "l_testEffect$",
+        },
+        {
           "actionId": "testAction",
-          "dispatchSource": "l_test$",
+          "dispatchSource": "l_testEffect$",
           "payload": [
             "bananaEffect",
           ],
@@ -86,7 +107,7 @@ describe('Single slice', () => {
     `);
 
     await waitForExpect(() => {
-      expect(dispatchSpy.getDebugLogItems()).toHaveLength(4);
+      expect(dispatchSpy.getDebugLogItems()).toHaveLength(5);
     });
 
     expect(dispatchSpy.getDebugLogItems()).toMatchInlineSnapshot(`
@@ -103,18 +124,32 @@ describe('Single slice', () => {
           "type": "TX",
         },
         {
-          "name": "testEffect",
+          "actionId": "ready",
+          "dispatcher": "l_testEffect$",
+          "payload": [],
+          "sourceSliceLineage": "l_testEffect$",
+          "store": "test-store",
+          "targetSliceLineage": "l_testEffect$",
+          "txId": "<txId>",
+          "type": "TX",
+        },
+        {
+          "name": "testEffect(changeEffect)",
           "source": [
             {
               "actionId": "testAction",
               "lineageId": "l_test$",
+            },
+            {
+              "actionId": "ready",
+              "lineageId": "l_testEffect$",
             },
           ],
           "type": "SYNC_UPDATE_EFFECT",
         },
         {
           "actionId": "testAction",
-          "dispatcher": "l_test$",
+          "dispatcher": "l_testEffect$",
           "payload": [
             "bananaEffect",
           ],
@@ -125,7 +160,7 @@ describe('Single slice', () => {
           "type": "TX",
         },
         {
-          "name": "testEffect",
+          "name": "testEffect(changeEffect)",
           "source": [
             {
               "actionId": "testAction",

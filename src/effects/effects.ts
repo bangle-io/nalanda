@@ -1,9 +1,13 @@
-import { createSlice } from '../vanilla';
-import { ExtractReturnTypes } from '../vanilla/internal-types';
-import { AnySlice, OpaqueSlice } from '../vanilla/public-types';
-import { PickOpts } from '../vanilla/slice';
+import { createBaseSlice } from '../vanilla/create';
+import { Effect, ExtractReturnTypes, PickOpts } from '../vanilla/types';
 import type { StoreState } from '../vanilla/state';
 import type { ReducedStore } from '../vanilla/store';
+import {
+  AnySlice,
+  AnySliceWithName,
+  Slice,
+  UnknownSlice,
+} from '../vanilla/slice';
 
 export type ExtractSliceFromEffectSelectors<
   ES extends Record<
@@ -14,7 +18,9 @@ export type ExtractSliceFromEffectSelectors<
   string,
   [infer S, (storeState: StoreState<any>) => any, any]
 >
-  ? S
+  ? S extends AnySliceWithName<infer N>
+    ? N
+    : never
   : never;
 
 export const syncChangeEffect: typeof changeEffect = (
@@ -42,7 +48,7 @@ export const changeEffect = <
     ref: Record<string, any>,
   ) => void | (() => void),
   opts?: { sync?: boolean },
-): OpaqueSlice<N> => {
+): Slice<N, {}, ExtractSliceFromEffectSelectors<ES>, {}> => {
   const comparisonEntries = Object.entries(effectSelectors).map(
     (r): [string, (storeState: StoreState<any>) => any, PickOpts] => [
       r[0],
@@ -51,48 +57,59 @@ export const changeEffect = <
     ],
   );
 
-  type EffectRef = {
-    firstRun?: boolean;
-    prevCleanup?: void | (() => void);
-    userRef?: Record<string, any>;
+  type RefValue = {
+    current?: {
+      firstRun: boolean;
+      prevCleanup: void | (() => void);
+      userRef: Record<string, any>;
+    };
   };
+
+  type SliceState = {
+    ready: boolean;
+  };
+
+  type SliceEffect = Effect<N, SliceState, string, {}>;
 
   const deps = Array.from(
     new Set(Object.values(effectSelectors).map((r) => r[0])),
-  ) as OpaqueSlice<any>[];
+  ) as UnknownSlice[];
 
-  const slice = createSlice(deps, {
+  const slice = createBaseSlice(deps, {
     name: name,
     initState: {
       ready: false,
     },
-    actions: {
-      ready: () => () => ({
-        ready: false,
-      }),
-    },
-    selector: () => {},
+    derivedState: () => () => ({}),
     terminal: true,
   });
 
-  const effect: Parameters<(typeof slice)['addEffect']>[0] = {
+  const readyAction = Slice.createAction(slice, 'ready', () => {
+    return (state) => ({
+      ...state,
+      ready: true,
+    });
+  });
+  const effect: SliceEffect = {
     name: name + `(changeEffect)`,
-    init(slice, store, ref: EffectRef) {
-      ref.firstRun = true;
-      ref.prevCleanup = undefined;
-      ref.userRef = {};
-      store.dispatch(slice.actions.ready());
+    init(slice, store, ref: RefValue) {
+      ref.current = {
+        firstRun: true,
+        prevCleanup: undefined,
+        userRef: {},
+      };
+      store.dispatch(readyAction());
     },
-    destroy(slice, state, ref: EffectRef) {
-      ref?.prevCleanup?.();
+    destroy(slice, state, ref: RefValue) {
+      ref.current?.prevCleanup?.();
     },
   };
 
-  const run: (typeof effect)['update'] = (
+  const run: SliceEffect['update'] = (
     sl,
     store,
     prevStoreState,
-    ref: EffectRef,
+    ref: RefValue,
   ) => {
     let hasNew = false;
 
@@ -107,22 +124,24 @@ export const changeEffect = <
       return [k, newVal];
     });
 
-    if (hasNew || ref.firstRun) {
-      if (ref.firstRun) {
-        ref.firstRun = false;
+    // ref should already be defined in the init
+    const current = ref.current!;
+
+    if (hasNew || current.firstRun) {
+      if (current.firstRun) {
+        current.firstRun = false;
       } else {
-        ref.prevCleanup?.();
+        current.prevCleanup?.();
       }
 
       const res = cb(
         Object.fromEntries(newObjectEntries),
         store.dispatch,
-        // ref should already be defined in the init
-        ref.userRef!,
+        current.userRef,
       );
 
       if (typeof res === 'function') {
-        ref.prevCleanup = res;
+        current.prevCleanup = res;
       }
     }
   };
@@ -133,5 +152,7 @@ export const changeEffect = <
     effect.update = run;
   }
 
-  return slice.addEffect(effect) as any;
+  Slice._registerEffect(slice, effect);
+
+  return slice as any;
 };

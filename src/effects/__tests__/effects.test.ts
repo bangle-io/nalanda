@@ -1,10 +1,15 @@
 import { changeEffect, syncChangeEffect } from '../effects';
-import { createKey, slice } from '../../vanilla/create';
+import {
+  createSelector,
+  createSlice,
+  createSliceWithSelectors,
+} from '../../vanilla/create';
 import { timeoutSchedular } from '../../vanilla/effect';
 import { Store } from '../../vanilla/store';
 import waitForExpect from 'wait-for-expect';
-import { expectType, rejectAny } from '../../vanilla/internal-types';
-import { createDispatchSpy } from '../../test-helpers';
+import { Slice } from '../../vanilla';
+import { createDispatchSpy } from '../../test-helpers/test-helpers';
+import { expectType, rejectAny } from '../../vanilla/types';
 waitForExpect.defaults.timeout = 600;
 waitForExpect.defaults.interval = 30;
 
@@ -12,22 +17,53 @@ function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
 }
 
-const testSlice1 = slice({
-  key: createKey('test-1', [], { num: 4 }, (state) => ({
-    numSq: state.num * state.num,
-  })),
-  actions: {
-    increment: (opts: { increment: boolean }) => (state) => {
-      return { ...state, num: state.num + (opts.increment ? 1 : 0) };
-    },
-    decrement: (opts: { decrement: boolean }) => (state) => {
-      return { ...state, num: state.num - (opts.decrement ? 1 : 0) };
-    },
+const testSlice1 = createSliceWithSelectors([], {
+  name: 'test-1',
+  initState: {
+    num: 4,
+  },
+  selectors: {
+    numSq: createSelector(
+      {
+        num: (state) => state.num,
+      },
+      ({ num }) => num * num,
+    ),
   },
 });
 
-const testSlice2 = slice({
-  key: createKey('test-2', [], { name: 'tame', age: 4 }),
+const testSlice1Increment = Slice.createAction(
+  testSlice1,
+  'increment',
+  (opts: { increment: boolean }) => {
+    return (state) => {
+      return {
+        ...state,
+        num: state.num + (opts.increment ? 1 : 0),
+      };
+    };
+  },
+);
+
+const testSlice1Decrement = Slice.createAction(
+  testSlice1,
+  'decrement',
+  (opts: { decrement: boolean }) => {
+    return (state) => {
+      return {
+        ...state,
+        num: state.num - (opts.decrement ? 1 : 0),
+      };
+    };
+  },
+);
+
+const testSlice2 = createSlice([], {
+  name: 'test-2',
+  initState: {
+    name: 'tame',
+    age: 4,
+  },
   actions: {
     prefix: (prefix: string) => (state) => {
       return { ...state, name: prefix + state.name };
@@ -44,8 +80,11 @@ const testSlice2 = slice({
   },
 });
 
-const testSlice3 = slice({
-  key: createKey('test-3', [], { name: 'TAME' }),
+const testSlice3 = createSlice([], {
+  name: 'test-3',
+  initState: {
+    name: 'TAME',
+  },
   actions: {
     lowercase: () => (state) => {
       return { ...state, name: state.name.toLocaleLowerCase() };
@@ -110,11 +149,6 @@ describe('run once', () => {
       },
     );
 
-    // @ts-expect-error should not expose any actions externally
-    once.actions.xyz?.();
-
-    expectType<Record<string, never>>(once.actions);
-
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
@@ -125,16 +159,16 @@ describe('run once', () => {
 
     expect(testSlice3.getState(store.state).name).toEqual('TAME');
 
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
 
     await sleep(10);
     // expect(called).toHaveBeenCalledTimes(1);
 
     // expect(testSlice3.getState(store.state).name).toEqual('tame');
 
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
 
     await sleep(10);
     // expect(called).toHaveBeenCalledTimes(1);
@@ -228,27 +262,22 @@ describe('sync once', () => {
       },
     );
 
-    // @ts-expect-error should not expose any actions externally
-    once.actions.xyz?.();
-
-    expectType<Record<string, never>>(once.actions);
-
     const store = Store.create({
       storeName: 'test-store',
       scheduler: timeoutSchedular(0),
       state: [testSlice1, testSlice2, testSlice3, once],
     });
     expect(testSlice3.getState(store.state).name).toEqual('TAME');
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
 
     // because sync effect execution is queued to a microtask we need to await on promise
     await Promise.resolve();
     expect(called).toHaveBeenCalledTimes(1);
     expect(testSlice3.getState(store.state).name).toEqual('tame');
 
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
 
     await Promise.resolve();
     expect(called).toHaveBeenCalledTimes(1);
@@ -292,7 +321,7 @@ describe('changeEffect', () => {
         };
 
         if (result.numnum % 2 === 0) {
-          dispatch(testSlice1.actions.increment({ increment: true }));
+          dispatch(testSlice1Increment({ increment: true }));
         }
       },
     );
@@ -341,7 +370,7 @@ describe('changeEffect', () => {
         }
 
         if (result.sl1Square % 2 === 0) {
-          dispatch(testSlice1.actions.increment({ increment: true }));
+          dispatch(testSlice1Increment({ increment: true }));
         }
       },
     );
@@ -391,16 +420,16 @@ describe('changeEffect', () => {
       expect(call).toEqual(['run0']);
     });
 
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
 
     await waitForExpect(() => {
       expect(call).toEqual(['run0', 'cleanup0', 'run1']);
     });
 
     // should still call cleanup only once
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
-    store.dispatch(testSlice1.actions.increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
+    store.dispatch(testSlice1Increment({ increment: true }));
 
     await waitForExpect(() => {
       expect(call).toEqual(['run0', 'cleanup0', 'run1', 'cleanup1', 'run2']);
