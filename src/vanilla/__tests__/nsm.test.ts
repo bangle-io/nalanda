@@ -5,7 +5,7 @@ import {
   createSliceWithSelectors,
 } from '../create';
 import { timeoutSchedular } from '../effect';
-import { Slice } from '../slice';
+import { AnySliceWithName, Slice } from '../slice';
 import { StoreState } from '../state';
 import { Store } from '../store';
 import { expectType } from '../types';
@@ -57,6 +57,17 @@ const testSlice3 = createSlice([], {
       return { ...state, name: state.name.toLocaleLowerCase() };
     },
   },
+});
+
+test('type check', () => {
+  // const state = {} as StoreState<'bangle/page-slice' | 'editor-manager-slice'>;
+  const store = Store.create({
+    storeName: 'test-store',
+    scheduler: timeoutSchedular(0),
+    state: [testSlice1, testSlice2],
+  });
+
+  testSlice1.getState(store.state);
 });
 
 test('empty store', () => {

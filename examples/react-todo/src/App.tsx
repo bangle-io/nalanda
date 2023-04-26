@@ -5,6 +5,7 @@ import {
   addTodo,
   removeTodo,
   setFilterValue,
+  setInput,
   todoSlice,
   toggleCompleted,
   useSlice,
@@ -75,7 +76,7 @@ const Filtered = () => {
 };
 
 const TodoList = () => {
-  const [, dispatch] = useSlice(todoSlice);
+  const [{ input }, dispatch] = useSlice(todoSlice);
 
   return (
     <>
@@ -83,6 +84,8 @@ const TodoList = () => {
       <input
         name="inputTitle"
         placeholder="Type ..."
+        value={input}
+        onChange={(e) => dispatch(setInput(e.currentTarget.value))}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();

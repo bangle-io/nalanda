@@ -1,8 +1,15 @@
-export type { StableSliceId, LineageId } from './types';
+export type { AnySlice, AnySliceWithName } from './slice';
+
+export type {
+  InferSliceName,
+  ActionBuilder,
+  StableSliceId,
+  LineageId,
+} from './types';
 
 export { timeoutSchedular, idleCallbackScheduler } from './effect';
 
-export { createSlice } from './create';
+export { createSlice, createSliceV2, createSliceWithSelectors } from './create';
 export { Slice } from './slice';
 export { StoreState } from './state';
 export { Store } from './store';

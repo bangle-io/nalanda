@@ -10,6 +10,15 @@ export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
 export function rejectAny<K extends IfAny<K, never, unknown>>(key: K): void {}
 
+export type InferSliceName<T> = T extends Slice<infer N, any, any, any>
+  ? N
+  : never;
+
+export type ValidStoreState<
+  TInputSliceNames extends string,
+  TSliceName extends string,
+> = TSliceName extends TInputSliceNames ? StoreState<TInputSliceNames> : never;
+
 export type PickOpts = {
   ignoreChanges?: boolean;
 };
@@ -20,9 +29,9 @@ export type DerivedStateFn<
   TDependency extends string,
   TDerivedState,
 > = (
-  initStoreState: StoreState<TDependency>,
-  slice: Slice<N, TState, TDependency, TDerivedState>,
-) => (storeState: StoreState<TDependency>) => TDerivedState;
+  initStoreState: StoreState<N | TDependency>,
+  slice: Slice<N, TState, TDependency, never>,
+) => (storeState: StoreState<N | TDependency>) => TDerivedState;
 
 export type TransactionBuilder<N extends string, P extends unknown[]> = (
   ...payload: P

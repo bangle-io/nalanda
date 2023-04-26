@@ -140,24 +140,32 @@ describe('createSliceWithSelectors', () => {
             initStoreState,
           );
 
+          // if using custom selectors, allow calling
+          // self
           () => {
-            // @ts-expect-error - should error to avoid circular calling
             slice.getState(initStoreState);
-            // @ts-expect-error - should error to avoid circular calling
-            slice.resolveState(initStoreState);
-            // @ts-expect-error - should error to avoid circular calling
-            slice.getDerivedState(initStoreState);
+
+            // to avoid infinite loops, we return a never
+            let resolved = slice.resolveState(initStoreState);
+            rejectAny(resolved);
+            expectType<never>(resolved);
+            let derived = slice.getDerivedState(initStoreState);
+            rejectAny(derived);
+            expectType<never>(derived);
           };
 
           expectType<
-            Slice<
-              'test-1',
-              {
-                num: number;
-                bar: string;
-              },
-              'base-1' | 'base-2',
-              any
+            Omit<
+              Slice<
+                'test-1',
+                {
+                  num: number;
+                  bar: string;
+                },
+                'base-1' | 'base-2',
+                any
+              >,
+              'resolveState' | 'getDerivedState'
             >
           >(slice);
 
@@ -166,10 +174,10 @@ describe('createSliceWithSelectors', () => {
             expectType<StoreState<'base-1' | 'base-2'>>(storeState);
 
             () => {
-              // @ts-expect-error - should error to avoid circular calling
               slice.getState(storeState);
-              // @ts-expect-error - should error to avoid circular calling
-              slice.resolveState(storeState);
+              let resolved = slice.resolveState(storeState);
+              rejectAny(resolved);
+              expectType<never>(resolved);
             };
 
             return 9;
