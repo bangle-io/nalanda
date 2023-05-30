@@ -552,7 +552,7 @@ describe('basic test', () => {
   });
 
   describe('init state override', () => {
-    test('state is overridden in main and replica', async () => {
+    test('state is overridden in main and replica', () => {
       const result = createBasicPair({
         main: {
           syncSlices: [],
@@ -583,7 +583,7 @@ describe('basic test', () => {
       });
     });
 
-    test('throws error if overriding sync slice in replica', async () => {
+    test('throws error if overriding sync slice in replica', () => {
       expect(() =>
         createBasicPair({
           main: {
@@ -604,7 +604,7 @@ describe('basic test', () => {
       );
     });
 
-    test('throws error if overriding sync slice in main', async () => {
+    test('throws error if overriding sync slice in main', () => {
       expect(() =>
         createBasicPair({
           main: {
