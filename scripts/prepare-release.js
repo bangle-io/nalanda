@@ -8,12 +8,32 @@ const packageJson = JSON.parse(packageJsonText);
 
 const nextVersion = process.argv[2] || '0.0.0';
 
-const topPaths = ['vanilla', 'react', 'sync', 'test-helpers'];
+function getChildDirectories(directory) {
+  const childDirectories = [];
+
+  const files = fs.readdirSync(directory);
+
+  for (const file of files) {
+    const filePath = path.join(directory, file);
+    const stat = fs.statSync(filePath);
+
+    if (stat.isDirectory()) {
+      childDirectories.push(file);
+    }
+  }
+
+  return childDirectories;
+}
+
+const topPaths = getChildDirectories(path.join(__dirname, '..', 'src'))
+  .filter((dir) => !dir.includes('__tests__'))
+  .map((item) => path.basename(item));
+
 const defaultExports = {
   '.': {
-    types: './index.d.ts',
-    import: './index.mjs',
-    require: './index.js',
+    types: './dist/index.d.ts',
+    import: './dist/index.mjs',
+    require: './dist/index.js',
   },
   './package.json': './package.json',
 };
