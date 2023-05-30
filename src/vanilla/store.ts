@@ -65,6 +65,7 @@ export class Store<N extends string = any> {
     return store;
   }
 
+  // TODO reduce the number of times we have to call this function
   /**
    * Create a new store that only has access to the given slices
    * @param slices
@@ -74,7 +75,7 @@ export class Store<N extends string = any> {
     store: Store,
     dispatcherSlice: AnySliceWithName<N>,
   ): ReducedStore<N> {
-    return new ReducedStore(store, dispatcherSlice);
+    return new ReducedStore(store, dispatcherSlice, store._debug);
   }
 
   static updateState(
@@ -140,7 +141,7 @@ export class Store<N extends string = any> {
     private _dispatchTx: DispatchTx<any>,
     scheduler?: Scheduler,
     disableSideEffects?: boolean,
-    private _debug?: DebugFunc,
+    public _debug?: DebugFunc,
   ) {
     if (!disableSideEffects) {
       this._effectsManager = new SideEffectsManager(
@@ -220,6 +221,7 @@ export class ReducedStore<N extends string = any> {
   constructor(
     private _store: Store,
     private dispatcherSlice: AnySliceWithName<N>,
+    public _debug?: DebugFunc,
   ) {}
 
   get destroyed() {

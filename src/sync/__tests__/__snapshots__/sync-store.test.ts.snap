@@ -113,17 +113,8 @@ exports[`basic test one slice sync - case 1 1`] = `
   },
   {
     "name": "watch-in-main(changeEffect)",
-    "source": [
-      {
-        "actionId": "increment",
-        "lineageId": "l_testSlice1$",
-      },
-      {
-        "actionId": "ready",
-        "lineageId": "l_watch-in-main$",
-      },
-    ],
-    "type": "UPDATE_EFFECT",
+    "source": [],
+    "type": "CUSTOM_EFFECT",
   },
   {
     "actionId": "increment",
@@ -137,13 +128,8 @@ exports[`basic test one slice sync - case 1 1`] = `
   },
   {
     "name": "watch-in-main(changeEffect)",
-    "source": [
-      {
-        "actionId": "increment",
-        "lineageId": "l_testSlice1$",
-      },
-    ],
-    "type": "UPDATE_EFFECT",
+    "source": [],
+    "type": "CUSTOM_EFFECT",
   },
 ]
 `;
@@ -244,17 +230,8 @@ exports[`basic test one slice sync - case 2 - replica slice depends on sync slic
   },
   {
     "name": "watch-in-replica-store(changeEffect)",
-    "source": [
-      {
-        "actionId": "ready",
-        "lineageId": "l_watch-in-replica-store$",
-      },
-      {
-        "actionId": "increment",
-        "lineageId": "l_testSlice1$",
-      },
-    ],
-    "type": "UPDATE_EFFECT",
+    "source": [],
+    "type": "CUSTOM_EFFECT",
   },
   {
     "actionId": "increment",
@@ -268,13 +245,8 @@ exports[`basic test one slice sync - case 2 - replica slice depends on sync slic
   },
   {
     "name": "watch-in-replica-store(changeEffect)",
-    "source": [
-      {
-        "actionId": "increment",
-        "lineageId": "l_testSlice1$",
-      },
-    ],
-    "type": "UPDATE_EFFECT",
+    "source": [],
+    "type": "CUSTOM_EFFECT",
   },
 ]
 `;

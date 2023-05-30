@@ -4,6 +4,7 @@ import type {
   AnySliceWithName,
   UnknownSliceWithName,
   AnySlice,
+  Slice,
 } from './slice';
 import {
   ExpandSlice,
@@ -11,15 +12,27 @@ import {
   validatePathMap,
   createSliceLineageLookup,
   validateSlices,
+  flattenReverseDependencies,
+  calcReverseDependencies,
 } from './slices-helpers';
 import type { Transaction } from './transaction';
-import type { LineageId, StableSliceId } from './types';
+import type { DerivedStateFn, LineageId, StableSliceId } from './types';
 
 interface InputStoreStateSpec<TSliceName extends string> {
   readonly slices: UnknownSliceWithName<TSliceName>[];
   readonly stableToLineage: Record<StableSliceId, LineageId>;
   readonly lineageToStable: Record<LineageId, StableSliceId>;
   readonly lookupByLineage: Record<LineageId, UnknownSlice>;
+  readonly deriveStateFuncs: Record<
+    LineageId,
+    ReturnType<DerivedStateFn<TSliceName, unknown, any, any>>
+  >;
+  readonly reverseDeps: Record<LineageId, Set<LineageId>>;
+}
+
+interface CurrentState {
+  slices: Record<LineageId, unknown>;
+  change: Record<LineageId, symbol>;
 }
 
 interface StoreStateConfig {
@@ -48,8 +61,10 @@ export class StoreState<TSliceName extends string> {
   ): StoreState<TSliceName> {
     const { slices, pathMap, reversePathMap } = expanded;
     validateSlices(slices);
-
     validatePathMap(pathMap, reversePathMap);
+
+    const deriveStateFuncs: InputStoreStateSpec<any>['deriveStateFuncs'] =
+      Object.create(null);
 
     const instance = new StoreState(
       {
@@ -57,19 +72,25 @@ export class StoreState<TSliceName extends string> {
         lineageToStable: pathMap,
         stableToLineage: reversePathMap,
         lookupByLineage: createSliceLineageLookup(slices),
+        deriveStateFuncs: deriveStateFuncs,
+        reverseDeps: flattenReverseDependencies(
+          calcReverseDependencies(slices),
+        ),
       },
       {},
     );
 
     for (const slice of slices) {
-      instance.slicesCurrentState[slice.spec.lineageId] = slice.spec.initState;
+      instance.currentState.slices[slice.spec.lineageId] = slice.spec.initState;
+      instance.currentState.change[slice.spec.lineageId] = Symbol();
     }
 
+    // setup override of initial state
     if (initStateOverride) {
       const overriddenSlices = new Set<string>(Object.keys(initStateOverride));
       for (const slice of slices) {
         if (initStateOverride[slice.spec.lineageId] !== undefined) {
-          instance.slicesCurrentState[slice.spec.lineageId] =
+          instance.currentState.slices[slice.spec.lineageId] =
             initStateOverride[slice.spec.lineageId];
 
           overriddenSlices.delete(slice.spec.lineageId);
@@ -84,13 +105,21 @@ export class StoreState<TSliceName extends string> {
       }
     }
 
+    // initialize derived state
+    for (const slice of slices) {
+      deriveStateFuncs[slice.spec.lineageId] = slice.spec.derivedState(
+        instance,
+        slice as Slice<any, any, any, never>,
+      );
+    }
+
     return instance;
   }
 
   // TODO improve this as it is running on every call, we dont need to
   static getDerivedState(storeState: StoreState<any>, _sl: AnySlice): unknown {
-    const callback = _sl.spec.derivedState(storeState, _sl);
-    return callback(storeState);
+    const func = storeState.spec.deriveStateFuncs[_sl.spec.lineageId]!;
+    return func(_sl.getState(storeState), storeState);
   }
 
   static getLineageId(
@@ -115,6 +144,10 @@ export class StoreState<TSliceName extends string> {
     return storeState.spec.slices;
   }
 
+  static getChangeRef(storeState: StoreState<any>, _sl: AnySlice): symbol {
+    return storeState.currentState.change[_sl.spec.lineageId]!;
+  }
+
   static getSliceState(storeState: StoreState<any>, _sl: AnySlice): unknown {
     const sl = storeState.spec.lookupByLineage[_sl.spec.lineageId];
 
@@ -129,9 +162,10 @@ export class StoreState<TSliceName extends string> {
 
       if (
         !scopedSlice ||
-        // TODO make this deep dependency lookup? this is because they can in theory pass it around
-        // so in theory a deep dependency lookup is what we want.
-        !sliceDepLineageLookup(scopedSlice).has(_sl.spec.lineageId)
+        // TODO we need to test this case
+        !storeState.spec.reverseDeps[_sl.spec.lineageId]?.has(
+          scopedSlice.spec.lineageId,
+        )
       ) {
         throw new Error(
           `Slice "${sl.spec.name}" is not included in the dependencies of the scoped slice "${scopedSlice?.spec.name}"`,
@@ -170,18 +204,28 @@ export class StoreState<TSliceName extends string> {
     });
   }
 
-  protected slicesCurrentState: Record<LineageId, unknown> =
-    Object.create(null);
+  protected currentState: CurrentState = {
+    slices: Object.create(null),
+    change: Object.create(null),
+  };
 
   constructor(
     protected readonly spec: InputStoreStateSpec<TSliceName>,
     protected readonly config: StoreStateConfig,
   ) {}
 
+  protected cloneCurrentState(): CurrentState {
+    return {
+      slices: { ...this.currentState.slices },
+      change: { ...this.currentState.change },
+    };
+  }
+
   applyTransaction(
     tx: Transaction<TSliceName, unknown[]>,
   ): StoreState<TSliceName> {
-    const newState = { ...this.slicesCurrentState };
+    const newState = this.cloneCurrentState();
+
     const newStoreState = StoreState._fork(this, newState);
 
     let found = false;
@@ -200,11 +244,19 @@ export class StoreState<TSliceName extends string> {
           );
         }
 
-        newState[slice.spec.lineageId] = slice.applyTx(
+        newState.slices[slice.spec.lineageId] = slice.applyTx(
           sliceState.value,
           newStoreState,
           tx,
         );
+
+        newState.change[slice.spec.lineageId] = Symbol();
+
+        this.spec.reverseDeps[slice.spec.lineageId]?.forEach((dep) => {
+          newState.change[dep] = Symbol();
+        });
+
+        break;
       }
     }
 
@@ -220,23 +272,23 @@ export class StoreState<TSliceName extends string> {
    */
   static _fork(
     state: StoreState<any>,
-    slicesState: Record<string, unknown> = state.slicesCurrentState,
+    currentState: CurrentState = state.currentState,
     config?: Partial<StoreStateConfig>,
   ): StoreState<any> {
     const newConfig = config ? { ...state.config, ...config } : state.config;
     const newInstance = new StoreState(state.spec, newConfig);
-    newInstance.slicesCurrentState = slicesState;
+    newInstance.currentState = currentState;
     return newInstance;
   }
 
   private _getDirectSliceState(lineageId: LineageId) {
     if (
       // TODO maybe we can improve the performance here
-      Object.prototype.hasOwnProperty.call(this.slicesCurrentState, lineageId)
+      Object.prototype.hasOwnProperty.call(this.currentState.slices, lineageId)
     ) {
       return {
         found: true,
-        value: this.slicesCurrentState[lineageId]!,
+        value: this.currentState.slices[lineageId]!,
       };
     }
 

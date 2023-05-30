@@ -276,6 +276,7 @@ export class EffectHandler {
       );
     }
   }
+
   runInit(store: Store) {
     this.effect.init?.(
       this._slice,
@@ -283,6 +284,7 @@ export class EffectHandler {
       this._ref,
     );
   }
+
   runSyncUpdate(store: Store) {
     // Note: if it is the first time an effect is running this
     // the previouslySeenState would be the initial state
@@ -305,7 +307,7 @@ export class EffectHandler {
   }
 
   private _sendDebugInfo(type: 'sync' | 'deferred') {
-    if (!this._debug) {
+    if (!this._debug || this.effect.logging === false) {
       return;
     }
 

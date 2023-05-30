@@ -486,7 +486,7 @@ describe('selector', () => {
 
     const action2 = Slice.createAction(
       mySlice,
-      'myAction',
+      'action2',
       (num: number, foo: string, brother: () => void) => {
         return (state) => ({ ...state, num: num + state.count });
       },

@@ -40,11 +40,14 @@ export function createSelector<
   ) => TSelector,
   // TODO maybe we donot need to send the store in the final callback of each select
 ): DerivedStateFn<N, TState, TDependency, TSelector> {
-  const returnVal: any = (
-    initStoreState: StoreState<TDependency>,
-    slice: Slice<string, TState, TDependency, any>,
+  const returnVal: DerivedStateFn<string, TState, string, TSelector> = (
+    initStoreState,
+    slice,
   ) => {
-    const entries = Object.entries(fieldSelectors);
+    const entries: [
+      string,
+      (sliceState: TState, storeState: StoreState<string>) => any,
+    ][] = Object.entries(fieldSelectors);
 
     let resolveSelected = entries.map(([k, v]): [string, unknown] => [
       k,
@@ -55,7 +58,7 @@ export function createSelector<
       initStoreState,
     );
 
-    return (storeState: StoreState<TDependency>): TSelector => {
+    return (_, storeState: StoreState<string>) => {
       const values = entries.map(([k, v]): [string, unknown] => [
         k,
         v(slice.getState(storeState), storeState),
@@ -71,6 +74,23 @@ export function createSelector<
   };
 
   return returnVal;
+}
+
+export function createSliceV2<
+  N extends string,
+  TState,
+  TDepSlice extends Slice<string, any, any, any>,
+>(
+  dependencies: TDepSlice[],
+  arg: {
+    name: N;
+    initState: TState;
+  },
+) {
+  return createBaseSlice(dependencies, {
+    ...arg,
+    derivedState: () => () => ({}),
+  });
 }
 
 export function createSliceWithSelectors<
@@ -105,13 +125,35 @@ export function createSliceWithSelectors<
   return createBaseSlice(dependencies, {
     ...arg,
     derivedState: (initStoreState, sl) => {
-      const selectors = Object.entries(arg.selectors).map(
-        ([k, v]) => [k, v(initStoreState, sl)] as const,
+      const selectors: Array<
+        [string, (state: TState, storeState: StoreState<string>) => unknown]
+      > = Object.entries(arg.selectors).map(([k, v]) => [
+        k,
+        v(initStoreState, sl),
+      ]);
+
+      let prevChangeRef = StoreState.getChangeRef(initStoreState, sl);
+
+      const initSliceState = sl.getState(initStoreState);
+
+      let prevDerivedState = Object.fromEntries(
+        selectors.map(([k, v]) => [k, v(initSliceState, initStoreState)]),
       );
-      return (sliceState) => {
-        return Object.fromEntries(
-          selectors.map(([k, v]) => [k, v(sliceState)]),
+
+      return (sliceState, storeState) => {
+        const changeRef = StoreState.getChangeRef(storeState, sl);
+
+        if (changeRef === prevChangeRef) {
+          return prevDerivedState;
+        }
+
+        prevChangeRef = changeRef;
+
+        prevDerivedState = Object.fromEntries(
+          selectors.map(([k, v]) => [k, v(sliceState, storeState)]),
         );
+
+        return prevDerivedState;
       };
     },
   }) as any;

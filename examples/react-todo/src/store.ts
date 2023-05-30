@@ -12,9 +12,11 @@ type Todo = {
 };
 
 const todosInitState: {
+  input: string | undefined;
   todos: Todo[];
   filter: 'all' | 'completed' | 'incompleted';
 } = {
+  input: undefined,
   todos: [],
   filter: 'incompleted',
 };
@@ -80,6 +82,19 @@ export const setFilterValue = Slice.createAction(
       return {
         ...state,
         filter,
+      };
+    };
+  },
+);
+
+export const setInput = Slice.createAction(
+  todoSlice,
+  'setInput',
+  (val: string | undefined) => {
+    return (state) => {
+      return {
+        ...state,
+        input: val,
       };
     };
   },

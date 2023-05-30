@@ -5,10 +5,30 @@ import type { Transaction } from './transaction';
 
 export type Action = () => void;
 
+export type IfEquals<T, U, Y = unknown, N = never> = (<G>() => G extends T
+  ? 1
+  : 2) extends <G>() => G extends U ? 1 : 2
+  ? Y
+  : N;
+
 export const expectType = <Type>(_: Type): void => void 0;
+
+export const expectType2 = <Expected, Actual>(
+  actual: IfEquals<Actual, Expected, Actual>,
+) => void 0;
+
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
 export function rejectAny<K extends IfAny<K, never, unknown>>(key: K): void {}
+
+export type InferSliceName<T> = T extends Slice<infer N, any, any, any>
+  ? N
+  : never;
+
+export type ValidStoreState<
+  TInputSliceNames extends string,
+  TSliceName extends string,
+> = TSliceName extends TInputSliceNames ? StoreState<TInputSliceNames> : never;
 
 export type PickOpts = {
   ignoreChanges?: boolean;
@@ -20,9 +40,12 @@ export type DerivedStateFn<
   TDependency extends string,
   TDerivedState,
 > = (
-  initStoreState: StoreState<TDependency>,
-  slice: Slice<N, TState, TDependency, TDerivedState>,
-) => (storeState: StoreState<TDependency>) => TDerivedState;
+  initStoreState: StoreState<N | TDependency>,
+  slice: Slice<N, TState, TDependency, never>,
+) => (
+  sliceState: TState,
+  storeState: StoreState<N | TDependency>,
+) => TDerivedState;
 
 export type TransactionBuilder<N extends string, P extends unknown[]> = (
   ...payload: P
@@ -54,6 +77,7 @@ export interface Effect<
   TDerivedState,
 > {
   name?: string;
+  logging?: boolean;
   destroy?: (
     slice: Slice<N, TState, TDependency, TDerivedState>,
     state: StoreState<N | TDependency>,
@@ -96,9 +120,19 @@ export type StableSliceId = Brand<string, 'StableSliceId'>;
 export type ExtractReturnTypes<
   T extends Record<string, (...args: any[]) => any>,
 > = {
-  [K in keyof T]: T[K] extends (i: any) => infer R ? R : never;
+  [K in keyof T]: T[K] extends (...args: any[]) => infer R ? R : never;
 } & {};
 
 // Magic type that when used at sites where generic types are inferred from, will prevent those sites from being involved in the inference.
 // https://github.com/microsoft/TypeScript/issues/14829
 export type NoInfer<T> = [T][T extends any ? 0 : never];
+
+/**
+ * Returns `true` if type `A` extends type `B`, `false` if not
+ *
+ * @param A Type
+ * @param B Type
+ * @return Boolean
+ */
+export type DoesExtendBool<A, B> = [A] extends [B] ? true : false;
+export type DoesExtend<A, B> = [A] extends [B] ? A : never;

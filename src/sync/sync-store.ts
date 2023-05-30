@@ -1,4 +1,4 @@
-import { StableSliceId, Store } from '../vanilla';
+import { LineageId, StableSliceId, Store } from '../vanilla';
 import { Scheduler } from '../vanilla/effect';
 import { AnySlice } from '../vanilla/slice';
 import { DispatchTx } from '../vanilla/store';
@@ -60,6 +60,7 @@ export interface StoreConfig<SL extends AnySlice> {
   dispatchTx: DispatchTx<Transaction<any, any>>;
   scheduler: Scheduler;
   slices: SL[];
+  initStateOverride?: Record<LineageId, unknown> | undefined;
   storeName: string;
   debug?: DebugFunc;
   onSyncError?: (err: Error) => void;

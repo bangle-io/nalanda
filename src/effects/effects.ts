@@ -92,6 +92,7 @@ export const changeEffect = <
   });
   const effect: SliceEffect = {
     name: name + `(changeEffect)`,
+    logging: false,
     init(slice, store, ref: RefValue) {
       ref.current = {
         firstRun: true,
@@ -134,6 +135,13 @@ export const changeEffect = <
         current.prevCleanup?.();
       }
 
+      // TODO improve debug logging by including the source
+      store._debug?.({
+        type: 'CUSTOM_EFFECT',
+        name: name + `(changeEffect)`,
+        source: [],
+      });
+
       const res = cb(
         Object.fromEntries(newObjectEntries),
         store.dispatch,
@@ -156,3 +164,81 @@ export const changeEffect = <
 
   return slice as any;
 };
+
+/**
+ * Prefer using `changeEffect` without dependencies or with all `passivePick` to
+ * get the same functionality. This is for special cases where you want
+ * access to the entire store object
+ */
+export function mountEffect<N extends string, TDep extends string>(
+  name: N,
+  depSlices: AnySliceWithName<TDep>[],
+  cb: (store: ReducedStore<TDep>) => void | (() => void),
+): Slice<N, {}, TDep, {}> {
+  const slice = createBaseSlice(depSlices, {
+    name: name,
+    initState: {},
+    derivedState: () => () => ({}),
+    terminal: true,
+  });
+
+  type RefValue = {
+    current?: {
+      controller: AbortController;
+    };
+  };
+
+  Slice._registerEffect(slice, {
+    name: name + `(onceEffect)`,
+    init(slice, store: ReducedStore<any>, ref: RefValue) {
+      const controller = new AbortController();
+
+      ref.current = {
+        controller,
+      };
+
+      let cleanup: void | (() => void);
+
+      const timer = setTimeout(() => {
+        cleanup = cb(store);
+      }, 0);
+
+      controller.signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          cleanup?.();
+        },
+        { once: true },
+      );
+    },
+
+    destroy(slice, state, ref: RefValue) {
+      ref.current?.controller?.abort();
+    },
+  });
+
+  return slice;
+}
+
+export function intervalRunEffect<N extends string, TDep extends string>(
+  name: N,
+  depSlices: AnySliceWithName<TDep>[],
+  time: number,
+  cb: (
+    storeState: ReducedStore<TDep>['state'],
+    dispatch: ReducedStore<TDep>['dispatch'],
+  ) => (() => void) | void,
+) {
+  return mountEffect(name, depSlices, (store) => {
+    let cleanup: void | (() => void);
+    const timer = setInterval(() => {
+      cleanup = cb(store.state, store.dispatch);
+    }, time);
+
+    return () => {
+      clearInterval(timer);
+      cleanup?.();
+    };
+  });
+}

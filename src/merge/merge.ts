@@ -58,7 +58,7 @@ export function mergeAll<N extends string, TSlice extends AnySlice>(
     name: name,
     initState: {},
     derivedState: () => {
-      return (storeState) => {
+      return (_, storeState) => {
         let seenKeys = new Set<string>();
         return Object.fromEntries(
           nonTerminalSlices.flatMap((slice) => {

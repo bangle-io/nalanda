@@ -1,10 +1,11 @@
-import { createLineageId } from './helpers';
+import { weakCache } from './helpers';
 import { StoreState } from './state';
 import { Transaction } from './transaction';
 import type {
   ActionBuilder,
   DerivedStateFn,
   Effect,
+  ValidStoreState,
   LineageId,
   PickOpts,
   TransactionBuilder,
@@ -64,7 +65,7 @@ export interface SliceConfig {
 }
 
 export class Slice<
-  N extends string,
+  TName extends string,
   TState,
   TDependency extends string,
   TDerivedState,
@@ -109,6 +110,7 @@ export class Slice<
       disableEffects: true,
     });
   }
+
   static registerAction<
     N extends string,
     TState,
@@ -133,8 +135,14 @@ export class Slice<
       actionId,
     });
 
+    if (slice.spec.actionBuilders[actionId]) {
+      throw new Error(
+        `Action "${actionId}" already registered for slice "${slice.spec.lineageId}"`,
+      );
+    }
     slice.spec.actionBuilders[actionId] = action;
   }
+
   static registerEffectSlice(slice: AnySlice, effectSlices: AnySlice[]): void {
     if (slice.config.frozen) {
       throw new Error(
@@ -150,10 +158,15 @@ export class Slice<
       after: effectSlices,
     });
   }
-  public readonly spec: SliceInputSpec<N, TState, TDependency, TDerivedState>;
+  public readonly spec: SliceInputSpec<
+    TName,
+    TState,
+    TDependency,
+    TDerivedState
+  >;
   public readonly config: SliceConfig;
   constructor(
-    inputSpec: SliceInputSpec<N, TState, TDependency, TDerivedState>,
+    inputSpec: SliceInputSpec<TName, TState, TDependency, TDerivedState>,
     config: Partial<SliceConfig> = {},
   ) {
     if (inputSpec.dependencies.some((dep) => dep.spec.terminal)) {
@@ -173,11 +186,13 @@ export class Slice<
       disableEffects: false,
       ...config,
     };
+    // find a better way, I feel weakCache might be slow
+    this.resolveState = weakCache(this.resolveState.bind(this));
   }
-  applyTx(
+  applyTx<TStoreSlices extends string>(
     sliceState: TState,
-    storeState: StoreState<N>,
-    tx: Transaction<N, unknown[]>,
+    storeState: ValidStoreState<TStoreSlices, TName>,
+    tx: Transaction<TName, unknown[]>,
   ): TState {
     const action = this.spec.actionBuilders[tx.actionId];
 
@@ -192,7 +207,7 @@ export class Slice<
   /**
    * Freeze the slice so that no more transaction builders or effects can be registered.
    */
-  finalize(): Slice<N, TState, TDependency, TDerivedState> {
+  finalize(): Slice<TName, TState, TDependency, TDerivedState> {
     this.config.frozen = true;
     // Should we fork here?
     return this;
@@ -202,13 +217,17 @@ export class Slice<
    */
   protected fork(
     config: Partial<SliceConfig> = {},
-  ): Slice<N, TState, TDependency, TDerivedState> {
+  ): Slice<TName, TState, TDependency, TDerivedState> {
     return new Slice(this.spec, { ...this.config, ...config });
   }
-  getDerivedState(storeState: StoreState<N>): TDerivedState {
+  getDerivedState<TStateSlices extends string>(
+    storeState: ValidStoreState<TStateSlices, TName>,
+  ): TDerivedState {
     return StoreState.getDerivedState(storeState, this) as TDerivedState;
   }
-  getState(storeState: StoreState<N>): TState {
+  getState<TStateSlices extends string>(
+    storeState: ValidStoreState<TStateSlices, TName>,
+  ): TState {
     return StoreState.getSliceState(storeState, this) as TState;
   }
   /**
@@ -216,20 +235,20 @@ export class Slice<
    * when you want to just read the value and not trigger the effect if
    * it changes.
    */
-  passivePick<T>(cb: (resolvedState: TState & TDerivedState) => T) {
+  passivePick = <T>(cb: (resolvedState: TState & TDerivedState) => T) => {
     const opts: PickOpts = {
       ignoreChanges: true,
     };
     return this.pick(cb, opts);
-  }
-  pick<T>(
+  };
+  pick = <T>(
     cb: (resolvedState: TState & TDerivedState) => T,
     _opts: PickOpts = {},
   ): [
-    Slice<N, TState, TDependency, TDerivedState>,
+    Slice<TName, TState, TDependency, TDerivedState>,
     (storeState: StoreState<any>) => T,
     PickOpts,
-  ] {
+  ] => {
     return [
       this,
       (storeState: StoreState<any>) => {
@@ -237,13 +256,24 @@ export class Slice<
       },
       _opts,
     ];
-  }
-  resolveState(storeState: StoreState<N>): TState & TDerivedState {
+  };
+
+  resolveState<TStateSlices extends string>(
+    storeState: ValidStoreState<TStateSlices, TName>,
+  ): TState & TDerivedState {
     return {
       ...this.getState(storeState),
       ...this.getDerivedState(storeState),
     };
   }
+
+  createAction<TActionParam extends unknown[]>(
+    actionId: string,
+    action: ActionBuilder<TActionParam, TState, TDependency>,
+  ): TransactionBuilder<TName, TActionParam> {
+    return Slice.createAction(this, actionId, action);
+  }
+
   static _fork<TSlice extends AnySlice>(
     slice: TSlice,
     config?: Partial<SliceConfig>,

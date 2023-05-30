@@ -5,10 +5,10 @@ import {
   createSliceWithSelectors,
 } from '../create';
 import { timeoutSchedular } from '../effect';
-import { Slice } from '../slice';
+import { AnySliceWithName, Slice } from '../slice';
 import { StoreState } from '../state';
 import { Store } from '../store';
-import { expectType } from '../types';
+import { DoesExtendBool, expectType, expectType2 } from '../types';
 
 function sleep(t = 20): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
@@ -57,6 +57,26 @@ const testSlice3 = createSlice([], {
       return { ...state, name: state.name.toLocaleLowerCase() };
     },
   },
+});
+
+test('type check', () => {
+  const store = Store.create({
+    storeName: 'test-store',
+    scheduler: timeoutSchedular(0),
+    state: [testSlice1, testSlice2],
+  });
+
+  testSlice1.getState(store.state);
+
+  store.dispatch(testSlice1.actions.increment({ increment: true }));
+  store.dispatch(testSlice2.actions.prefix('pre-'));
+
+  expect(() =>
+    // @ts-expect-error testSlice3 is not in the store
+    store.dispatch(testSlice3.actions.lowercase()),
+  ).toThrowErrorMatchingInlineSnapshot(
+    `"Cannot dispatch transaction as slice "l_test-3$" is not registered in Store"`,
+  );
 });
 
 test('empty store', () => {
@@ -843,5 +863,34 @@ describe('effects', () => {
       's1-sync= 18,16',
       's2-sync= 18,16',
     ]);
+  });
+});
+
+describe('does extend', () => {
+  test('works', () => {
+    expectType2<DoesExtendBool<'kushan', 'kushan' | 'joshi' | 'test'>, true>(
+      true,
+    );
+    expectType2<DoesExtendBool<'kushan', 'kushan' | 'joshi'>, true>(true);
+    expectType2<DoesExtendBool<'kushan', 'kushan'>, true>(true);
+
+    expectType2<DoesExtendBool<'kushan', ''>, false>(false);
+    expectType2<
+      DoesExtendBool<'kushan' | 'joshi', 'kushan' | 'c' | 'joshi' | 'c'>,
+      true
+    >(true);
+
+    expectType2<
+      DoesExtendBool<'kushan' | 'joshi' | 'k', 'kushan' | 'c' | 'joshi' | 'c'>,
+      false
+    >(false);
+
+    expectType2<
+      DoesExtendBool<
+        'kushan' | 'joshi' | 'k',
+        'kushan' | 'c' | 'joshi' | 'c' | 'k'
+      >,
+      true
+    >(true);
   });
 });

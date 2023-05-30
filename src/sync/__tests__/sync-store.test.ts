@@ -4,6 +4,7 @@ import {
   createSelector,
   createSlice,
   createSliceWithSelectors,
+  LineageId,
   Slice,
   Store,
   timeoutSchedular,
@@ -115,6 +116,7 @@ const createBasicPair = ({
     sendDelay?: number;
     payloadParser?: typeof defaultPayloadParser;
     payloadSerializer?: typeof defaultPayloadSerializer;
+    stateOverride?: Record<LineageId, any>;
   };
   replica?: {
     mainStore?: string;
@@ -124,6 +126,7 @@ const createBasicPair = ({
     sendDelay?: number;
     payloadParser?: typeof defaultPayloadParser;
     payloadSerializer?: typeof defaultPayloadSerializer;
+    stateOverride?: Record<LineageId, any>;
   };
 }) => {
   let sendMessages: SyncMessage[] = [];
@@ -180,6 +183,7 @@ const createBasicPair = ({
     dispatchTx: mainDispatchSpy.dispatch,
     onSyncError: mainOnSyncError,
     onSyncReady: mainOnSyncReady,
+    initStateOverride: main.stateOverride,
   });
 
   let replicaDispatchSpy = createDispatchSpy();
@@ -217,6 +221,7 @@ const createBasicPair = ({
       dispatchTx: replicaDispatchSpy.dispatch,
       onSyncError: replicaOnSyncError,
       onSyncReady: replicaOnSyncReady,
+      initStateOverride: replica.stateOverride,
     });
 
     replicaStore = _replicaStore;
@@ -248,7 +253,7 @@ const createBasicPair = ({
     replicaDispatchSpy,
     sendMessages,
     mainStore: mainStore.store,
-    getReplicaStore: () => {
+    getReplicaStore: (): Store => {
       return replicaStore.store;
     },
     mainOnSyncError,
@@ -544,6 +549,81 @@ describe('basic test', () => {
     });
 
     expect(result.replicaDispatchSpy.getDebugLogItems()).toMatchSnapshot();
+  });
+
+  describe('init state override', () => {
+    test('state is overridden in main and replica', async () => {
+      const result = createBasicPair({
+        main: {
+          syncSlices: [],
+          slices: [testSlice2],
+          stateOverride: {
+            [testSlice2.spec.lineageId]: {
+              name: 'main-override',
+            },
+          },
+        },
+        replica: {
+          syncSlices: [],
+          slices: [testSlice2],
+          stateOverride: {
+            [testSlice2.spec.lineageId]: {
+              name: 'replica-override',
+            },
+          },
+        },
+      });
+
+      expect(testSlice2.getState(result.getReplicaStore().state)).toEqual({
+        name: 'replica-override',
+      });
+
+      expect(testSlice2.getState(result.mainStore.state)).toEqual({
+        name: 'main-override',
+      });
+    });
+
+    test('throws error if overriding sync slice in replica', async () => {
+      expect(() =>
+        createBasicPair({
+          main: {
+            syncSlices: [],
+            slices: [testSlice2],
+          },
+          replica: {
+            syncSlices: [testSlice2],
+            stateOverride: {
+              [testSlice2.spec.lineageId]: {
+                name: 'replica-override',
+              },
+            },
+          },
+        }),
+      ).toThrowError(
+        'Cannot override init state for slice l_testSlice2$ as it was not found. Override is not supported in sync slices.',
+      );
+    });
+
+    test('throws error if overriding sync slice in main', async () => {
+      expect(() =>
+        createBasicPair({
+          main: {
+            slices: [],
+            syncSlices: [testSlice2],
+            stateOverride: {
+              [testSlice2.spec.lineageId]: {
+                name: 'main-override',
+              },
+            },
+          },
+          replica: {
+            syncSlices: [],
+          },
+        }),
+      ).toThrowError(
+        'Cannot override init state for slice l_testSlice2$ as it was not found. Override is not supported in sync slices.',
+      );
+    });
   });
 });
 
@@ -1086,63 +1166,3 @@ describe('getReplicaLookup', () => {
     }
   `);
 });
-
-// describe('works with merged slice', () => {
-//   test('nested', async () => {
-//     const forwarded1 = mergeAll([testSlice1, testSlice2], {
-//       name: 'test-merged',
-//     });
-
-//     const result = createBasicPair({
-//       main: {
-//         syncSlices: [forwarded1],
-//         slices: [depOnTestSlice1Slice],
-//       },
-//       replica: {
-//         syncSlices: [forwarded1],
-//       },
-//     });
-
-//     result.mainStore.dispatch(forwarded1.actions.increment());
-//     result.mainStore.dispatch(forwarded1.actions.padEnd(5, 'padding'));
-
-//     expect(testSlice1.getState(result.mainStore.state)).toEqual({
-//       counter: 1,
-//     });
-
-//     expect(forwarded1.resolveState(result.mainStore.state)).toEqual({
-//       counter: 1,
-//       name: 'kjpad',
-//     });
-
-//     await waitForExpect(() => {
-//       expect(result.mainOnSyncReady).toHaveBeenCalledTimes(1);
-//       expect(result.replicaOnSyncReady).toHaveBeenCalledTimes(1);
-//     });
-
-//     expect(testSlice1.getState(result.getReplicaStore().state)).toEqual({
-//       counter: 1,
-//     });
-//     expect(testSlice2.getState(result.getReplicaStore().state)).toEqual({
-//       name: 'kjpad',
-//     });
-//     expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
-//       counter: 1,
-//       name: 'kjpad',
-//     });
-
-//     result.mainStore.dispatch(forwarded1.actions.uppercase());
-
-//     expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
-//       counter: 1,
-//       name: 'KJPAD',
-//     });
-
-//     await waitForExpect(() => {
-//       expect(forwarded1.resolveState(result.getReplicaStore().state)).toEqual({
-//         counter: 1,
-//         name: 'KJPAD',
-//       });
-//     });
-//   });
-// });

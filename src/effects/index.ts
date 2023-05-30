@@ -1,1 +1,6 @@
-export { changeEffect, syncChangeEffect } from './effects';
+export {
+  changeEffect,
+  intervalRunEffect,
+  mountEffect,
+  syncChangeEffect,
+} from './effects';
