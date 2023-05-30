@@ -135,17 +135,8 @@ describe('Single slice', () => {
         },
         {
           "name": "testEffect(changeEffect)",
-          "source": [
-            {
-              "actionId": "testAction",
-              "lineageId": "l_test$",
-            },
-            {
-              "actionId": "ready",
-              "lineageId": "l_testEffect$",
-            },
-          ],
-          "type": "SYNC_UPDATE_EFFECT",
+          "source": [],
+          "type": "CUSTOM_EFFECT",
         },
         {
           "actionId": "testAction",
@@ -161,13 +152,8 @@ describe('Single slice', () => {
         },
         {
           "name": "testEffect(changeEffect)",
-          "source": [
-            {
-              "actionId": "testAction",
-              "lineageId": "l_test$",
-            },
-          ],
-          "type": "SYNC_UPDATE_EFFECT",
+          "source": [],
+          "type": "CUSTOM_EFFECT",
         },
       ]
     `);

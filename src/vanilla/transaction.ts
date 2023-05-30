@@ -150,7 +150,7 @@ export class Metadata {
 }
 
 export interface EffectLog {
-  type: 'SYNC_UPDATE_EFFECT' | 'UPDATE_EFFECT';
+  type: 'SYNC_UPDATE_EFFECT' | 'UPDATE_EFFECT' | 'CUSTOM_EFFECT';
   name: string;
   source: Array<{ lineageId: LineageId; actionId: string }>;
 }

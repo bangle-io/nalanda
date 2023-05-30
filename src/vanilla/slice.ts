@@ -235,20 +235,20 @@ export class Slice<
    * when you want to just read the value and not trigger the effect if
    * it changes.
    */
-  passivePick<T>(cb: (resolvedState: TState & TDerivedState) => T) {
+  passivePick = <T>(cb: (resolvedState: TState & TDerivedState) => T) => {
     const opts: PickOpts = {
       ignoreChanges: true,
     };
     return this.pick(cb, opts);
-  }
-  pick<T>(
+  };
+  pick = <T>(
     cb: (resolvedState: TState & TDerivedState) => T,
     _opts: PickOpts = {},
   ): [
     Slice<TName, TState, TDependency, TDerivedState>,
     (storeState: StoreState<any>) => T,
     PickOpts,
-  ] {
+  ] => {
     return [
       this,
       (storeState: StoreState<any>) => {
@@ -256,7 +256,7 @@ export class Slice<
       },
       _opts,
     ];
-  }
+  };
 
   resolveState<TStateSlices extends string>(
     storeState: ValidStoreState<TStateSlices, TName>,

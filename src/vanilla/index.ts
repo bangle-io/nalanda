@@ -5,6 +5,8 @@ export type {
   ActionBuilder,
   StableSliceId,
   LineageId,
+  ValidStoreState,
+  DoesExtend,
 } from './types';
 
 export { timeoutSchedular, idleCallbackScheduler } from './effect';

@@ -60,6 +60,7 @@ export class SyncStoreReplica<
       storeName: config.storeName,
       sync: config.sync,
       otherSlices: config.slices,
+      initStateOverride: this.config.initStateOverride,
     });
 
     this.storeInfo = {

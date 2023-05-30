@@ -307,7 +307,7 @@ export class EffectHandler {
   }
 
   private _sendDebugInfo(type: 'sync' | 'deferred') {
-    if (!this._debug) {
+    if (!this._debug || this.effect.logging === false) {
       return;
     }
 

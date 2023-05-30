@@ -58,6 +58,7 @@ export class SyncStoreMain<SbSync extends AnySlice, SbOther extends AnySlice> {
       storeName,
       otherSlices: config.slices,
       sync: this.config.sync,
+      initStateOverride: this.config.initStateOverride,
     });
 
     this.storeInfo = {

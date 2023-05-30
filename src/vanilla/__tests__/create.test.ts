@@ -169,9 +169,14 @@ describe('createSliceWithSelectors', () => {
             >
           >(slice);
 
-          return (storeState) => {
+          return (sliceState, storeState) => {
             rejectAny(storeState);
+            rejectAny(sliceState);
             expectType<StoreState<'base-1' | 'base-2'>>(storeState);
+            expectType<{
+              num: number;
+              bar: string;
+            }>(sliceState);
 
             () => {
               slice.getState(storeState);

@@ -16,7 +16,7 @@ import {
   calcReverseDependencies,
 } from './slices-helpers';
 import type { Transaction } from './transaction';
-import type { LineageId, StableSliceId } from './types';
+import type { DerivedStateFn, LineageId, StableSliceId } from './types';
 
 interface InputStoreStateSpec<TSliceName extends string> {
   readonly slices: UnknownSliceWithName<TSliceName>[];
@@ -25,7 +25,7 @@ interface InputStoreStateSpec<TSliceName extends string> {
   readonly lookupByLineage: Record<LineageId, UnknownSlice>;
   readonly deriveStateFuncs: Record<
     LineageId,
-    (storeState: StoreState<any>) => unknown
+    ReturnType<DerivedStateFn<TSliceName, unknown, any, any>>
   >;
   readonly reverseDeps: Record<LineageId, Set<LineageId>>;
 }
@@ -61,7 +61,6 @@ export class StoreState<TSliceName extends string> {
   ): StoreState<TSliceName> {
     const { slices, pathMap, reversePathMap } = expanded;
     validateSlices(slices);
-
     validatePathMap(pathMap, reversePathMap);
 
     const deriveStateFuncs: InputStoreStateSpec<any>['deriveStateFuncs'] =
@@ -119,7 +118,8 @@ export class StoreState<TSliceName extends string> {
 
   // TODO improve this as it is running on every call, we dont need to
   static getDerivedState(storeState: StoreState<any>, _sl: AnySlice): unknown {
-    return storeState.spec.deriveStateFuncs[_sl.spec.lineageId]!(storeState);
+    const func = storeState.spec.deriveStateFuncs[_sl.spec.lineageId]!;
+    return func(_sl.getState(storeState), storeState);
   }
 
   static getLineageId(
@@ -162,9 +162,10 @@ export class StoreState<TSliceName extends string> {
 
       if (
         !scopedSlice ||
-        // TODO make this deep dependency lookup? this is because they can in theory pass it around
-        // so in theory a deep dependency lookup is what we want.
-        !sliceDepLineageLookup(scopedSlice).has(_sl.spec.lineageId)
+        // TODO we need to test this case
+        !storeState.spec.reverseDeps[_sl.spec.lineageId]?.has(
+          scopedSlice.spec.lineageId,
+        )
       ) {
         throw new Error(
           `Slice "${sl.spec.name}" is not included in the dependencies of the scoped slice "${scopedSlice?.spec.name}"`,

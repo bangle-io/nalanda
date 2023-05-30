@@ -79,6 +79,7 @@ export class SyncManager {
       storeName: string;
       sync: SyncMainConfig<AnySlice> | SyncReplicaConfig<AnySlice>;
       otherSlices: AnySlice[];
+      initStateOverride?: Record<LineageId, unknown> | undefined;
     },
   ) {
     let syncExpanded = expandSlices(config.sync.slices);
@@ -100,7 +101,20 @@ export class SyncManager {
       },
     };
 
-    this.initStoreState = StoreState.createWithExpanded(merged);
+    if (config.initStateOverride) {
+      for (const [lineageId] of Object.entries(config.initStateOverride)) {
+        if (!otherExpanded.pathMap[lineageId as LineageId]) {
+          throw new Error(
+            `Cannot override init state for slice ${lineageId} as it was not found. Override is not supported in sync slices.`,
+          );
+        }
+      }
+    }
+
+    this.initStoreState = StoreState.createWithExpanded(
+      merged,
+      config.initStateOverride,
+    );
 
     let expandedSyncSlices = syncExpanded.slices;
 

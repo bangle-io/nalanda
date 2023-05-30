@@ -1,11 +1,5 @@
 import { createLineageId } from './helpers';
-import {
-  AnySlice,
-  Slice,
-  SliceConfig,
-  SliceReducer,
-  UnknownSlice,
-} from './slice';
+import { Slice, SliceConfig, SliceReducer } from './slice';
 import { StoreState } from './state';
 import {
   DerivedStateFn,
@@ -64,7 +58,7 @@ export function createSelector<
       initStoreState,
     );
 
-    return (storeState: StoreState<string>) => {
+    return (_, storeState: StoreState<string>) => {
       const values = entries.map(([k, v]): [string, unknown] => [
         k,
         v(slice.getState(storeState), storeState),
@@ -131,19 +125,22 @@ export function createSliceWithSelectors<
   return createBaseSlice(dependencies, {
     ...arg,
     derivedState: (initStoreState, sl) => {
-      const selectors: Array<[string, (s: StoreState<any>) => unknown]> =
-        Object.entries(arg.selectors).map(([k, v]) => [
-          k,
-          v(initStoreState, sl),
-        ]);
+      const selectors: Array<
+        [string, (state: TState, storeState: StoreState<string>) => unknown]
+      > = Object.entries(arg.selectors).map(([k, v]) => [
+        k,
+        v(initStoreState, sl),
+      ]);
 
       let prevChangeRef = StoreState.getChangeRef(initStoreState, sl);
 
+      const initSliceState = sl.getState(initStoreState);
+
       let prevDerivedState = Object.fromEntries(
-        selectors.map(([k, v]) => [k, v(initStoreState)]),
+        selectors.map(([k, v]) => [k, v(initSliceState, initStoreState)]),
       );
 
-      return (storeState) => {
+      return (sliceState, storeState) => {
         const changeRef = StoreState.getChangeRef(storeState, sl);
 
         if (changeRef === prevChangeRef) {
@@ -153,7 +150,7 @@ export function createSliceWithSelectors<
         prevChangeRef = changeRef;
 
         prevDerivedState = Object.fromEntries(
-          selectors.map(([k, v]) => [k, v(storeState)]),
+          selectors.map(([k, v]) => [k, v(sliceState, storeState)]),
         );
 
         return prevDerivedState;

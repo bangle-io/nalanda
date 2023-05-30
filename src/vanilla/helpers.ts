@@ -27,7 +27,6 @@ export function weakCache<T extends object, R>(
     if (cache.has(arg)) {
       return cache.get(arg)!;
     }
-
     const value = fn(arg);
     cache.set(arg, value);
 
