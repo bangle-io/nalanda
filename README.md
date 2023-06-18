@@ -46,7 +46,7 @@ const store = createStore({
 
 store.dispatch(updateCount({ count: 5 }));
 
-countSlice.get(store.state); // { count: 6 }
+countSlice.get(store.state); // { count: 5 }
 ```
 
 ## Dependency Management
