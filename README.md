@@ -1,197 +1,142 @@
-# Nalanda (WIP)
+# Nalanda
 
-## React API
+Nalanda is a TypeScript-first state management library designed for serious web applications. It provides modern, predictable state management with no magical underpinnings. Nalanda offers high performance through explicit dependency management, allows you to build slices of state that depend on others and only update when necessary.
 
-### Consuming Slice State
+The library also provides a powerful effects system that enables you to handle complex logic outside of your UI components. It supports breaking down your app into small, testable, and maintainable slices, and is compatible with any framework.
 
-```ts
-import { Slice, createUseSliceHook } from 'nalanda';
+## Installation
 
-const store = Store.create({
-  slices: [sliceA, sliceB],
-});
+To install Nalanda, use the following command in your project directory:
 
-// Create a hook from your store that can be used in your components
-const useSlice = createUseSliceHook(myStore);
-
-function MyComponent() {
-  const [state, dispatch] = useSlice(mySlice);
-  return <div>{state.counter}</div>;
-}
 ```
-
-### Consuming from multiple slices
-
-When using multiple slices, it can get tiresome to remember which dispatch to use.
-
-```ts
-function MyComponent() {
-  const [stateA, dispatchA] = useSlice(mySliceA);
-  const [stateB, dispatchB] = useSlice(mySliceB);
-
-  return <div>{state.counter}</div>;
-}
-```
-
-Instead you can create a single dispatch and use it to dispatch actions from all the slices your component uses.
-
-You can also optimize re-renders by selecting only the state you need. Nalanda will automatically only re-render your component when the selected state changes.
-
-```ts
-const [{ apple, orange }, dispatch] = useSelectStore(
-  [mySliceA, mySliceB],
-  (storeState) => {
-    return {
-      apple: mySliceA.getState(storeState).apple,
-      orange: mySliceB.getState(storeState).orange,
-    };
-  },
-);
-```
-
-### Using with React context
-
-It is recommended that you define your own hooks, for better typing support.
-
-```tsx
-// store.ts
-import { Slice, Store } from 'nalanda';
-import { sliceA } from './slice-a';
-import { sliceB } from './slice-b';
-
-const store = Store.create({
-  slices: [sliceA, sliceB],
-});
-
-const [storeState, dispatch] = useStoreState();
-const val = mySlice.getState(storeState);
-
-export const MyStoreContext = React.createContext(store);
-
-// Wrap your Application with this provider
-export function MyStoreProvider({ children }) {
-  return (
-    <MyStoreContext.Provider value={store}>{children}</MyStoreContext.Provider>
-  );
-}
-
-export function useSliceState<SL extends Slice>(sl: SL) {
-  const store = useContext(MyStoreContext).current;
-}
+npm i nalanda
 ```
 
 ## Features
 
-- Clean abstractions - you control over the state change. No magic.
+- **Predictable State Management:** No magic, just modern, understandable state management.
+- **Performance Optimized:** With explicit dependency management, slices of state only update when necessary, ensuring optimal performance.
+- **TypeScript First:** Leverages TypeScript to catch errors at compile-time.
+- **Powerful Effects System:** Handle complex logic outside of your UI components.
+- **Scalability:** Allows you to break your app into small, testable, and maintainable slices.
+- **Framework Agnostic:** Works seamlessly with any framework.
 
-## Dependencies
+## Quick Start
 
-Knowing the dependencies of a slice helps ensure any code is only run when its dependencies are updated. Think of it as React's virtual DOM but without the DOM which is the slowest part of React.
-
-## Selector
-
-### Accessing other selector inside a selector
-
-## Syncing across multiple stores
+Here is a quick example to get you started:
 
 ```ts
-const mySlice = slice({
-  key: 'test-3',
-  initState: { name: 'jojo' },
-  actions: {
-    lowercase: () => (state) => {
-      return { ...state, name: state.name.toLocaleLowerCase() };
+import { createSliceKey, createSlice, createStore } from 'nalanda';
+
+const countSliceKey = createSliceKey([], {
+  name: 'countSlice',
+  state: {
+    count: 1,
+  },
+});
+
+const countSlice = createSlice({
+  key: countSliceKey,
+  computed: {},
+});
+
+const updateCounter = countSlice.createAction(
+  ({ count }: { count: number }) => {
+    return countSlice.createTxn((state) => {
+      return {
+        count: state.count + count,
+      };
+    });
+  },
+);
+
+const store = createStore({
+  slices: [countSlice],
+});
+
+store.dispatch(updateCounter({ count: 5 }));
+
+countSlice.get(store.state); // { count: 6 }
+```
+
+## Dependency Management
+
+Nalanda lets you add dependencies to your slices. These slices depend on the data from other slices and update only when necessary.
+
+```ts
+const fruitSliceKey = createSliceKey([countSlice], {
+  name: 'fruitSlice',
+  state: {
+    fruit: 'mango',
+  },
+});
+```
+
+## Selectors and Computed State
+
+Selectors are functions that take the state and return a value. The computed state, on the other hand, is a value derived from the state.
+
+```ts
+const fruitCount = fruitSliceKey.createSelector((state) => {
+  const { count } = countSlice.get(state);
+  const { fruit } = fruitSliceKey.get(state);
+  return `We have ${count} ${fruit}!`;
+});
+
+const fruitSlice = createSlice({
+  key: fruitSliceKey,
+  computed: {
+    fruitCount: fruitCount,
+  },
+});
+
+fruitSlice.get(store.state); // { fruitCount: 'We have 5 mango!', fruit: 'mango' }
+
+store.dispatch(updateCounter({ count: 6 }));
+
+fruitSlice.get(store.state); // { fruitCount: 'We have 6 mango!', fruit: 'mango' }
+```
+
+## Type Safety
+
+Nalanda is written in TypeScript, which provides type safety. If you forget to add a dependency to a slice, the TypeScript compiler will catch it as a type error.
+
+```ts
+const fruitSliceKey = createSliceKey(
+  [], // missing countSlice dependency
+  {
+    name: 'fruitSlice',
+    state: {
+      fruit: 'mango',
     },
   },
-});
-
-const mainStore = Store.create({
-  storeName: 'main-store',
-  state: State.create({
-    slices: [mySlice],
-  }),
-});
-
-const workerStore = Store.create({
-  storeName: 'worker-store',
-  state: State.create({
-    slices: [replica(mySlice, { mainStore: 'main-store' })],
-  }),
-});
-```
-
-### Effects
-
-```ts
-const appleCountSlice = createSlice([], {
-  name: 'appleCountSlice',
-  initState: {
-    count: 0,
-  },
-  actions: {
-    increment: () => (state) => ({
-      count: state.count + 1,
-    }),
-  },
-  selector: () => {},
-});
-
-const appleCountChangeEffect = changeEffect(
-  'appleCountChangeEffect',
-  {
-    count: appleCountSlice.pick((state) => state.count),
-  },
-  // The effect will run whenever the count changes.
-  // Note: The effect will also run after the store is initialized.
-  ({ count }) => {
-    console.log('count', count);
-  },
 );
 
-export const appleSliceFamily = [appleCountSlice, appleCountChangeEffect];
+const fruitCount = fruitSliceKey.createSelector((state) => {
+  const { count } = countSlice.get(state);
+  //                           ^ type error: countSlice not in dependency list
+});
 ```
 
-### Passive pick
+## Effects
 
-Sometimes you want to passively read a value from the state but you don't want to trigger an effect run when the value changes.
+The effects system in Nalanda helps you extract complex logic from your UI components. Effects run whenever one of their dependencies change.
 
 ```ts
-const appleCountSlice = createSlice([], {
-  name: 'appleCountSlice',
-  initState: {
-    count: 0,
-    spoilCount: 0,
-  },
-  actions: {
-    increment: () => (state) => ({
-      ...state,
-      count: state.count + 1,
-    }),
-    setSpoilCount: (spoil: number) => (state) => ({
-      ...state,
-      spoilCount: spoil,
-    }),
-  },
-  selector: () => {},
-});
-
-const appleCountChangeEffect = changeEffect(
-  'appleCountChangeEffect',
+effect(
   {
-    appleCount: appleCountSlice.pick((state) => state.count),
-    // Read the value but don't trigger the effect if it changes.
-    spoilCount: appleCountSlice.passivePick((state) => state.spoilCount),
+    // dependencies
+    fruit: fruitSlice.pick((s) => s.fruit),
   },
-  // The effect will only run when the apple count changes.
-  ({ appleCount, spoilCount }, dispatch) => {
-    console.log(`fruit count ${appleCount}}`);
+  ({ fruit }, dispatch) => {
+    // runs on mount and when fruit changes
+    console.log(`We have ${fruit}!`);
 
-    const spoilCount = calculateSpoilCount(appleCount, spoilCount);
-
-    // updating spoil count will not cause the effect to run again.
-    dispatch(appleCountSlice.actions.setSpoilCount(spoilCount));
+    if (fruit === 'mango') {
+      dispatch(changeFruit({ fruit: 'apple' }));
+    }
   },
 );
-
-export const appleSliceFamily = [appleCountSlice, appleCountChangeEffect];
 ```
+
+For more examples and usage instructions, please refer to our [Documentation](link-to-docs). Feel free to contribute, raise issues, and suggest improvements on our [GitHub page](link-to-github).
