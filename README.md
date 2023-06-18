@@ -1,4 +1,4 @@
-# Nalanda
+# Nalanda (wip)
 
 Nalanda is state management library designed for high performance, maximum scalability, and ease of use with TypeScript.
 
