@@ -120,7 +120,7 @@ effect(
     countSlice: countSlice.pick((s) => s.count),
   },
   ({ fruit, count }, dispatch) => {
-    // runs on mount and when fruit changes
+    // runs on mount and when fruit or count changes
     console.log(`We have ${fruit}!`);
 
     if (fruit === 'mango' && count > 5) {
