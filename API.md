@@ -93,7 +93,7 @@ const myAction = slice.createAction(
 
 ### Global NoOp transaction
 
-### Chain transaction
+### Chain transaction or multiple txns
 
 what about steps
 
@@ -204,6 +204,12 @@ effect({
   },
 });
 ```
+
+### sharing ref across effects
+
+I am thinking just setting the value using weakmap to Store would allow me to share the ref across effects.
+Not everyone has access to store, we need to have a storeKey which is unique to store and can be used to access metadata.
+see worker-editor in bangle
 
 ### cleanup
 
