@@ -1,236 +1,275 @@
-## init
+# Slice
+
+## basic
 
 ```ts
-const key = createKey('FooBar', [otherSlice], {
-  x: 0,
-  y: 'hi',
-});
-
-type Selector = (state: State) => DerivedState;
-
-// should call the callback only when deps of key change or key itself changes
-const selectorA = key.createSelector(
-  (state) => {
-    const loca = key.get(state);
-    const foo = otherSlice.get(state);
-
-    return {};
-  },
-  {
-    equal: () => false,
-  },
-);
-
-// should update if the tracked state changes
-// the benefit here is that the selector only runs when sliceA or key state changes
-const selectorB = key.optimizedSelector({
-  track: {
-    foo: sliceA.tracked((state) => state.foo),
-  },
-  selector: ({ foo }) => {
-    return {};
-  },
-});
-
-const slice = createSlice({
-  key,
-  derivedState: (state) => {
-    return {
-      b: selectorB,
-    };
+createSlice([], {
+  name: 'sliceName',
+  state: {
+    a: 1,
   },
 });
 ```
 
-## Actions
+## With selectors
+
+```ts
+const key = createKey([sliceA], {
+  name: 'sliceName',
+  state: {
+    a: 1,
+  },
+});
+
+const sel0 = key.createSelector(
+  // will have sliceA
+  (state) => {
+    return key.get(state).z;
+  },
+  {
+    equal: (a, b) => a === b,
+  },
+);
+
+const sel1 = key.createSelector(
+  // will have sliceA
+  (state) => {
+    const otherSel = sel0(state);
+    const otherSlice = sliceA.get(state);
+    return key.get(state).f + otherSlice;
+  },
+  {
+    equal: (a, b) => a === b,
+  },
+);
+
+const slice = key.createSlice({
+  derivedState: {
+    a: sel1,
+  },
+});
+```
+
+# Query
+
+generally prefer using selectors, but we have this for flexibility
+
+```ts
+const myQuery = createQuery<StoreState>(({ param: X }) => {
+  return (storeState): T => {};
+});
+
+const result = myQuery(store.state, { param: 1 });
+```
+
+# Actions
 
 Should always be updating the key State and nothing else.
 Q: not forcing an action name could be problem with syncing, maybe we can use a counter++ to always have the same name?
 and not burden the user with naming actions
 
-```ts
-type Action<T> = (obj: T, state: StoreState) => Transaction;
+- Global NoOp transaction
 
-const myAction = slice.createAction((obj: { x: number }, state: StoreState) => {
-  return slice.newValue();
+- Chain transaction or multiple txns
+
+without helpers
+
+```ts
+const myAction = slice.createAction((obj: { x: number }) => {
+  return (storeState) => {
+    return {
+      ...slice.get(storeState),
+      x: obj.x,
+    };
+  };
 });
 ```
 
-if you want to give name, use function notation
-
-### Dispatching
+with helpers
 
 ```ts
-store.dispatch(myAction(param));
+const myAction = slice.createAction((obj: { x: number }) => {
+  return slice.tx((storeState) => {
+    return slice.update(storeState, { x: obj.x });
+  });
+});
+
+let tx: Transaction = slice.tx((storeState: StoreState): SliceState => {});
 ```
 
-should i send dispatch as part of action?
-
-Note: this might not work if we want to play around and txns
-
-```ts
-myAction(param, store.dispatch);
-```
-
-### Higher Action or meta action
-
-When an action can update more than one slice state
-
-If we change action to something like this
+### Serialization
 
 ```ts
 const myAction = slice.createAction(
-  (
-    obj: { x: number },
-    createTxn: TXBuilder<Slice_NAME>,
-  ): Transaction<one_of_slice_deps_or_slice> => {
-    return createTxn((state) => state);
-  },
+  z.object({
+    x: z.number(),
+  }),
+  (obj) => {},
 );
 ```
 
-## Do I need to wrap action what if i let users return Transaction
-
-### Global NoOp transaction
-
-### Chain transaction or multiple txns
-
-what about steps
+### update helpers
 
 ```ts
-createTxn(step1, step2);
+let result: SliceState = slice.update(
+  storeState,
+  (sliceState) => ({
+    ...sliceState,
+    x: obj.x,
+  }),
+  {
+    replace: true,
+  },
+);
 
-const step1 = slice.updateState((state) => state);
+slice.update(storeState, (sliceState) => ({
+  // is partial by default
+  x: obj.x,
+}));
+
+slice.update(storeState, (sliceState) => ({
+  // is partial by default
+  x: obj.x,
+}));
+// selector updates are ignored
+slice.update(storeState, (sliceState) => ({
+  x: obj.x,
+  selectorA: 2, // ignored
+}));
 ```
 
-### Serializing
+# Operations
 
 ```ts
-const myAction = mySerializer({
-  slice: slice,
-  schema: z.object({
-    removals: z.array(z.string()),
-    additions: z.array(z.string()),
-  }),
-  action: (obj, state) => {},
+const op = createOp<Store<SlA>>((obj: { x: number }) => {
+  return (store): void => {
+    const valA = sliceA.get(store);
+    const valB = sliceB.get(store);
+
+    dispatch(someAction);
+  };
+});
+
+dispatch(op(param));
+```
+
+## Serialization of operation
+
+```ts
+const op = createSerialOp<Store<SlA>>(z.object({ som: z.string() }), (obj) => {
+  return (key, dispatch): void => {
+    dispatch(someAction);
+  };
+});
+
+dispatch(op(param));
+```
+
+# Effects
+
+Using auto dependency thing
+
+```ts
+effect((store) => {
+  key.name('myEffect'); // or use function name
+
+  const valA = sliceA.get(store); // this will be tracked
+  const valT = sliceA.get(store, (val) => val.t); // this will be selective tracked, when t changes
+
+  const valB = sliceB.get(untracked(key)); // this will be un-tracked
+
+  cleanup(store, () => {});
+  cleanup(store, () => {}); // can have multiple
+
+  store.dispatch(someAction);
 });
 ```
 
-### Writing query functions
+## Effect Async
 
-Query functions are similar to selectors but can be used for complex things or event side-effects
+- When a new effect runs, previous runs dispatch become no-op
 
 ```ts
-const queryFunc = (state: State<THE_CORRECT_TYPE_BASED_ON_SLICE>) => {
-  const s = slice1.get(state);
-  const s2 = slice2.get(state);
+effect(async (store) => {
+  const valT = sliceA.get(store, (val) => val.t); // this will be selective tracked, when t changes
 
-  return s + s2;
+  const abort = new AbortController();
+  const data = await fetch('someurl');
+
+  const valC = sliceB.get(store); // TODO: should this be tracked?
+
+  cleanup(store, () => {
+    abort.abort();
+  });
+
+  store.dispatch(someAction);
+});
+```
+
+## Typings
+
+By default dispatch can be `any`, but they can provide a store type if they want
+
+```ts
+store.effect(() => {});
+
+// or
+
+effect<Store<SliceA>>((store) => {
+  dispatch(someAction); // dispatch will be typed
+});
+```
+
+## API
+
+```ts
+effect(cb);
+effect(cb, opts);
+
+let ef = effect();
+ef.disable();
+type Opts = {
+  autoRegister: boolean; // default true
 };
 ```
 
-### Operation
-
-## Effects
-
-Effects should auto register to any dependent slice
+## Refs
 
 ```ts
-effect(
-  {
-    obj: mySlice.pick((s) => s.obj),
-  },
-  ({ obj }, dispatch: Dispatch<mySlice>): void => {},
-);
-```
-
-allow passive picking
-
-```ts
-effect(
-  {
-    obj: mySlice.pick((s) => s.obj),
-    xyz: mySlice2.passivePick((s) => s.xyz),
-  },
-  ({ obj, xyz }, dispatch: Dispatch<mySlice | mySlice2>): void => {},
-);
-```
-
-### getting the entire slice state
-
-This can also be used to mimic mount
-
-```ts
-effect(
-  {
-    sliceState: mySlice.passivePick((s) => s),
-  },
-  ({ obj, xyz }, dispatch: Dispatch<mySlice | mySlice2>): void => {},
-);
-```
-
-### Effects Ref
-
-```ts
-effect(
-  'change_effect',
-  {
-    obj: mySlice.pick((s) => s.obj),
-    myRef: mySlice.ref(false),
-  },
-  (
-    { obj, myRef },
-    dispatch: Dispatch<mySlice>,
-    onCleanup,
-  ): void | Promise<void> => {
-    myRef.current; // typed and boolean
-  },
-);
-```
-
-```ts
-effect({
-  name: 'change_effect',
-  track: {
-    obj: mySlice.pick((s) => s.obj),
-    myRef: mySlice.ref(false),
-  },
-  run: (
-    { obj, myRef },
-    dispatch: Dispatch<mySlice>,
-    onCleanup,
-  ): void | Promise<void> => {
-    myRef.current; // typed and boolean
-  },
+effect((store) => {
+  const ref = createRef(store, false);
 });
 ```
 
-### sharing ref across effects
+## Shared Refs
 
-I am thinking just setting the value using weakmap to Store would allow me to share the ref across effects.
-Not everyone has access to store, we need to have a storeKey which is unique to store and can be used to access metadata.
-see worker-editor in bangle
-
-### cleanup
-
-we should follow angular style here to allow for cleanup, so that async await can work.
-
-When an effect is terminated, the dispatch function should become a no-op. This should be customizable if someone
-wants to not cancel the efffect on a new trigger.
+Refs that can be shared with other effects
 
 ```ts
-effect(
-  {
-    obj: mySlice.pick((s) => s.obj),
-  },
-  ({ obj }, dispatch: Dispatch<mySlice>, onCleanup): void | Promise<void> => {},
-);
+const sharedRef = createSharedRef(false);
+
+effect((store) => {
+  const ref = sharedRef(store);
+});
 ```
 
-### manual state or access to store unconditionally
+## Other features
 
-see : `persistStateWatch`
+- allow store to throw error if effects donot have name
+
+- we should follow angular style here to allow for cleanup, so that async await can work.
+  - When an effect is terminated, the dispatch function should become a no-op. This should be customizable if someone
+    wants to not cancel the efffect on a new trigger.
+- running it once
 
 ```ts
-createManualEffect({});
+effect((store) => {
+  store.cleanup(() => {});
+});
 ```
+
+# Readonly clone of slice
+
+This will help with the worker sync in an elegant way.
+
+we can also allow to merge multiple slices into one readonly slice
