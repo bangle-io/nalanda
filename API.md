@@ -3,7 +3,7 @@
 ## basic
 
 ```ts
-createSlice([], {
+slice([], {
   name: 'sliceName',
   state: {
     a: 1,
@@ -14,14 +14,14 @@ createSlice([], {
 ## With selectors
 
 ```ts
-const key = createKey([sliceA], {
+const key = sliceKey([sliceA], {
   name: 'sliceName',
   state: {
     a: 1,
   },
 });
 
-const sel0 = key.createSelector(
+const sel0 = key.selector(
   // will have sliceA
   (state) => {
     return key.get(state).z;
@@ -31,7 +31,7 @@ const sel0 = key.createSelector(
   },
 );
 
-const sel1 = key.createSelector(
+const sel1 = key.selector(
   // will have sliceA
   (state) => {
     const otherSel = sel0(state);
@@ -43,7 +43,7 @@ const sel1 = key.createSelector(
   },
 );
 
-const slice = key.createSlice({
+const slice = key.slice({
   derivedState: {
     a: sel1,
   },
@@ -58,6 +58,8 @@ generally prefer using selectors, but we have this for flexibility
 const myQuery = createQuery<StoreState>(({ param: X }) => {
   return (storeState): T => {};
 });
+
+key.createQuery(); // <-- like this
 
 const result = myQuery(store.state, { param: 1 });
 ```
@@ -259,7 +261,7 @@ effect((store) => {
 
 - we should follow angular style here to allow for cleanup, so that async await can work.
   - When an effect is terminated, the dispatch function should become a no-op. This should be customizable if someone
-    wants to not cancel the efffect on a new trigger.
+    wants to not cancel the effect on a new trigger.
 - running it once
 
 ```ts
