@@ -77,7 +77,7 @@ and not burden the user with naming actions
 without helpers
 
 ```ts
-const myAction = slice.createAction((obj: { x: number }) => {
+const myAction = slice.action((obj: { x: number }) => {
   return (storeState) => {
     return {
       ...slice.get(storeState),
@@ -85,12 +85,14 @@ const myAction = slice.createAction((obj: { x: number }) => {
     };
   };
 });
+
+myAction; // (params: P) => Transaction<SliceName, P[]>
 ```
 
 with helpers
 
 ```ts
-const myAction = slice.createAction((obj: { x: number }) => {
+const myAction = slice.action((obj: { x: number }) => {
   return slice.tx((storeState) => {
     return slice.update(storeState, { x: obj.x });
   });

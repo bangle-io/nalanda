@@ -1,12 +1,11 @@
-import { InferSliceName } from '../vanilla';
-import { BaseStore } from './base-store';
+import { BaseStore, InferSliceNameFromStore } from './base-store';
 
 type EffectOpts = {
   autoRegister?: boolean;
 };
 
 type EffectCallback<TStore extends BaseStore<any>> = (
-  store: EffectStore<InferSliceName<TStore>>,
+  store: EffectStore<InferSliceNameFromStore<TStore>>,
 ) => void | Promise<void>;
 
 export function cleanup<TStore extends BaseStore<any>>(

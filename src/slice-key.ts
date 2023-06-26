@@ -1,5 +1,6 @@
+import { CreateSliceOpts, BaseSlice } from './base-slice';
 import { NoInfer } from './helpers';
-import { CreateSliceOpts, Slice, SliceBase, slice } from './slice';
+import { InferSliceNameFromSlice, Slice, slice } from './slice';
 import { StoreState } from './store-state';
 
 type SelectorOpts<T> = {
@@ -17,18 +18,21 @@ export class SliceKey<
   TSliceName extends string,
   TState extends object,
   TDep extends string,
-> extends SliceBase<TSliceName, TState, TDep> {
+> extends BaseSlice<TSliceName, TState, TDep> {
   static create<
     TSliceName extends string,
     TState extends object,
-    TDep extends string,
+    TDepSlice extends Slice<string, any, any>,
   >(
-    dependencies: Slice<TDep, any, any>[],
-    opts: Omit<CreateSliceOpts<TSliceName, TState, TDep>, 'dependencies'>,
-  ): SliceKey<TSliceName, TState, TDep> {
-    return new SliceKey<TSliceName, TState, TDep>({
+    dependencies: TDepSlice[],
+    opts: Omit<
+      CreateSliceOpts<TSliceName, TState, InferSliceNameFromSlice<TDepSlice>>,
+      'dependencies'
+    >,
+  ): SliceKey<TSliceName, TState, InferSliceNameFromSlice<TDepSlice>> {
+    return new SliceKey({
       ...opts,
-      dependencies: dependencies,
+      dependencies: dependencies as any,
     });
   }
 
@@ -39,7 +43,7 @@ export class SliceKey<
   }
 
   selector<T>(
-    cb: (storeState: StoreState) => T,
+    cb: (storeState: StoreState<TSliceName | TDep>) => T,
     opts: SelectorOpts<NoInfer<T>> = {},
   ): Selector<T> {
     return {} as any;
