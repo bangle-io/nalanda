@@ -1,5 +1,10 @@
+import { testOnlyResetIdGeneration } from '../id_generation';
 import { GetStoreState, expectType, IfEquals } from '../helpers';
 import { InferDepNameFromSlice, Slice, slice } from '../slice';
+
+beforeEach(() => {
+  testOnlyResetIdGeneration();
+});
 
 describe('slice', () => {
   describe('types and setup', () => {

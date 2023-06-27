@@ -1,4 +1,5 @@
-import { LineageId, createLineageId } from './helpers';
+import { SliceId } from './helpers';
+import { idGeneration } from './id_generation';
 import type { Slice } from './slice';
 import type { StoreState } from './store-state';
 
@@ -26,13 +27,13 @@ export abstract class BaseSlice<
   readonly initialState: TState;
   readonly dependencies: Slice<TDep, any, any>[];
 
-  readonly lineageId: LineageId;
+  readonly sliceId: SliceId;
 
   constructor(opts: CreateSliceOpts<TSliceName, TState, TDep>) {
     this.name = opts.name;
     this.initialState = opts.state;
     this.dependencies = opts.dependencies;
-    this.lineageId = createLineageId(opts.name);
+    this.sliceId = idGeneration.createSliceId(opts.name);
   }
 
   get<TStoreSlices extends string>(

@@ -22,7 +22,8 @@ export type Brand<T, K> = T & { [__brand]: K };
 // https://github.com/microsoft/TypeScript/issues/14829
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
-export type LineageId = Brand<string, 'LineageId'>;
+export type SliceId = Brand<string, 'SliceId'>;
+export type ActionId = Brand<string, 'ActionId'>;
 
 export type IfEquals<T, U, Y = unknown, N = never> = (<G>() => G extends T
   ? 1
@@ -34,10 +35,6 @@ export const expectType = <Expected, Actual>(
   actual: IfEquals<Actual, Expected, Actual>,
 ) => void 0;
 
-const lineages: Record<string, number> = Object.create(null);
-
-export function createLineageId(name: string): LineageId {
-  if (name in lineages) return `l_${name}$${++lineages[name]}` as LineageId;
-  lineages[name] = 0;
-  return `l_${name}$` as LineageId;
+export function uuid(len = 10) {
+  return Math.random().toString(36).substring(2, 15).slice(0, len);
 }

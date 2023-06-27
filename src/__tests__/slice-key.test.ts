@@ -1,6 +1,11 @@
+import { testOnlyResetIdGeneration } from '../id_generation';
 import { expectType } from '../helpers';
 import { sliceKey } from '../slice-key';
 import { StoreState } from '../store-state';
+
+beforeEach(() => {
+  testOnlyResetIdGeneration();
+});
 
 describe('sliceKey', () => {
   describe('types and setup', () => {
