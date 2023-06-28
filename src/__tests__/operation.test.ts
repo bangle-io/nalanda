@@ -1,5 +1,6 @@
-import { testOnlyResetIdGeneration } from '../id_generation';
 import { operation } from '../operation';
+import { testCleanup } from '../test-cleanup';
+
 beforeEach(() => {
-  testOnlyResetIdGeneration();
+  testCleanup();
 });

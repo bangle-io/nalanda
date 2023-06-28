@@ -1,8 +1,7 @@
 import { ActionId, SliceId, uuid } from './helpers';
 import { idGeneration } from './id_generation';
 
-type TransactionOpts<TSliceName extends string, TParams extends any[]> = {
-  name: TSliceName;
+export type Step<TSliceName extends string, TParams extends any[]> = {
   params: TParams;
   actionId: ActionId;
   sourceSliceName: string;
@@ -15,12 +14,18 @@ export const TX_META_DISPATCH_SOURCE = 'DEBUG_DISPATCH_SOURCE';
 export const TX_META_STORE_TX_ID = 'store-tx-id';
 export const TX_META_STORE_NAME = 'store-name';
 
-let txCounter = 0;
+type TransactionOpts = {};
 
-export class Transaction<TSliceName extends string, TParams extends unknown[]> {
+export class Transaction<TSliceName extends string> {
   public metadata = new Metadata();
 
   readonly txId = idGeneration.createTransactionId();
+
+  protected destroyed = false;
+
+  get isDestroyed() {
+    return this.destroyed;
+  }
 
   static create<TSliceName extends string, TParams extends unknown[]>(opts: {
     name: TSliceName;
@@ -29,16 +34,33 @@ export class Transaction<TSliceName extends string, TParams extends unknown[]> {
     sourceSliceName: string;
     sourceSliceId: SliceId;
   }) {
-    return new Transaction<TSliceName, TParams>({
-      ...opts,
+    const step: Step<TSliceName, TParams> = {
+      params: opts.params,
+      actionId: opts.actionId,
+      sourceSliceName: opts.sourceSliceName,
+      sourceSliceId: opts.sourceSliceId,
       targetSliceName: opts.name,
       targetSliceId: opts.sourceSliceId,
-    });
+    };
+
+    return new Transaction<TSliceName>([step], {});
   }
 
   private constructor(
-    public readonly opts: TransactionOpts<TSliceName, TParams>,
+    public readonly steps: ReadonlyArray<Step<any, unknown[]>>,
+    protected readonly opts: TransactionOpts,
   ) {}
+
+  append<TSliceName2 extends string>(
+    txn: Transaction<TSliceName2>,
+  ): Transaction<TSliceName | TSliceName2> {
+    txn.destroyed = true;
+    this.destroyed = true;
+    return new Transaction<TSliceName | TSliceName2>(
+      [...this.steps, ...txn.steps],
+      this.opts,
+    );
+  }
 }
 
 export class Metadata {
@@ -83,19 +105,9 @@ export interface TransactionLog {
   params: unknown[];
 }
 
-export function txLog(tx: Transaction<any, any>): TransactionLog {
-  return {
-    type: 'TX',
-    sourceSliceName: tx.opts.sourceSliceName,
-    targetSliceName: tx.opts.targetSliceName,
-    sourceSliceId: tx.opts.sourceSliceId,
-    targetSliceId: tx.opts.sourceSliceId,
-    actionId: tx.opts.actionId,
-    dispatcher: tx.metadata.getMetadata(TX_META_DISPATCH_SOURCE),
-    store: tx.metadata.getMetadata(TX_META_STORE_NAME),
-    txId: tx.metadata.getMetadata(TX_META_STORE_TX_ID),
-    params: tx.opts.params,
-  };
+export function txLog(tx: Transaction<any>): TransactionLog {
+  // TODO
+  return {} as any;
 }
 
 export type LogItem = EffectLog | TransactionLog;

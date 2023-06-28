@@ -5,11 +5,15 @@ import { StoreState } from './store-state';
 export type TheStoreKey = {};
 
 export class StoreKey {}
+export type AnySlice = Slice<any, any, any>;
 
-export type GetStoreState<TSlice extends Slice<any, any, any>> =
-  TSlice extends Slice<infer TSliceName, any, any>
-    ? StoreState<TSliceName>
-    : never;
+export type GetStoreState<TSlice extends AnySlice> = TSlice extends Slice<
+  infer TSliceName,
+  any,
+  any
+>
+  ? StoreState<TSliceName>
+  : never;
 
 /**
  * Hack for nominal typing

@@ -1,14 +1,16 @@
 import { expectType } from '../helpers';
-import { slice } from '../slice';
+import { Slice, slice } from '../slice';
 import { Transaction } from '../transaction';
-import { ActionBuilder } from '../action';
-import { testOnlyResetIdGeneration } from '../id_generation';
+import { Action, ActionBuilder } from '../action';
+import { idGeneration } from '../id_generation';
+import { StoreState } from '../store-state';
+import { testCleanup } from '../test-cleanup';
 
-beforeEach(() => {
-  testOnlyResetIdGeneration();
+afterEach(() => {
+  testCleanup();
 });
 
-describe('actions', () => {
+describe('action type', () => {
   const mySlice = slice([], {
     name: 'mySlice',
     state: {
@@ -23,38 +25,35 @@ describe('actions', () => {
       });
     });
 
-    const txn = myAction(3);
-    expectType<Transaction<'mySlice', [number]>, typeof txn>(txn);
+    expectType<(a: number) => Transaction<'mySlice'>, typeof myAction>(
+      myAction,
+    );
 
-    expect(txn).toMatchInlineSnapshot(
-      {
-        opts: {
-          actionId: expect.any(String),
-          sourceSliceId: expect.any(String),
-          targetSliceId: expect.any(String),
-        },
-        txId: expect.any(String),
-      },
-      `
-      {
+    const txn = myAction(3);
+    expectType<Transaction<'mySlice'>, typeof txn>(txn);
+
+    expect(txn).toMatchInlineSnapshot(`
+      Transaction {
+        "destroyed": false,
         "metadata": Metadata {
           "_metadata": {},
         },
-        "opts": {
-          "actionId": Any<String>,
-          "name": "mySlice",
-          "params": [
-            3,
-          ],
-          "sourceSliceId": Any<String>,
-          "sourceSliceName": "mySlice",
-          "targetSliceId": Any<String>,
-          "targetSliceName": "mySlice",
-        },
-        "txId": Any<String>,
+        "opts": {},
+        "steps": [
+          {
+            "actionId": "a_[sl_mySlice$]",
+            "params": [
+              3,
+            ],
+            "sourceSliceId": "sl_mySlice$",
+            "sourceSliceName": "mySlice",
+            "targetSliceId": "sl_mySlice$",
+            "targetSliceName": "mySlice",
+          },
+        ],
+        "txId": "tx_0",
       }
-    `,
-    );
+    `);
   });
 
   test('action naming', () => {
@@ -70,9 +69,11 @@ describe('actions', () => {
       });
     });
 
-    expect(myAction1(3).opts.actionId).toContain('a_myActioning[sl_mySlice');
+    expect(myAction1(3).steps[0]!.actionId).toContain(
+      'a_myActioning[sl_mySlice',
+    );
 
-    expect(myAction2(3).opts.actionId).toEqual('a_[sl_mySlice$]0');
+    expect(myAction2(3).steps[0]!.actionId).toEqual('a_[sl_mySlice$]0');
   });
 
   test('same hint', () => {
@@ -95,22 +96,166 @@ describe('actions', () => {
       });
     });
 
-    expect(myAction1(3).opts.actionId).toEqual(
+    expect(myAction1(3).steps[0]?.actionId).toEqual(
       'a_myActioning[sl_sliceJackson$]',
     );
-    expect(myAction2(3).opts.actionId).toEqual(
+    expect(myAction2(3).steps[0]?.actionId).toEqual(
       'a_myActioning[sl_sliceJackson$]0',
     );
   });
 
-  test('.tx', () => {
+  test('types', () => {
     let stateBuilder = mySlice.tx((state) => {
       return mySlice.update(state, { a: 3 });
     });
 
     expectType<
-      ActionBuilder<'mySlice', { a: number }, string>,
+      ActionBuilder<'mySlice', { a: number }, never>,
       typeof stateBuilder
     >(stateBuilder);
+  });
+
+  test('types when slice has dep', () => {
+    const mySlice0 = slice([mySlice], {
+      name: 'mySlice0',
+      state: {
+        a: 1,
+      },
+    });
+
+    const mySlice2 = slice([mySlice, mySlice0], {
+      name: 'mySlice2',
+      state: {
+        a: 1,
+      },
+    });
+
+    let stateBuilder = mySlice2.tx((state) => {
+      return mySlice2.update(state, { a: 3 });
+    });
+
+    expectType<
+      ActionBuilder<'mySlice2', { a: number }, 'mySlice' | 'mySlice0'>,
+      typeof stateBuilder
+    >(stateBuilder);
+  });
+});
+
+describe('Action', () => {
+  let mySlice = slice([], {
+    name: 'test',
+    state: {
+      z: -1,
+      a: 0,
+    },
+  });
+
+  test('constructor sets actionId and registers action', () => {
+    const actionUpdateTo3 = mySlice.action(
+      (
+        a: number,
+        config: {
+          opt1: string;
+        },
+      ) => {
+        return mySlice.tx((state) => {
+          return mySlice.update(state, { a: 3 });
+        });
+      },
+    );
+
+    const txn = actionUpdateTo3(4, { opt1: 'hi' });
+    expect(txn).toMatchInlineSnapshot(`
+      Transaction {
+        "destroyed": false,
+        "metadata": Metadata {
+          "_metadata": {},
+        },
+        "opts": {},
+        "steps": [
+          {
+            "actionId": "a_[sl_test$]",
+            "params": [
+              4,
+              {
+                "opt1": "hi",
+              },
+            ],
+            "sourceSliceId": "sl_test$",
+            "sourceSliceName": "test",
+            "targetSliceId": "sl_test$",
+            "targetSliceName": "test",
+          },
+        ],
+        "txId": "tx_0",
+      }
+    `);
+
+    const storeState = StoreState.create({ slices: [mySlice] });
+
+    expect(Action._applyStep(storeState, txn.steps[0]!)).toEqual({
+      sliceId: 'sl_test$',
+      state: {
+        a: 3,
+        z: -1,
+      },
+    });
+  });
+
+  test('using function for updating state works', () => {
+    const actionIncrement = mySlice.action(
+      (
+        a: number,
+        config: {
+          opt1: string;
+        },
+      ) => {
+        return mySlice.tx((state) => {
+          return mySlice.update(state, (existing) => ({ a: existing.a + 1 }));
+        });
+      },
+    );
+
+    const txn = actionIncrement(4, { opt1: 'hi' });
+    const storeState = StoreState.create({ slices: [mySlice] });
+
+    expect(Action._applyStep(storeState, txn.steps[0]!)).toEqual({
+      sliceId: 'sl_test$',
+      state: {
+        a: 1,
+        z: -1,
+      },
+    });
+  });
+
+  test('throws error if action id is not found', () => {
+    const actionIncrement = mySlice.action(
+      (
+        a: number,
+        config: {
+          opt1: string;
+        },
+      ) => {
+        return mySlice.tx((state) => {
+          return mySlice.update(state, (existing) => ({ a: existing.a + 1 }));
+        });
+      },
+    );
+
+    const txn = actionIncrement(4, { opt1: 'hi' });
+    const storeState = StoreState.create({ slices: [mySlice] });
+
+    expect(() => {
+      Action._applyStep(storeState, {
+        actionId: idGeneration.createActionId(mySlice.sliceId),
+        params: [],
+        sourceSliceId: mySlice.sliceId,
+        targetSliceId: mySlice.sliceId,
+        sourceSliceName: mySlice.name,
+        targetSliceName: mySlice.name,
+      });
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"ActionId "a_[sl_test$]0" for Slice "sl_test$" does not exist"`,
+    );
   });
 });

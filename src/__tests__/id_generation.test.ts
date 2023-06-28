@@ -1,7 +1,8 @@
 import { idGeneration, testOnlyResetIdGeneration } from '../id_generation';
+import { testCleanup } from '../test-cleanup';
 
 beforeEach(() => {
-  testOnlyResetIdGeneration();
+  testCleanup();
 });
 
 describe('idGeneration.createActionId', () => {

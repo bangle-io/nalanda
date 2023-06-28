@@ -3,7 +3,7 @@ import {
   UserActionCallback,
   ActionBuilder as ActionBuilder,
 } from './action';
-import { StoreState } from './store-state';
+import type { StoreState } from './store-state';
 import { Transaction } from './transaction';
 import { BaseSlice, CreateSliceOpts } from './base-slice';
 
@@ -47,22 +47,22 @@ export class Slice<
   }
 
   action<TParams extends any[]>(
-    cb: UserActionCallback<TSliceName, TParams>,
-  ): (...params: TParams) => Transaction<TSliceName, TParams> {
+    cb: UserActionCallback<TParams, ActionBuilder<any, any, any>>,
+  ): (...params: TParams) => Transaction<TSliceName> {
     const action = new Action<TSliceName, TParams>({
       slice: this,
       userCallback: cb,
     });
 
-    return action.callable();
+    return action.getTransactionBuilder();
   }
 
   tx(
     calcSliceState: (storeState: StoreState<TSliceName | TDep>) => TState,
-  ): ActionBuilder<TSliceName, TState, TDep> {
+  ): ActionBuilder<TSliceName, TState, any> {
     return new ActionBuilder({
       name: this.name,
-      calcSliceState,
+      calcUserSliceState: calcSliceState,
     });
   }
 

@@ -39,8 +39,7 @@ export abstract class BaseSlice<
   get<TStoreSlices extends string>(
     storeState: ValidStoreState<TStoreSlices, TSliceName>,
   ): TState {
-    // TODO implement
-    return {} as any;
+    return storeState.getSliceState(this.sliceId).userState as TState;
   }
 
   update<TStoreSlices extends string>(
@@ -48,12 +47,17 @@ export abstract class BaseSlice<
     updater: ((cur: TState) => Partial<TState>) | Partial<TState>,
     opts: { replace?: boolean } = {},
   ): TState {
-    // TODO implement
-    // Notes
-    //  - if replace is true, replace the provided state
-    //    with the new state.
-    //  - if replace is false, merge the provided state
-    //  - ? figure out ignoring of selector properties
-    return {} as any;
+    const sliceState = storeState.getSliceState(this.sliceId)
+      .userState as TState;
+
+    const newSliceState =
+      typeof updater === 'function' ? updater(sliceState) : updater;
+
+    const mergedState = opts.replace
+      ? newSliceState
+      : { ...sliceState, ...newSliceState };
+
+    // TODO  - ? figure out ignoring of selector properties
+    return mergedState as TState;
   }
 }

@@ -30,19 +30,5 @@ export function effect<TStore extends BaseStore<any>>(
   callback: EffectCallback<TStore>,
   opts: EffectOpts = {},
 ): Effect<TStore> {
-  // TODO
   return new Effect(callback, opts);
 }
-
-// tests
-
-effect((s) => {
-  s.dispatch();
-  cleanup(s, () => {});
-});
-
-let m = effect(async (s) => {
-  s.dispatch();
-  await Promise.resolve(4);
-  cleanup(s, () => {});
-});

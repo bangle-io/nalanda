@@ -1,10 +1,10 @@
-import { testOnlyResetIdGeneration } from '../id_generation';
 import { expectType } from '../helpers';
 import { sliceKey } from '../slice-key';
 import { StoreState } from '../store-state';
+import { testCleanup } from '../test-cleanup';
 
 beforeEach(() => {
-  testOnlyResetIdGeneration();
+  testCleanup();
 });
 
 describe('sliceKey', () => {
