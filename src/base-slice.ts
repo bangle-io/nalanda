@@ -39,7 +39,7 @@ export abstract class BaseSlice<
   get<TStoreSlices extends string>(
     storeState: ValidStoreState<TStoreSlices, TSliceName>,
   ): TState {
-    return storeState.getSliceState(this.sliceId).userState as TState;
+    return storeState.getSliceStateManager(this.sliceId).sliceState as TState;
   }
 
   update<TStoreSlices extends string>(
@@ -47,8 +47,8 @@ export abstract class BaseSlice<
     updater: ((cur: TState) => Partial<TState>) | Partial<TState>,
     opts: { replace?: boolean } = {},
   ): TState {
-    const sliceState = storeState.getSliceState(this.sliceId)
-      .userState as TState;
+    const sliceState = storeState.getSliceStateManager(this.sliceId)
+      .sliceState as TState;
 
     const newSliceState =
       typeof updater === 'function' ? updater(sliceState) : updater;

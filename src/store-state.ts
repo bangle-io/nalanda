@@ -28,21 +28,35 @@ function computeConfig<TSliceName extends string>(
   };
 }
 
-export class SliceState {
+export class SliceStateManager {
   constructor(
     public readonly sliceId: SliceId,
-    public readonly userState: unknown,
+    public readonly sliceState: unknown,
   ) {}
+
+  applyStep(
+    step: Step<any, any>,
+    storeState: StoreState<any>,
+  ): SliceStateManager {
+    const newSliceState = Action._applyStep(storeState, step);
+
+    if (this.sliceState === newSliceState) {
+      return this;
+    }
+
+    return new SliceStateManager(step.targetSliceId, newSliceState);
+  }
 }
 
 export class StoreState<TSliceName extends string> {
   static create<TSliceName extends string>(opts: StoreStateOpts<TSliceName>) {
     validateSlices(opts.slices);
 
-    const sliceStateMap: Record<SliceId, SliceState> = Object.create(null);
+    const sliceStateMap: Record<SliceId, SliceStateManager> =
+      Object.create(null);
 
     for (const slice of opts.slices) {
-      sliceStateMap[slice.sliceId] = new SliceState(
+      sliceStateMap[slice.sliceId] = new SliceStateManager(
         slice.sliceId,
         slice.initialState,
       );
@@ -56,14 +70,17 @@ export class StoreState<TSliceName extends string> {
             `StoreState.create: slice with id "${id}" does not exist`,
           );
         }
-        sliceStateMap[id] = new SliceState(id, override);
+        sliceStateMap[id] = new SliceStateManager(id, override);
       }
     }
 
     return new StoreState(sliceStateMap, computeConfig(opts));
   }
 
-  getSliceState(sliceId: SliceId): SliceState {
+  /**
+   * @internal
+   */
+  getSliceStateManager(sliceId: SliceId): SliceStateManager {
     const match = this.sliceStateMap[sliceId];
 
     if (match === undefined) {
@@ -93,19 +110,22 @@ export class StoreState<TSliceName extends string> {
   }
 
   private applyStep(step: Step<any, any>): StoreState<any> {
-    const result = Action._applyStep(this, step);
+    const oldManager = this.getSliceStateManager(step.targetSliceId);
+    const newManager = oldManager.applyStep(step, this);
 
-    if (result === this.getSliceState(step.targetSliceId)) {
+    if (newManager === oldManager) {
       return this;
     }
 
     const sliceStateMap = { ...this.sliceStateMap };
-    sliceStateMap[result.sliceId] = result;
+    sliceStateMap[newManager.sliceId] = newManager;
     return new StoreState(sliceStateMap, this.config);
   }
 
   private constructor(
-    private sliceStateMap: Record<SliceId, SliceState> = Object.create(null),
+    private sliceStateMap: Record<SliceId, SliceStateManager> = Object.create(
+      null,
+    ),
     protected config: StoreStateConfig<TSliceName>,
   ) {}
 }

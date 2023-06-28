@@ -189,19 +189,32 @@ describe('StoreState Slice and Transaction Operations', () => {
       slices: [sliceA, sliceB],
     });
 
-    store = store.applyTransaction(
+    let newStore = store.applyTransaction(
       actionIncrementCounterA().append(actionIncrementCounterB()),
     );
 
     expect({
-      a: sliceA.get(store),
-      b: sliceB.get(store),
+      a: sliceA.get(newStore),
+      b: sliceB.get(newStore),
     }).toEqual({
       a: {
         counter: 2,
       },
       b: {
         counter: 4,
+      },
+    });
+
+    // previous state should not be changed
+    expect({
+      a: sliceA.get(store),
+      b: sliceB.get(store),
+    }).toEqual({
+      a: {
+        counter: 1,
+      },
+      b: {
+        counter: 1,
       },
     });
   });

@@ -1,4 +1,4 @@
-import { SliceState, StoreState } from './store-state';
+import { StoreState } from './store-state';
 import { Slice } from './slice';
 import { Step, Transaction } from './transaction';
 import { ActionId, SliceId } from './helpers';
@@ -20,24 +20,30 @@ export const actionRegistry = new Map<ActionId, Action<any, any>>();
 
 export class Action<TSliceName extends string, TParams extends any[]> {
   /**
+   * Executesaction based on params
+   *
    * @internal
    */
   static _applyStep(
     storeState: StoreState<any>,
     step: Step<any, any>,
-  ): SliceState {
-    const action = actionRegistry.get(step.actionId);
+  ): unknown {
+    const { actionId, targetSliceId, params } = step;
+
+    const action = actionRegistry.get(actionId);
 
     if (!action) {
       throw new Error(
-        `ActionId "${step.actionId}" for Slice "${step.sourceSliceId}" does not exist`,
+        `ActionId "${actionId}" for Slice "${targetSliceId}" does not exist`,
       );
     }
 
-    return action.applyStep(storeState, step);
+    const actionBuilder = action.opts.userCallback(...params);
+    return actionBuilder.opts.calcUserSliceState(storeState);
   }
 
   actionId: ActionId;
+
   constructor(public readonly opts: ActionOpts<TSliceName, TParams>) {
     const hint = opts.userCallback.name;
     this.actionId = idGeneration.createActionId(opts.slice.sliceId, hint);
@@ -48,6 +54,9 @@ export class Action<TSliceName extends string, TParams extends any[]> {
     actionRegistry.set(this.actionId, this);
   }
 
+  /**
+   * @internal
+   */
   getTransactionBuilder(): (...params: TParams) => Transaction<TSliceName> {
     return (...params) => {
       const sliceStateBuilder = this.opts.userCallback(...params);
@@ -58,22 +67,6 @@ export class Action<TSliceName extends string, TParams extends any[]> {
         sliceName: this.opts.slice.name,
       });
     };
-  }
-
-  // applies the params to the action and returns the new slice state
-  protected applyStep(
-    storeState: StoreState<any>,
-    step: Step<any, any>,
-  ): SliceState {
-    const existingState = storeState.getSliceState(step.targetSliceId);
-    const actionBuilder = this.opts.userCallback(...step.params);
-    const newUserSliceState = actionBuilder.opts.calcUserSliceState(storeState);
-
-    if (existingState.userState === newUserSliceState) {
-      return existingState;
-    }
-
-    return new SliceState(step.targetSliceId, newUserSliceState);
   }
 }
 

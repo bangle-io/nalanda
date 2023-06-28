@@ -194,11 +194,8 @@ describe('Action', () => {
     const storeState = StoreState.create({ slices: [mySlice] });
 
     expect(Action._applyStep(storeState, txn.steps[0]!)).toEqual({
-      sliceId: 'sl_test$',
-      state: {
-        a: 3,
-        z: -1,
-      },
+      a: 3,
+      z: -1,
     });
   });
 
@@ -220,11 +217,8 @@ describe('Action', () => {
     const storeState = StoreState.create({ slices: [mySlice] });
 
     expect(Action._applyStep(storeState, txn.steps[0]!)).toEqual({
-      sliceId: 'sl_test$',
-      state: {
-        a: 1,
-        z: -1,
-      },
+      a: 1,
+      z: -1,
     });
   });
 

@@ -42,7 +42,6 @@ describe('sliceKey', () => {
       (storeState) => {
         //   @ts-expect-error should fail as mySliceB is a dep
         mySliceKeyB.get(storeState);
-
         mySliceKeyA.get(storeState);
         mySliceKeyC.get(storeState);
         mySliceA.get(storeState);
