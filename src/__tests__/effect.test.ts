@@ -1,5 +1,5 @@
 import { Effect, effect } from '../effect';
-import { testCleanup } from '../test-cleanup';
+import { testCleanup } from '../helpers/test-cleanup';
 
 beforeEach(() => {
   testCleanup();

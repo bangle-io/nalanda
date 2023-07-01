@@ -1,4 +1,4 @@
-import { actionRegistry } from './action';
+import { actionRegistry } from '../action';
 import { testOnlyResetIdGeneration } from './id_generation';
 
 /**

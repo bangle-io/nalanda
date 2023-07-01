@@ -1,23 +1,12 @@
+import { InferSliceNameFromSlice } from 'src/types';
 import {
   Action,
   UserActionCallback,
   ActionBuilder as ActionBuilder,
-} from './action';
-import type { StoreState } from './store-state';
-import { Transaction } from './transaction';
+} from '../action';
+import type { StoreState } from '../store-state';
+import { Transaction } from '../transaction';
 import { BaseSlice, CreateSliceOpts } from './base-slice';
-
-export type InferSliceNameFromSlice<T> = T extends Slice<
-  infer TSliceName,
-  any,
-  any
->
-  ? TSliceName
-  : never;
-
-export type InferDepNameFromSlice<T> = T extends Slice<any, any, infer TDep>
-  ? TDep
-  : never;
 
 export class Slice<
   TSliceName extends string,

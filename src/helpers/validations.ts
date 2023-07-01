@@ -1,5 +1,4 @@
-import { AnySlice } from './helpers';
-import { Slice } from './slice';
+import type { AnySlice } from '../types';
 
 export function validateSlices(slices: AnySlice[]) {
   // TODO implement

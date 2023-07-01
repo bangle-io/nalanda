@@ -1,6 +1,7 @@
-import { GetStoreState, expectType, IfEquals } from '../helpers';
-import { InferDepNameFromSlice, Slice, slice } from '../slice';
-import { testCleanup } from '../test-cleanup';
+import { GetStoreState, expectType, IfEquals } from '../types';
+import { Slice, slice } from '../slice';
+import { testCleanup } from '../helpers/test-cleanup';
+import { InferDepNameFromSlice } from '../types';
 
 beforeEach(() => {
   testCleanup();

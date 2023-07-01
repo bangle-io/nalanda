@@ -1,7 +1,7 @@
-import { SliceId } from './helpers';
-import { idGeneration } from './id_generation';
+import type { SliceId } from '../types';
+import { idGeneration } from '../helpers/id_generation';
 import type { Slice } from './slice';
-import type { StoreState } from './store-state';
+import type { StoreState } from '../store-state';
 
 export type CreateSliceOpts<
   TSliceName extends string,

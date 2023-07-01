@@ -1,10 +1,10 @@
-import { expectType } from '../helpers';
-import { Slice, slice } from '../slice';
+import { expectType } from '../types';
+import { slice } from '../slice';
 import { Transaction } from '../transaction';
 import { Action, ActionBuilder } from '../action';
-import { idGeneration } from '../id_generation';
+import { idGeneration } from '../helpers';
 import { StoreState } from '../store-state';
-import { testCleanup } from '../test-cleanup';
+import { testCleanup } from '../helpers';
 
 afterEach(() => {
   testCleanup();

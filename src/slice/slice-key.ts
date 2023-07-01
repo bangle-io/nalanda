@@ -1,7 +1,7 @@
 import { CreateSliceOpts, BaseSlice } from './base-slice';
-import { NoInfer } from './helpers';
-import { InferSliceNameFromSlice, Slice, slice } from './slice';
-import { StoreState } from './store-state';
+import type { InferSliceNameFromSlice, NoInfer } from '../types';
+import { Slice, slice } from './slice';
+import { StoreState } from '../store-state';
 
 type SelectorOpts<T> = {
   equal?: (a: T, b: T) => boolean;

@@ -1,8 +1,8 @@
 import { StoreState } from './store-state';
 import { Slice } from './slice';
 import { Step, Transaction } from './transaction';
-import { ActionId, SliceId } from './helpers';
-import { idGeneration } from './id_generation';
+import { idGeneration } from './helpers';
+import type { ActionId, SliceId } from './types';
 
 export type UserActionCallback<
   TParams extends any[],

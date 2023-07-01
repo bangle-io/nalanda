@@ -1,6 +1,5 @@
-import { Slice, slice } from '../slice';
+import { slice } from '../slice/slice';
 import { StoreState } from '../store-state';
-import { Transaction } from '../transaction';
 
 describe('StoreState Slice and Transaction Operations', () => {
   const sliceOne = slice([], {

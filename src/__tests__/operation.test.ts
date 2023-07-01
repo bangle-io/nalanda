@@ -1,5 +1,5 @@
 import { operation } from '../operation';
-import { testCleanup } from '../test-cleanup';
+import { testCleanup } from '../helpers/test-cleanup';
 
 beforeEach(() => {
   testCleanup();

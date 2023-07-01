@@ -46,11 +46,3 @@ export function operation<TStore extends BaseStore<any>>() {
     };
   };
 }
-
-// TEST
-
-let myOpn = operation<BaseStore<'FooSlice'>>()((param: { num: number }) => {
-  return (store) => {};
-});
-
-let result = myOpn({ num: 1 });

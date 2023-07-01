@@ -104,7 +104,7 @@ let tx: Transaction = slice.tx((storeState: StoreState): SliceState => {});
 ### Serialization
 
 ```ts
-const myAction = slice.createAction(
+const myAction = slice.action(
   z.object({
     x: z.number(),
   }),

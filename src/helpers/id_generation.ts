@@ -1,4 +1,4 @@
-import type { ActionId, SliceId } from './helpers';
+import type { ActionId, SliceId } from '../types';
 
 type InternalIdGenerators = {
   txCounter: number;
@@ -26,7 +26,7 @@ class IdGeneration {
     return `tx_${idGenerators.txCounter++}`;
   }
 
-  createActionId(sliceId: SliceId, hint: string = ''): ActionId {
+  createActionId(sliceId: SliceId, hint = ''): ActionId {
     let prefix = `a_${hint}[${sliceId}]`;
     if (sliceId in idGenerators.actionIdCounters) {
       return `${prefix}${idGenerators.actionIdCounters[sliceId]++}` as ActionId;

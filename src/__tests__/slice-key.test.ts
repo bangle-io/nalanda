@@ -1,7 +1,7 @@
-import { expectType } from '../helpers';
-import { sliceKey } from '../slice-key';
+import { expectType } from '../types';
+import { sliceKey } from '../slice';
 import { StoreState } from '../store-state';
-import { testCleanup } from '../test-cleanup';
+import { testCleanup } from '../helpers/test-cleanup';
 
 beforeEach(() => {
   testCleanup();

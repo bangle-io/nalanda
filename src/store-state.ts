@@ -1,8 +1,8 @@
 import { Action } from './action';
-import type { SliceId } from './helpers';
+import type { SliceId } from './types';
 import type { Slice } from './slice';
 import type { Step, Transaction } from './transaction';
-import { validateSlices } from './validations';
+import { validateSlices } from './helpers';
 
 type StoreStateOpts<TSliceName extends string> = {
   stateOverride?: Record<SliceId, unknown>;

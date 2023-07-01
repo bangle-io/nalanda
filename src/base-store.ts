@@ -1,4 +1,4 @@
-import type { StoreKey } from './helpers';
+import type { StoreKey } from './types';
 
 export type BaseStoreOpts = {
   state: object;
