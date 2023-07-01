@@ -110,7 +110,8 @@ export class StoreState<TSliceName extends string> {
   }
 
   private applyStep(step: Step<any, any>): StoreState<any> {
-    const oldManager = this.getSliceStateManager(step.targetSliceId);
+    const sliceId = step.targetSliceId;
+    const oldManager = this.getSliceStateManager(sliceId);
     const newManager = oldManager.applyStep(step, this);
 
     if (newManager === oldManager) {
@@ -118,7 +119,7 @@ export class StoreState<TSliceName extends string> {
     }
 
     const sliceStateMap = { ...this.sliceStateMap };
-    sliceStateMap[newManager.sliceId] = newManager;
+    sliceStateMap[sliceId] = newManager;
     return new StoreState(sliceStateMap, this.config);
   }
 
