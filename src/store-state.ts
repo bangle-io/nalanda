@@ -2,7 +2,7 @@ import { Action } from './action';
 import type { AnySlice, SliceId } from './types';
 import type { Slice } from './slice';
 import type { Step, Transaction } from './transaction';
-import { validateSlices } from './helpers';
+import { calcReverseDependencies, validateSlices } from './helpers';
 
 type StoreStateOpts<TSliceName extends string> = {
   stateOverride?: Record<SliceId, Record<string, unknown>>;
@@ -13,6 +13,7 @@ type StoreStateConfig<TSliceName extends string> =
   StoreStateOpts<TSliceName> & {
     slicesLookup: Record<SliceId, Slice<TSliceName, any, any>>;
     storeStateKey: StoreStateKey;
+    reverseSliceDependencies: Record<SliceId, Set<SliceId>>;
   };
 
 export class StoreStateKey {
@@ -31,6 +32,7 @@ function computeConfig<TSliceName extends string>(
     ...opts,
     slicesLookup,
     storeStateKey,
+    reverseSliceDependencies: calcReverseDependencies(opts.slices),
   };
 }
 
@@ -173,5 +175,52 @@ export class StoreState<TSliceName extends string> {
    */
   get _storeStateKey() {
     return this.config.storeStateKey;
+  }
+}
+
+export class RestrictionManager {
+  private _restrict: Set<SliceId> | undefined = undefined;
+  private _restrictionOwner: SliceId | undefined = undefined;
+
+  _restrictSliceAndDeps(
+    owner: SliceId,
+    reverseSliceDependencies: Record<SliceId, Set<SliceId>>,
+  ) {
+    // Donot further all restriction to a slice that is already inside a restriction
+    if (this._restrict?.has(owner)) {
+      return;
+    }
+
+    const deps = new Set(reverseSliceDependencies[owner]);
+
+    this._restrictionOwner = owner;
+    this._restrict = deps;
+  }
+
+  _clearRestriction(owner: SliceId) {
+    if (this._restrictionOwner !== owner) {
+      return;
+    }
+
+    this._restrictionOwner = undefined;
+    this._restrict = new Set();
+  }
+
+  private isAllowed(sliceId: SliceId) {
+    return sliceId === this._restrictionOwner || this._restrict?.has(sliceId);
+  }
+
+  checkRestriction(sliceId: SliceId) {
+    if (!this._restrictionOwner) {
+      return;
+    }
+
+    if (this.isAllowed(sliceId)) {
+      return;
+    }
+
+    throw new Error(
+      `StoreState.getSliceState: slice with id "${sliceId}" cannot be accessed as it is not part of the dependency graph of Slice ${this._restrictionOwner}`,
+    );
   }
 }
