@@ -1,50 +1,58 @@
 import { Action } from './action';
-import type { SliceId } from './types';
+import type { AnySlice, SliceId } from './types';
 import type { Slice } from './slice';
 import type { Step, Transaction } from './transaction';
 import { validateSlices } from './helpers';
 
 type StoreStateOpts<TSliceName extends string> = {
-  stateOverride?: Record<SliceId, unknown>;
+  stateOverride?: Record<SliceId, Record<string, unknown>>;
   slices: Slice<TSliceName, any, any>[];
 };
 
-// meant to be used internally
 type StoreStateConfig<TSliceName extends string> =
   StoreStateOpts<TSliceName> & {
     slicesLookup: Record<SliceId, Slice<TSliceName, any, any>>;
+    storeStateKey: StoreStateKey;
   };
+
+export class StoreStateKey {
+  _storeStateKey = 'StoreStateKey';
+}
 
 function computeConfig<TSliceName extends string>(
   opts: StoreStateOpts<TSliceName>,
 ): StoreStateConfig<TSliceName> {
-  const lookup: Record<SliceId, Slice<any, any, any>> = Object.fromEntries(
+  const slicesLookup = Object.fromEntries(
     opts.slices.map((slice) => [slice.sliceId, slice]),
   );
+  const storeStateKey = new StoreStateKey();
 
   return {
     ...opts,
-    slicesLookup: lookup,
+    slicesLookup,
+    storeStateKey,
   };
 }
 
 export class SliceStateManager {
   constructor(
-    public readonly sliceId: SliceId,
-    public readonly sliceState: unknown,
+    public readonly slice: AnySlice,
+    public readonly sliceState: Record<string, unknown>,
   ) {}
 
   applyStep(
-    step: Step<any, any>,
     storeState: StoreState<any>,
-  ): SliceStateManager {
+    step: Step<any, any>,
+  ): StoreState<any> {
     const newSliceState = Action._applyStep(storeState, step);
 
     if (this.sliceState === newSliceState) {
-      return this;
+      return storeState;
     }
 
-    return new SliceStateManager(step.targetSliceId, newSliceState);
+    return storeState._updateSliceStateManager(
+      new SliceStateManager(this.slice, newSliceState),
+    );
   }
 }
 
@@ -53,14 +61,14 @@ export class StoreState<TSliceName extends string> {
     validateSlices(opts.slices);
 
     const sliceStateMap: Record<SliceId, SliceStateManager> =
-      Object.create(null);
-
-    for (const slice of opts.slices) {
-      sliceStateMap[slice.sliceId] = new SliceStateManager(
-        slice.sliceId,
-        slice.initialState,
+      Object.fromEntries(
+        opts.slices.map((slice) => [
+          slice.sliceId,
+          new SliceStateManager(slice, slice.initialState),
+        ]),
       );
-    }
+
+    const config = computeConfig(opts);
 
     if (opts.stateOverride) {
       for (const [sliceId, override] of Object.entries(opts.stateOverride)) {
@@ -70,26 +78,46 @@ export class StoreState<TSliceName extends string> {
             `StoreState.create: slice with id "${id}" does not exist`,
           );
         }
-        sliceStateMap[id] = new SliceStateManager(id, override);
+        sliceStateMap[id] = new SliceStateManager(
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          config.slicesLookup[id]!,
+          override,
+        );
       }
     }
 
-    return new StoreState(sliceStateMap, computeConfig(opts));
+    return new StoreState(sliceStateMap, config);
   }
+
+  private resolveCache: Record<SliceId, unknown> = {};
+  private constructor(
+    private sliceStateMap: Record<SliceId, SliceStateManager>,
+    protected config: StoreStateConfig<TSliceName>,
+  ) {}
 
   /**
    * @internal
    */
-  getSliceStateManager(sliceId: SliceId): SliceStateManager {
-    const match = this.sliceStateMap[sliceId];
+  _updateSliceStateManager(
+    sliceStateManager: SliceStateManager,
+  ): StoreState<TSliceName> {
+    return new StoreState(
+      {
+        ...this.sliceStateMap,
+        [sliceStateManager.slice.sliceId]: sliceStateManager,
+      },
+      this.config,
+    );
+  }
 
-    if (match === undefined) {
+  getSliceStateManager(sliceId: SliceId): SliceStateManager {
+    const manager = this.sliceStateMap[sliceId];
+    if (!manager) {
       throw new Error(
         `StoreState.resolveSliceState: slice with id "${sliceId}" does not exist`,
       );
     }
-
-    return match;
+    return manager;
   }
 
   applyTransaction(txn: Transaction<any>): StoreState<TSliceName> {
@@ -99,34 +127,51 @@ export class StoreState<TSliceName extends string> {
       );
     }
 
-    let storeState: StoreState<any> = this;
-
-    // we want each step to get the updated storeState
-    for (const step of txn.steps) {
-      storeState = storeState.applyStep(step);
-    }
-
-    return storeState;
+    return txn.steps.reduce((storeState, step) => {
+      return storeState
+        .getSliceStateManager(step.targetSliceId)
+        .applyStep(storeState, step);
+    }, this as StoreState<TSliceName>);
   }
 
-  private applyStep(step: Step<any, any>): StoreState<any> {
-    const sliceId = step.targetSliceId;
-    const oldManager = this.getSliceStateManager(sliceId);
-    const newManager = oldManager.applyStep(step, this);
-
-    if (newManager === oldManager) {
-      return this;
-    }
-
-    const sliceStateMap = { ...this.sliceStateMap };
-    sliceStateMap[sliceId] = newManager;
-    return new StoreState(sliceStateMap, this.config);
+  getSliceState(sliceId: SliceId): unknown {
+    return this.getSliceStateManager(sliceId).sliceState;
   }
 
-  private constructor(
-    private sliceStateMap: Record<SliceId, SliceStateManager> = Object.create(
-      null,
-    ),
-    protected config: StoreStateConfig<TSliceName>,
-  ) {}
+  /**
+   * @internal
+   */
+  resolve(
+    sliceId: SliceId,
+    { skipDerivedData }: { skipDerivedData?: boolean } = {},
+  ): unknown {
+    const sliceStateManager = this.getSliceStateManager(sliceId);
+
+    if (!sliceStateManager.slice.opts.calcDerivedState || skipDerivedData) {
+      return sliceStateManager.sliceState;
+    }
+
+    const cached = this.resolveCache[sliceId];
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const derivedState = sliceStateManager.slice.opts.calcDerivedState(this);
+    const result = {
+      ...sliceStateManager.sliceState,
+      ...derivedState,
+    };
+
+    this.resolveCache[sliceId] = result;
+
+    return result;
+  }
+
+  /**
+   * @internal
+   */
+  get _storeStateKey() {
+    return this.config.storeStateKey;
+  }
 }
