@@ -20,14 +20,14 @@ export const actionRegistry = new Map<ActionId, Action<any, any>>();
 
 export class Action<TSliceName extends string, TParams extends any[]> {
   /**
-   * Executesaction based on params
+   * Executes action based on params
    *
    * @internal
    */
   static _applyStep(
     storeState: StoreState<any>,
     step: Step<any, any>,
-  ): unknown {
+  ): Record<string, unknown> {
     const { actionId, targetSliceId, params } = step;
 
     const action = actionRegistry.get(actionId);

@@ -1,4 +1,4 @@
-import { InferSliceNameFromSlice } from 'src/types';
+import { AnySlice, InferSliceNameFromSlice } from '../types';
 import {
   Action,
   UserActionCallback,
@@ -6,29 +6,30 @@ import {
 } from '../action';
 import type { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
-import { BaseSlice, CreateSliceOpts } from './base-slice';
+import { BaseSlice, CreateSliceOpts, UserSliceOpts } from './base-slice';
 
 export class Slice<
   TSliceName extends string,
   TState extends object,
   TDep extends string,
 > extends BaseSlice<TSliceName, TState, TDep> {
+  /**
+   * @internal
+   */
   static create<
     TSliceName extends string,
     TState extends object,
     TDepSlice extends Slice<string, any, any>,
   >(
-    dependencies: TDepSlice[],
-    opts: Omit<
-      CreateSliceOpts<TSliceName, TState, InferSliceNameFromSlice<TDepSlice>>,
-      'dependencies'
+    opts: CreateSliceOpts<
+      TSliceName,
+      TState,
+      InferSliceNameFromSlice<TDepSlice>
     >,
   ): Slice<TSliceName, TState, InferSliceNameFromSlice<TDepSlice>> {
-    return new Slice({
-      ...opts,
-      dependencies: dependencies,
-    });
+    return new Slice(opts);
   }
+
   private constructor(
     public readonly opts: CreateSliceOpts<TSliceName, TState, TDep>,
   ) {
@@ -65,4 +66,16 @@ export class Slice<
   }
 }
 
-export const slice: typeof Slice.create = Slice.create.bind(Slice);
+export function slice<
+  TSliceName extends string,
+  TState extends object,
+  TDepSlice extends Slice<string, any, any>,
+>(
+  dependencies: TDepSlice[],
+  opts: Omit<
+    UserSliceOpts<TSliceName, TState, InferSliceNameFromSlice<TDepSlice>>,
+    'dependencies'
+  >,
+): Slice<TSliceName, TState, InferSliceNameFromSlice<TDepSlice>> {
+  return Slice.create<TSliceName, TState, AnySlice>({ ...opts, dependencies });
+}

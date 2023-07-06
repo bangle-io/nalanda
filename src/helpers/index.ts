@@ -1,3 +1,5 @@
+export { shallowEqual } from './shallow-equal';
+
 export { validateSlices } from './validations';
 
 export { testCleanup } from './test-cleanup';

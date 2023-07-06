@@ -29,7 +29,7 @@ describe('slice', () => {
         );
         type DepName = InferDepNameFromSlice<typeof mySlice>;
         type Match = IfEquals<never, DepName, true, false>;
-        let result: Match = true as const;
+        let result: Match = true;
       });
 
       it('should have correct types with dependencies', () => {

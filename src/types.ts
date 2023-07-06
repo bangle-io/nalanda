@@ -1,4 +1,4 @@
-import type { Slice } from './slice';
+import type { BaseSlice, Slice } from './slice';
 import { StoreState } from './store-state';
 
 // TODO this will be Store | EffectStore | OpStore
@@ -39,7 +39,7 @@ export const expectType = <Expected, Actual>(
   actual: IfEquals<Actual, Expected, Actual>,
 ) => void 0;
 
-export type InferSliceNameFromSlice<T> = T extends Slice<
+export type InferSliceNameFromSlice<T> = T extends BaseSlice<
   infer TSliceName,
   any,
   any
@@ -47,6 +47,12 @@ export type InferSliceNameFromSlice<T> = T extends Slice<
   ? TSliceName
   : never;
 
-export type InferDepNameFromSlice<T> = T extends Slice<any, any, infer TDep>
+export type InferDepNameFromSlice<T> = T extends BaseSlice<any, any, infer TDep>
   ? TDep
   : never;
+
+export type ExtractReturnTypes<
+  T extends Record<string, (...args: any[]) => any>,
+> = {
+  [K in keyof T]: T[K] extends (...args: any[]) => infer R ? R : never;
+} & {};

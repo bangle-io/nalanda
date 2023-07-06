@@ -1,9 +1,9 @@
 import type { SliceId } from '../types';
-import { idGeneration } from '../helpers/id_generation';
+import { idGeneration } from '../helpers';
 import type { Slice } from './slice';
 import type { StoreState } from '../store-state';
 
-export type CreateSliceOpts<
+export type UserSliceOpts<
   TSliceName extends string,
   TState extends object,
   TDep extends string,
@@ -11,6 +11,20 @@ export type CreateSliceOpts<
   name: TSliceName;
   state: TState;
   dependencies: Slice<TDep, any, any>[];
+};
+
+export type CalcDerivedState = (
+  storeState: StoreState<any>,
+) => Record<string, unknown>;
+
+export type CreateSliceOpts<
+  TSliceName extends string,
+  TState extends object,
+  TDep extends string,
+> = UserSliceOpts<TSliceName, TState, TDep> & {
+  // provided internally
+  sliceId?: SliceId;
+  calcDerivedState?: CalcDerivedState;
 };
 
 export type ValidStoreState<
@@ -26,20 +40,19 @@ export abstract class BaseSlice<
   readonly name: TSliceName;
   readonly initialState: TState;
   readonly dependencies: Slice<TDep, any, any>[];
-
   readonly sliceId: SliceId;
 
   constructor(opts: CreateSliceOpts<TSliceName, TState, TDep>) {
     this.name = opts.name;
     this.initialState = opts.state;
     this.dependencies = opts.dependencies;
-    this.sliceId = idGeneration.createSliceId(opts.name);
+    this.sliceId = opts.sliceId || idGeneration.createSliceId(opts.name);
   }
 
   get<TStoreSlices extends string>(
     storeState: ValidStoreState<TStoreSlices, TSliceName>,
   ): TState {
-    return storeState.getSliceStateManager(this.sliceId).sliceState as TState;
+    return storeState.resolve(this.sliceId) as TState;
   }
 
   update<TStoreSlices extends string>(

@@ -178,7 +178,7 @@ effect((store) => {
   key.name('myEffect'); // or use function name
 
   const valA = sliceA.get(store); // this will be tracked
-  const valT = sliceA.get(store, (val) => val.t); // this will be selective tracked, when t changes
+  const valT = sliceA.get(store, (val) => val.t, { isEqual }); // this will be selective tracked, when t changes
 
   const valB = sliceB.get(untracked(key)); // this will be un-tracked
 
