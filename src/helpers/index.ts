@@ -1,3 +1,5 @@
+export { calcReverseDependencies } from './dependency-helpers';
+
 export { shallowEqual } from './shallow-equal';
 
 export { validateSlices } from './validations';
