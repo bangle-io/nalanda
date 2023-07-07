@@ -1,4 +1,4 @@
-import { slice } from '../slice/slice';
+import { sliceKey, slice } from '../slice';
 import { StoreState } from '../store-state';
 
 describe('StoreState Slice and Transaction Operations', () => {
@@ -234,6 +234,121 @@ describe('StoreState Slice and Transaction Operations', () => {
 
     expect(sliceTwo.get(store)).toEqual({
       keyTwo: 'valueTwo',
+    });
+  });
+});
+
+describe('StoreState', () => {
+  describe('.resolve', () => {
+    it('should return the slice state', () => {
+      const sliceOneKey = sliceKey([], {
+        name: 'sliceOne',
+        state: {
+          keyOne: 'valueOne',
+        },
+      });
+
+      const sliceOne = slice([], {
+        name: 'sliceOne',
+        state: {
+          keyOne: 'valueOne',
+        },
+      });
+
+      const store = StoreState.create({
+        slices: [sliceOne],
+      });
+
+      const sliceState = store.resolve(sliceOne.sliceId);
+
+      expect(sliceState).toEqual({ keyOne: 'valueOne' });
+    });
+
+    it('should return the slice state with derived state if calcDerivedState is defined', () => {
+      const sliceOneKey = sliceKey([], {
+        name: 'sliceOne',
+        state: {
+          keyOne: 'valueOne',
+        },
+      });
+
+      const selectorA = sliceOneKey.selector(
+        (state) => {
+          return 'derivedValue';
+        },
+        {
+          equal: (a, b) => {
+            return a === b;
+          },
+        },
+      );
+
+      const sliceOne = sliceOneKey.slice({
+        derivedState: {
+          selectorA,
+        },
+      });
+
+      const store = StoreState.create({
+        slices: [sliceOne],
+      });
+
+      const sliceState = store.resolve(sliceOne.sliceId);
+
+      expect(sliceState).toEqual({
+        keyOne: 'valueOne',
+        selectorA: 'derivedValue',
+      });
+
+      const sliceStateWithoutDerived = store.resolve(sliceOne.sliceId, {
+        skipDerivedData: true,
+      });
+
+      expect(sliceStateWithoutDerived).toEqual({
+        keyOne: 'valueOne',
+      });
+    });
+
+    it('should cache the result of calcDerivedState', () => {
+      const sliceOneKey = sliceKey([], {
+        name: 'sliceOne',
+        state: {
+          keyOne: 'valueOne',
+        },
+      });
+
+      const selectorA = sliceOneKey.selector(
+        (state) => {
+          return 'derivedValue';
+        },
+        {
+          equal: (a, b) => {
+            return a === b;
+          },
+        },
+      );
+
+      const sliceOne = sliceOneKey.slice({
+        derivedState: {
+          selectorA,
+        },
+      });
+
+      const store = StoreState.create({
+        slices: [sliceOne],
+      });
+
+      const sliceState = store.resolve(sliceOne.sliceId);
+
+      expect(sliceState).toEqual({
+        keyOne: 'valueOne',
+        selectorA: 'derivedValue',
+      });
+
+      // Call resolve again to ensure that the cached result is returned
+      const sliceState2 = store.resolve(sliceOne.sliceId);
+
+      expect(sliceState2).toBe(sliceState);
     });
   });
 });
