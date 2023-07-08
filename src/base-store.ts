@@ -1,3 +1,4 @@
+import { Transaction } from './transaction';
 import type { StoreKey } from './types';
 
 export type BaseStoreOpts = {
@@ -12,11 +13,14 @@ export type InferSliceNameFromStore<T> = T extends BaseStore<infer TSliceName>
   ? TSliceName
   : never;
 
-export abstract class BaseStore<TSliceName extends string> {
-  constructor(
-    public readonly opts: BaseStoreOpts,
-    protected readonly config: BaseStoreConfig,
-  ) {}
+export type Dispatch = (
+  txn: Transaction<any>,
+  opts?: {
+    debugInfo?: string;
+  },
+) => void;
 
-  dispatch() {}
+export abstract class BaseStore<TSliceName extends string> {
+  abstract readonly dispatch: Dispatch;
+  abstract readonly state: unknown;
 }

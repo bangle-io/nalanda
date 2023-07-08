@@ -175,12 +175,12 @@ Using auto dependency thing
 
 ```ts
 effect((store) => {
-  key.name('myEffect'); // or use function name
+  store.name('myEffect'); // or use function name
 
-  const valA = sliceA.get(store); // this will be tracked
-  const valT = sliceA.get(store, (val) => val.t, { isEqual }); // this will be selective tracked, when t changes
+  const valA = sliceA.track(store); // this will be tracked
+  const valT = sliceA.track(store, (val) => val.t, { isEqual }); // this will be selective tracked, when t changes
 
-  const valB = sliceB.get(untracked(key)); // this will be un-tracked
+  const valB = sliceB.get(store.state); // this will be un-tracked
 
   cleanup(store, () => {});
   cleanup(store, () => {}); // can have multiple
@@ -195,12 +195,12 @@ effect((store) => {
 
 ```ts
 effect(async (store) => {
-  const valT = sliceA.get(store, (val) => val.t); // this will be selective tracked, when t changes
+  const valT = sliceA.track(store, (val) => val.t); // this will be selective tracked, when t changes
 
   const abort = new AbortController();
   const data = await fetch('someurl');
 
-  const valC = sliceB.get(store); // TODO: should this be tracked?
+  const valC = sliceB.track(store); // TODO: should this be tracked?
 
   cleanup(store, () => {
     abort.abort();
