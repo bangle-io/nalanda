@@ -2,6 +2,8 @@ import type { SliceId } from '../types';
 import { idGeneration } from '../helpers';
 import type { Slice } from './slice';
 import type { StoreState } from '../store-state';
+import { Store } from 'src/store';
+import { EffectStore } from 'src/effect';
 
 export type UserSliceOpts<
   TSliceName extends string,
@@ -31,6 +33,11 @@ export type ValidStoreState<
   TStoreSlices extends string,
   TSliceName extends string,
 > = TSliceName extends TStoreSlices ? StoreState<TStoreSlices> : never;
+
+export type ValidEffectStore<
+  TStoreSlices extends string,
+  TSliceName extends string,
+> = TSliceName extends TStoreSlices ? EffectStore<TStoreSlices> : never;
 
 export abstract class BaseSlice<
   TSliceName extends string,

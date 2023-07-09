@@ -239,21 +239,13 @@ type Opts = {
 
 ## Refs
 
-```ts
-effect((store) => {
-  const ref = createRef(store, false);
-});
-```
-
-## Shared Refs
-
 Refs that can be shared with other effects
 
 ```ts
-const sharedRef = createSharedRef(false);
+const getMyRef = ref(false);
 
 effect((store) => {
-  const ref = sharedRef(store);
+  const myRef = getMyRef(store);
 });
 ```
 

@@ -6,8 +6,12 @@ import {
 } from '../action';
 import type { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
-import { BaseSlice, CreateSliceOpts, UserSliceOpts } from './base-slice';
-import { EffectStore } from '../effect';
+import {
+  BaseSlice,
+  CreateSliceOpts,
+  UserSliceOpts,
+  ValidEffectStore,
+} from './base-slice';
 
 export class Slice<
   TSliceName extends string,
@@ -66,14 +70,16 @@ export class Slice<
     return cb as any;
   }
 
-  track(store: EffectStore<TSliceName>): {
+  track<TStoreSlices extends string>(
+    store: ValidEffectStore<TStoreSlices, TSliceName>,
+  ): {
     [TKey in keyof TState]: () => TState[TKey];
   } {
     const result = Object.fromEntries(
-      Object.keys(this.get(store.state)).map((key) => [
+      Object.keys(this.get(store.state as StoreState<any>)).map((key) => [
         key,
         () => {
-          return (this.get(store.state) as any)[key];
+          return (this.get(store.state as StoreState<any>) as any)[key];
         },
       ]),
     );

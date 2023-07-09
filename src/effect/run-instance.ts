@@ -1,6 +1,6 @@
 import { AnySlice } from '../types';
 import type { CleanupCallback } from './effect';
-import type { BaseStore, Dispatch } from '../base-store';
+import { DerivativeStore } from '../base-store';
 import { Store } from '../store';
 
 type Dependencies = Map<AnySlice, Array<{ field: string; value: unknown }>>;
@@ -15,59 +15,26 @@ export function cleanup(store: EffectStore<any>, cb: CleanupCallback): void {
 /**
  * @internal
  */
-export class EffectStore<TSliceName extends string>
-  implements BaseStore<TSliceName>
-{
-  _destroyed = false;
-
-  private lastStateBeforeDestroy: unknown;
-
+export class EffectStore<
+  TSliceName extends string,
+> extends DerivativeStore<TSliceName> {
   constructor(
     /**
      * @internal
      */
     public _runInstance: RunInstance | undefined,
-    /**
-     * @internal
-     */
-    private _rootStore: Store<any> | undefined,
-
-    public readonly name: string,
-  ) {}
-
-  dispatch: Dispatch = (txn, opts) => {
-    if (!this._rootStore) {
-      console.error(
-        `Cannot dispatch on a stale effect "${this.name}" run. This is likely a bug in your code. Please use cleanup functions to track if an effect run is still valid.`,
-      );
-    } else {
-      this._rootStore.dispatch(txn, opts);
-    }
-  };
-
-  get state(): any {
-    if (!this._rootStore) {
-      console.warn(
-        `Trying to access store state in a stale effect "${this.name}" can cause memory leaks`,
-      );
-      return this.lastStateBeforeDestroy;
-    }
-
-    return this._rootStore.state;
+    _rootStore: Store<any>,
+    name: string,
+  ) {
+    super(_rootStore, name);
   }
 
   /**
    * @internal
    */
-  _destroy(): void {
+  override _destroy(): void {
     this._runInstance = undefined;
-    this.lastStateBeforeDestroy = this._rootStore?.state;
-    this._rootStore = undefined;
-    this._destroyed = true;
-  }
-
-  get destroyed(): boolean {
-    return this._destroyed;
+    super._destroy();
   }
 
   /**
@@ -98,7 +65,7 @@ export class RunInstance {
     this.effectStore = new EffectStore(this, rootStore, this.name);
   }
 
-  didDependenciesStateChange(store: BaseStore<any>): boolean {
+  didDependenciesStateChange(store: Store<any>): boolean {
     for (const [slice, fields] of this._dependencies) {
       const currentSliceState = slice.get(store.state) as Record<
         string,
