@@ -4,7 +4,7 @@ import type { Slice } from './slice';
 import type { Step, Transaction } from './transaction';
 import { calcReverseDependencies, validateSlices } from './helpers';
 
-type StoreStateOpts<TSliceName extends string> = {
+export type StoreStateOpts<TSliceName extends string> = {
   stateOverride?: Record<SliceId, Record<string, unknown>>;
   slices: Slice<TSliceName, any, any>[];
 };
@@ -168,6 +168,29 @@ export class StoreState<TSliceName extends string> {
     this.resolveCache[sliceId] = result;
 
     return result;
+  }
+  /**
+   * Returns slices that have changed compared to the provided store state.
+   * does not take into account slices that were removed in the current store state and exist
+   * in the provided store state.
+   * @internal
+   */
+  _getChangedSlices(otherStoreState: StoreState<any>): AnySlice[] {
+    const diff: AnySlice[] = [];
+
+    Object.values(this.sliceStateMap).forEach((sliceStateManager) => {
+      const slice = sliceStateManager.slice;
+      const sliceState = sliceStateManager.sliceState;
+
+      const otherSliceState =
+        otherStoreState.sliceStateMap[slice.sliceId]?.sliceState;
+
+      if (sliceState !== otherSliceState) {
+        diff.push(sliceStateManager.slice);
+      }
+    });
+
+    return diff;
   }
 
   /**

@@ -1,3 +1,4 @@
+import { StoreState } from './store-state';
 import { Transaction } from './transaction';
 import type { StoreKey } from './types';
 
@@ -22,5 +23,5 @@ export type Dispatch = (
 
 export abstract class BaseStore<TSliceName extends string> {
   abstract readonly dispatch: Dispatch;
-  abstract readonly state: unknown;
+  abstract readonly state: StoreState<any>;
 }

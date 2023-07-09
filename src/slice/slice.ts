@@ -7,6 +7,7 @@ import {
 import type { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
 import { BaseSlice, CreateSliceOpts, UserSliceOpts } from './base-slice';
+import { EffectStore } from '../effect';
 
 export class Slice<
   TSliceName extends string,
@@ -63,6 +64,26 @@ export class Slice<
     ) => (storeState: StoreState<TSliceName | TDep>) => TQuery,
   ): (storeState: StoreState<TSliceName | TDep>, ...params: TParams) => TQuery {
     return cb as any;
+  }
+
+  track(store: EffectStore<TSliceName>): {
+    [TKey in keyof TState]: () => TState[TKey];
+  } {
+    const result = Object.fromEntries(
+      Object.keys(this.get(store.state)).map((key) => [
+        key,
+        () => {
+          return (this.get(store.state) as any)[key];
+        },
+      ]),
+    );
+
+    return new Proxy(result, {
+      get: (target, prop: string) => {
+        store._addTrackedField(this, prop, target[prop]!());
+        return target[prop];
+      },
+    }) as any;
   }
 }
 

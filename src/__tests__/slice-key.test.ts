@@ -80,7 +80,9 @@ describe('sliceKey', () => {
 
     test('types are correct', () => {
       const cSelector = mySliceKeyC.selector((storeState) => {
-        expectType<StoreState<'mySliceA'>, typeof storeState>(storeState);
+        expectType<StoreState<'mySliceA' | 'mySliceC'>, typeof storeState>(
+          storeState,
+        );
 
         type SliceName = InferSliceNameFromStoreState<typeof storeState>;
 

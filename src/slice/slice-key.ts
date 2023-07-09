@@ -19,7 +19,7 @@ type AnyDerivedState = Record<string, Selector<any, any>>;
 
 type AnySliceKey = SliceKey<any, any, any>;
 
-type SelectorOpts<T> = {
+export type SelectorOpts<T> = {
   equal?: (a: T, b: T) => boolean;
 };
 

@@ -177,7 +177,7 @@ Using auto dependency thing
 effect((store) => {
   store.name('myEffect'); // or use function name
 
-  const valA = sliceA.track(store); // this will be tracked
+  const valA = sliceA.track.foo(store, { isEqual }); // this will be tracked
   const valT = sliceA.track(store, (val) => val.t, { isEqual }); // this will be selective tracked, when t changes
 
   const valB = sliceB.get(store.state); // this will be un-tracked
@@ -195,7 +195,7 @@ effect((store) => {
 
 ```ts
 effect(async (store) => {
-  const valT = sliceA.track(store, (val) => val.t); // this will be selective tracked, when t changes
+  const valT = sliceA.track.foo(); // this will be selective tracked, when t changes
 
   const abort = new AbortController();
   const data = await fetch('someurl');

@@ -1,20 +1,28 @@
+import { Transaction } from '../transaction';
+import { testCleanup } from '../helpers';
 import { sliceKey, slice } from '../slice';
 import { StoreState } from '../store-state';
 
-describe('StoreState Slice and Transaction Operations', () => {
-  const sliceOne = slice([], {
-    name: 'sliceOne',
-    state: {
-      keyOne: 'valueOne',
-    },
-  });
+const sliceOne = slice([], {
+  name: 'sliceOne',
+  state: {
+    keyOne: 'valueOne',
+  },
+});
 
-  const sliceTwo = slice([], {
-    name: 'sliceTwo',
-    state: { keyTwo: 'valueTwo' },
-  });
+const sliceTwo = slice([], {
+  name: 'sliceTwo',
+  state: { keyTwo: 'valueTwo' },
+});
 
-  const updateKeyOneSliceOne = sliceOne.action((keyOne: string) => {
+let updateKeyOneSliceOne: (keyOne: string) => Transaction<'sliceOne'>;
+
+let updateKeyTwoSliceTwo: (keyTwo: string) => Transaction<'sliceTwo'>;
+
+beforeEach(() => {
+  testCleanup();
+
+  updateKeyOneSliceOne = sliceOne.action((keyOne: string) => {
     let transaction = sliceOne.tx((state) => {
       return sliceOne.update(state, { keyOne });
     });
@@ -22,27 +30,29 @@ describe('StoreState Slice and Transaction Operations', () => {
     return transaction;
   });
 
-  const updateKeyTwoSliceTwo = sliceTwo.action((keyTwo: string) => {
+  updateKeyTwoSliceTwo = sliceTwo.action((keyTwo: string) => {
     return sliceTwo.tx((state) => {
       return sliceTwo.update(state, { keyTwo });
     });
   });
+});
 
+describe('StoreState Slice and Transaction Operations', () => {
   test('correctly applies a single transaction', () => {
-    let store = StoreState.create({
+    let storeState = StoreState.create({
       slices: [sliceOne, sliceTwo],
     });
 
     const transaction = updateKeyOneSliceOne('updatedValueOne');
 
-    store = store.applyTransaction(transaction);
+    storeState = storeState.applyTransaction(transaction);
 
-    expect(sliceOne.get(store)).toMatchInlineSnapshot(`
+    expect(sliceOne.get(storeState)).toMatchInlineSnapshot(`
       {
         "keyOne": "updatedValueOne",
       }
     `);
-    expect(sliceTwo.get(store)).toMatchInlineSnapshot(`
+    expect(sliceTwo.get(storeState)).toMatchInlineSnapshot(`
       {
         "keyTwo": "valueTwo",
       }
@@ -350,5 +360,70 @@ describe('StoreState', () => {
 
       expect(sliceState2).toBe(sliceState);
     });
+  });
+});
+
+describe('_getChangedSlices', () => {
+  test('returns an empty array when no transactions have been applied', () => {
+    let storeState = StoreState.create({
+      slices: [],
+    });
+
+    const changedSlices = storeState._getChangedSlices(
+      StoreState.create({
+        slices: [],
+      }),
+    );
+
+    expect(changedSlices).toEqual([]);
+  });
+
+  test('should return changed slices', () => {
+    let storeState1 = StoreState.create({
+      slices: [sliceOne, sliceTwo],
+    });
+
+    let storeState2 = StoreState.create({
+      slices: [sliceOne, sliceTwo],
+    });
+
+    // Apply transaction to the second store state
+    const transaction = updateKeyTwoSliceTwo('updatedValueTwo');
+    storeState2 = storeState2.applyTransaction(transaction);
+
+    const changedSlices = storeState1._getChangedSlices(storeState2);
+
+    // Only sliceTwo should have changed
+    expect(changedSlices.length).toBe(1);
+    expect(changedSlices[0]!.sliceId).toBe('sl_sliceTwo$');
+  });
+
+  test('should return empty array when no slices have changed', () => {
+    let storeState1 = StoreState.create({
+      slices: [sliceOne, sliceTwo],
+    });
+
+    let storeState2 = StoreState.create({
+      slices: [sliceOne, sliceTwo],
+    });
+
+    const changedSlices = storeState1._getChangedSlices(storeState2);
+
+    expect(changedSlices.length).toBe(0);
+  });
+
+  test('should return all slices when all slices have changed', () => {
+    let initialStoreState = StoreState.create({
+      slices: [sliceOne, sliceTwo],
+    });
+
+    // Apply transactions to the second store state
+    const transactionOne = updateKeyOneSliceOne('updatedValueOne');
+    const transactionTwo = updateKeyTwoSliceTwo('updatedValueTwo');
+    let storeState = initialStoreState.applyTransaction(transactionOne);
+    storeState = storeState.applyTransaction(transactionTwo);
+
+    expect(storeState._getChangedSlices(initialStoreState)).toHaveLength(2);
+    expect(initialStoreState._getChangedSlices(storeState)).toHaveLength(2);
   });
 });

@@ -1,5 +1,22 @@
 import { AnySlice, SliceId } from '../types';
 
+export function allDependencies(slices: AnySlice[]): Set<AnySlice> {
+  const result = new Set<AnySlice>();
+
+  for (const slice of slices) {
+    for (const dep of slice.dependencies) {
+      result.add(dep);
+    }
+    allDependencies(slice.dependencies).forEach((dep) => result.add(dep));
+  }
+
+  return result;
+}
+
+const calcReverseDependenciesCache = new WeakMap<
+  AnySlice[],
+  ReturnType<typeof calcReverseDependencies>
+>();
 /**
  * Returns Record of a flat list of all dependencies for the given slices.
  * @param slices
@@ -8,6 +25,11 @@ import { AnySlice, SliceId } from '../types';
 export function calcReverseDependencies(
   slices: AnySlice[],
 ): Record<SliceId, Set<SliceId>> {
+  if (calcReverseDependenciesCache.has(slices)) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return calcReverseDependenciesCache.get(slices)!;
+  }
+
   const reverseDependencies: Record<SliceId, Set<SliceId>> = {};
 
   for (const slice of slices) {
@@ -23,6 +45,7 @@ export function calcReverseDependencies(
     }
   }
   const result = flattenReverseDependencies(reverseDependencies);
+  calcReverseDependenciesCache.set(slices, result);
   return result;
 }
 

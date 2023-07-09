@@ -15,6 +15,7 @@ describe('slice', () => {
         a: 1,
       },
     });
+
     const mySlice2 = slice([mySlice], {
       name: 'mySlice2',
       state: {
