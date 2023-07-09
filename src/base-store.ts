@@ -1,15 +1,6 @@
 import { Store } from './store';
 import { StoreState } from './store-state';
 import { Transaction } from './transaction';
-import type { StoreKey } from './types';
-
-export type BaseStoreOpts = {
-  state: object;
-};
-
-export type BaseStoreConfig = {
-  readonly rootStoreKey: StoreKey;
-};
 
 export type InferSliceNameFromStore<T> = T extends BaseStore<infer TSliceName>
   ? TSliceName

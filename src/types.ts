@@ -1,10 +1,6 @@
 import type { BaseSlice, Slice } from './slice';
 import { StoreState } from './store-state';
 
-// TODO this will be Store | EffectStore | OpStore
-export type TheStoreKey = {};
-
-export class StoreKey {}
 export type AnySlice = Slice<any, any, any>;
 
 export type GetStoreState<TSlice extends AnySlice> = TSlice extends Slice<
