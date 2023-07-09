@@ -1,15 +1,25 @@
 import { AnySlice } from '../types';
-import { BaseStore, Dispatch, InferSliceNameFromStore } from '../base-store';
+import { BaseStore, InferSliceNameFromStore } from '../base-store';
 import { Store } from '../store';
-import { RunInstance } from './run-instance';
+import { EffectStore, RunInstance } from './run-instance';
 
 export type ValidEffectStore<
   TStoreSlices extends string,
   TSliceName extends string,
 > = TSliceName extends TStoreSlices ? EffectStore<TStoreSlices> : never;
 
+const DEFAULT_MAX_WAIT = 15;
+
 export type EffectOpts = {
-  autoRegister?: boolean;
+  /**
+   * Effects are deferred by default. If set to false, the effect will run immediately after
+   * a store state change. If set to true, the effect will run anytime before maxWait.
+   */
+  deferred?: boolean;
+  /**
+   *
+   */
+  maxWait?: number;
 };
 
 export type EffectCreator = (store: Store<any>) => Effect;
@@ -20,43 +30,11 @@ export type EffectCallback<TStore extends BaseStore<any>> = (
 
 export type CleanupCallback = () => void | Promise<void>;
 
-export function cleanup(store: EffectStore<any>, cb: CleanupCallback): void {
-  store._runInstance.addCleanup(cb);
-}
-
-export class EffectStore<TSliceName extends string>
-  implements BaseStore<TSliceName>
-{
-  /**
-   * @internal
-   */
-  _runInstance = new RunInstance();
-
-  dispatch: Dispatch = (txn, opts) => this.rootStore.dispatch(txn, opts);
-
-  get state(): any {
-    return this.rootStore.state;
-  }
-
-  constructor(private readonly rootStore: Store) {}
-
-  /**
-   * @internal
-   */
-  _addTrackedField(slice: AnySlice, field: string, val: unknown): void {
-    this._runInstance.addTrackedField(slice, field, val);
-  }
-
-  /**
-   * @internal
-   */
-  _newRunInstance(): void {
-    this._runInstance = this._runInstance.newRun();
-  }
-}
+const hasIdleCallback =
+  typeof window !== 'undefined' && 'requestIdleCallback' in window;
 
 export class Effect {
-  private effectStore: EffectStore<any>;
+  private runInstance: RunInstance;
 
   private destroyed = false;
 
@@ -64,12 +42,15 @@ export class Effect {
 
   private runCount = 0;
 
+  name: string;
+
   constructor(
     private readonly callback: EffectCallback<EffectStore<any>>,
-    private readonly store: Store<any>,
-    public readonly opts: EffectOpts,
+    private readonly rootStore: Store<any>,
+    public readonly opts: Required<EffectOpts>,
   ) {
-    this.effectStore = new EffectStore(store);
+    this.name = callback.name || 'anonymous';
+    this.runInstance = new RunInstance(rootStore, this.name);
   }
 
   private shouldQueueRun(slicesChanged?: Set<AnySlice>): boolean {
@@ -81,7 +62,7 @@ export class Effect {
       return true;
     }
 
-    for (const slice of this.effectStore._runInstance._dependencies.keys()) {
+    for (const slice of this.runInstance.dependencies.keys()) {
       if (slicesChanged.has(slice)) {
         return true;
       }
@@ -110,7 +91,7 @@ export class Effect {
     }
 
     this.pendingRun = true;
-    queueMicrotask(() => {
+    this.scheduler(() => {
       this._run();
       this.pendingRun = false;
     });
@@ -118,36 +99,50 @@ export class Effect {
     return true;
   }
 
+  private scheduler(cb: () => void): void {
+    if (this.opts.deferred) {
+      if (hasIdleCallback) {
+        window.requestIdleCallback(cb, { timeout: this.opts.maxWait });
+      } else {
+        setTimeout(cb, this.opts.maxWait);
+      }
+    } else {
+      queueMicrotask(cb);
+    }
+  }
+
   private _run(): void {
     // if runCount is 0, always= run, to ensure the effect runs at least once
     if (this.runCount > 0) {
-      const depChanged =
-        this.effectStore._runInstance.didDependenciesStateChange(
-          this.effectStore,
-        );
+      const depChanged = this.runInstance.didDependenciesStateChange(
+        this.rootStore,
+      );
 
       if (!depChanged) {
         return;
       }
     }
 
-    this.effectStore._newRunInstance();
-    void this.callback(this.effectStore);
+    this.runInstance = this.runInstance.newRun();
+    void this.callback(this.runInstance.effectStore);
     this.runCount++;
   }
 
   destroy(): void {
-    this.effectStore._newRunInstance();
+    this.runInstance = this.runInstance.newRun();
     this.destroyed = true;
   }
 }
 
 export function effect<TStore extends BaseStore<any>>(
   callback: EffectCallback<TStore>,
-  opts: EffectOpts = {},
+  { deferred = true, maxWait = DEFAULT_MAX_WAIT }: EffectOpts = {},
 ): EffectCreator {
   return (store: Store<any>) => {
-    const newEffect = new Effect(callback, store, opts);
+    const newEffect = new Effect(callback, store, {
+      deferred,
+      maxWait,
+    });
 
     return newEffect;
   };

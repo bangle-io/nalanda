@@ -2,7 +2,8 @@ import { slice, sliceKey } from '../../slice';
 import { testCleanup } from '../../helpers';
 import { Store } from '../../store';
 import waitForExpect from 'wait-for-expect';
-import { cleanup, effect } from '../effect';
+import { effect } from '../effect';
+import { cleanup } from '../run-instance';
 
 beforeEach(() => {
   testCleanup();
@@ -127,11 +128,16 @@ describe('effect with store', () => {
 
     const effectCalled = jest.fn();
 
-    const eff = store.effect((effectStore) => {
-      const { sliceAField1 } = sliceA.track(effectStore);
+    const eff = store.effect(
+      (effectStore) => {
+        const { sliceAField1 } = sliceA.track(effectStore);
 
-      effectCalled(sliceAField1());
-    });
+        effectCalled(sliceAField1());
+      },
+      {
+        deferred: false,
+      },
+    );
 
     await waitForExpect(() => {
       expect(effectCalled).toHaveBeenCalledTimes(1);
@@ -155,11 +161,16 @@ describe('effect with store', () => {
 
     let effectCalled = jest.fn();
 
-    store.effect(function effect2(store) {
-      const { sliceAField2 } = sliceA.track(store);
+    store.effect(
+      function effect2(store) {
+        const { sliceAField2 } = sliceA.track(store);
 
-      effectCalled(sliceAField2());
-    });
+        effectCalled(sliceAField2());
+      },
+      {
+        deferred: false,
+      },
+    );
 
     await waitForExpect(() => {
       expect(effectCalled).toHaveBeenCalledTimes(1);
@@ -179,11 +190,16 @@ describe('effect with store', () => {
 
     let effectCalled = jest.fn();
 
-    store.effect(function effect2(store) {
-      const { sliceAField2 } = sliceA.track(store);
+    store.effect(
+      function effect2(store) {
+        const { sliceAField2 } = sliceA.track(store);
 
-      effectCalled(sliceAField2());
-    });
+        effectCalled(sliceAField2());
+      },
+      {
+        deferred: false,
+      },
+    );
 
     await waitForExpect(() => {
       expect(effectCalled).toHaveBeenCalledTimes(1);
@@ -212,23 +228,38 @@ describe('effect with store', () => {
       selector2InitValue,
     );
 
-    store.effect(function effect1(store) {
-      const { sliceCDepBSelector1 } = sliceCDepB.track(store);
+    store.effect(
+      function effect1(store) {
+        const { sliceCDepBSelector1 } = sliceCDepB.track(store);
 
-      effect1Called(sliceCDepBSelector1());
-    });
+        effect1Called(sliceCDepBSelector1());
+      },
+      {
+        deferred: false,
+      },
+    );
 
-    store.effect(function effect2(store) {
-      const { sliceCDepBSelector2 } = sliceCDepB.track(store);
+    store.effect(
+      function effect2(store) {
+        const { sliceCDepBSelector2 } = sliceCDepB.track(store);
 
-      effect2Called(sliceCDepBSelector2());
-    });
+        effect2Called(sliceCDepBSelector2());
+      },
+      {
+        deferred: false,
+      },
+    );
 
-    store.effect(function effect3(store) {
-      const { sliceCDepBField } = sliceCDepB.track(store);
+    store.effect(
+      function effect3(store) {
+        const { sliceCDepBField } = sliceCDepB.track(store);
 
-      effect3Called(sliceCDepBField());
-    });
+        effect3Called(sliceCDepBField());
+      },
+      {
+        deferred: false,
+      },
+    );
 
     await waitForExpect(() => {
       expect(effect1Called).toHaveBeenCalledTimes(1);
@@ -272,13 +303,18 @@ describe('effect with store', () => {
       const cleanupCalled = jest.fn();
       const effectCalled = jest.fn();
 
-      const eff = store.effect((effectStore) => {
-        const { sliceAField1 } = sliceA.track(effectStore);
+      const eff = store.effect(
+        (effectStore) => {
+          const { sliceAField1 } = sliceA.track(effectStore);
 
-        effectCalled(sliceAField1());
+          effectCalled(sliceAField1());
 
-        cleanup(effectStore, cleanupCalled);
-      });
+          cleanup(effectStore, cleanupCalled);
+        },
+        {
+          deferred: false,
+        },
+      );
 
       await waitForExpect(() => {
         expect(effectCalled).toHaveBeenCalledTimes(1);
@@ -304,13 +340,16 @@ describe('effect with store', () => {
       const cleanupCalled = jest.fn();
       const effectCalled = jest.fn();
 
-      const eff = store.effect((effectStore) => {
-        const { sliceBField1 } = sliceB.track(effectStore);
+      const eff = store.effect(
+        (effectStore) => {
+          const { sliceBField1 } = sliceB.track(effectStore);
 
-        effectCalled(sliceBField1());
+          effectCalled(sliceBField1());
 
-        cleanup(effectStore, cleanupCalled);
-      });
+          cleanup(effectStore, cleanupCalled);
+        },
+        { deferred: false },
+      );
 
       await waitForExpect(() => {
         expect(effectCalled).toHaveBeenCalledTimes(1);
@@ -364,41 +403,56 @@ describe('effect with store', () => {
       let effect4 = jest.fn();
       let effect5 = jest.fn();
 
-      store.effect(function effectCb1(store) {
-        const { sliceAField1 } = sliceA.track(store);
-        effect1(sliceAField1());
-      });
+      store.effect(
+        function effectCb1(store) {
+          const { sliceAField1 } = sliceA.track(store);
+          effect1(sliceAField1());
+        },
+        { deferred: false },
+      );
 
-      store.effect(function effectCb2(store) {
-        const { sliceAField1 } = sliceA.track(store);
-        const { sliceBField1 } = sliceB.track(store);
+      store.effect(
+        function effectCb2(store) {
+          const { sliceAField1 } = sliceA.track(store);
+          const { sliceBField1 } = sliceB.track(store);
 
-        effect2(sliceAField1(), sliceBField1());
-      });
+          effect2(sliceAField1(), sliceBField1());
+        },
+        { deferred: false },
+      );
 
-      store.effect(function effectCb3(store) {
-        effect3();
-      });
+      store.effect(
+        function effectCb3(store) {
+          effect3();
+        },
+        { deferred: false },
+      );
 
-      store.effect(function effectCb4(store) {
-        const { sliceAField1, sliceAField2 } = sliceA.track(store);
-        const { sliceBField1 } = sliceB.track(store);
-        const { sliceCDepBField, sliceCDepBSelector1 } =
-          sliceCDepB.track(store);
+      store.effect(
+        function effectCb4(store) {
+          const { sliceAField1, sliceAField2 } = sliceA.track(store);
+          const { sliceBField1 } = sliceB.track(store);
+          const { sliceCDepBField, sliceCDepBSelector1 } =
+            sliceCDepB.track(store);
 
-        effect4(
-          sliceAField1(),
-          sliceAField2(),
-          sliceBField1(),
-          sliceCDepBField(),
-          sliceCDepBSelector1(),
-        );
-      });
+          effect4(
+            sliceAField1(),
+            sliceAField2(),
+            sliceBField1(),
+            sliceCDepBField(),
+            sliceCDepBSelector1(),
+          );
+        },
+        { deferred: false },
+      );
 
-      store.effect(function effectCb5(store) {
-        const { sliceCDepBSelector1 } = sliceCDepB.track(store);
-        effect5(sliceCDepBSelector1());
-      });
+      store.effect(
+        function effectCb5(store) {
+          const { sliceCDepBSelector1 } = sliceCDepB.track(store);
+          effect5(sliceCDepBSelector1());
+        },
+        { deferred: false },
+      );
 
       return {
         store,
@@ -518,9 +572,14 @@ describe('effect only', () => {
       slices: [sliceA, sliceB, sliceCDepB],
     });
     return {
-      effect: effect(() => {
-        callback();
-      })(store),
+      effect: effect(
+        () => {
+          callback();
+        },
+        {
+          deferred: false,
+        },
+      )(store),
       callback,
       store,
     };
@@ -566,10 +625,7 @@ describe('effect only', () => {
     await sleep(5);
 
     jest
-      .spyOn(
-        effect['effectStore']['_runInstance'],
-        'didDependenciesStateChange',
-      )
+      .spyOn(effect['runInstance'], 'didDependenciesStateChange')
       .mockReturnValue(true);
 
     effect.run();
@@ -586,10 +642,7 @@ describe('effect only', () => {
     expect(callback).toHaveBeenCalledTimes(1);
 
     jest
-      .spyOn(
-        effect['effectStore']['_runInstance'],
-        'didDependenciesStateChange',
-      )
+      .spyOn(effect['runInstance'], 'didDependenciesStateChange')
       .mockReturnValue(false);
 
     effect.run();
