@@ -109,10 +109,9 @@ describe('action type', () => {
       return mySlice.update(state, { a: 3 });
     });
 
-    expectType<
-      ActionBuilder<'mySlice', { a: number }, never>,
-      typeof stateBuilder
-    >(stateBuilder);
+    expectType<ActionBuilder<'mySlice', never>, typeof stateBuilder>(
+      stateBuilder,
+    );
   });
 
   test('types when slice has dep', () => {
@@ -135,7 +134,7 @@ describe('action type', () => {
     });
 
     expectType<
-      ActionBuilder<'mySlice2', { a: number }, 'mySlice' | 'mySlice0'>,
+      ActionBuilder<'mySlice2', 'mySlice' | 'mySlice0'>,
       typeof stateBuilder
     >(stateBuilder);
   });

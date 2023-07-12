@@ -65,7 +65,7 @@ export abstract class BaseSlice<
     storeState: ValidStoreState<TStoreSlices, TSliceName>,
     updater: ((cur: TState) => Partial<TState>) | Partial<TState>,
     opts: { replace?: boolean } = {},
-  ): TState {
+  ): UpdaterType<TSliceName> {
     const sliceState = storeState.getSliceStateManager(this.sliceId)
       .sliceState as TState;
 
@@ -76,7 +76,15 @@ export abstract class BaseSlice<
       ? newSliceState
       : { ...sliceState, ...newSliceState };
 
-    // TODO  - ? figure out ignoring of selector properties
-    return mergedState as TState;
+    return {
+      name: this.name,
+      [Updater]: mergedState,
+    };
   }
 }
+export type UpdaterType<TSliceName> = {
+  name: TSliceName;
+  [Updater]: unknown;
+};
+
+export const Updater = Symbol('Updater');

@@ -36,7 +36,7 @@ describe('sliceKey', () => {
       () => {
         let result: SliceName = {} as any;
         result = 'mySliceA';
-        // @ts-expect-error
+        // @ts-expect-error not a dep
         result = 'mySliceB';
       };
       return { a: mySliceKeyA.get(storeState).a };
@@ -91,7 +91,7 @@ describe('sliceKey', () => {
           expectType<'mySliceA' | 'mySliceC', typeof result>(result);
           result = 'mySliceA';
           result = 'mySliceC';
-          // @ts-expect-error
+          // @ts-expect-error should fail as mySliceB is not dep of C
           result = 'mySliceB';
         };
         () => {
@@ -325,13 +325,13 @@ describe('sliceKey', () => {
       calledTimesC = 0;
       incrementA = mySliceA.action(() => {
         return mySliceA.tx((storeState) =>
-          mySliceA.update(storeState, (obj) => ({ a: obj.a + 1 })),
+          mySliceKeyA.update(storeState, (obj) => ({ a: obj.a + 1 })),
         );
       });
 
       incrementB = mySliceB.action(() => {
         return mySliceB.tx((storeState) =>
-          mySliceB.update(storeState, (obj) => ({ b: obj.b + 1 })),
+          mySliceKeyB.update(storeState, (obj) => ({ b: obj.b + 1 })),
         );
       });
 

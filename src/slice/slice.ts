@@ -9,6 +9,7 @@ import { Transaction } from '../transaction';
 import {
   BaseSlice,
   CreateSliceOpts,
+  UpdaterType,
   UserSliceOpts,
   ValidEffectStore,
 } from './base-slice';
@@ -42,7 +43,7 @@ export class Slice<
   }
 
   action<TParams extends any[]>(
-    cb: UserActionCallback<TParams, ActionBuilder<any, any, any>>,
+    cb: UserActionCallback<TParams, ActionBuilder<any, any>>,
   ): (...params: TParams) => Transaction<TSliceName> {
     const action = new Action<TSliceName, TParams>({
       slice: this,
@@ -53,8 +54,10 @@ export class Slice<
   }
 
   tx(
-    calcSliceState: (storeState: StoreState<TSliceName | TDep>) => TState,
-  ): ActionBuilder<TSliceName, TState, any> {
+    calcSliceState: (
+      storeState: StoreState<TSliceName | TDep>,
+    ) => TState | UpdaterType<TSliceName>,
+  ): ActionBuilder<TSliceName, any> {
     return new ActionBuilder({
       name: this.name,
       calcUserSliceState: calcSliceState,

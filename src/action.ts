@@ -3,15 +3,16 @@ import { Slice } from './slice';
 import { Step, Transaction } from './transaction';
 import { idGeneration } from './helpers';
 import type { ActionId, SliceId } from './types';
+import { Updater, UpdaterType } from './slice/base-slice';
 
 export type UserActionCallback<
   TParams extends any[],
-  TActionBuilder extends ActionBuilder<any, any, any>,
+  TActionBuilder extends ActionBuilder<any, any>,
 > = (...params: TParams) => TActionBuilder;
 
 export type ActionOpts<TSliceName extends string, TParams extends any[]> = {
   slice: Slice<TSliceName, any, any>;
-  userCallback: UserActionCallback<TParams, ActionBuilder<any, any, any>>;
+  userCallback: UserActionCallback<TParams, ActionBuilder<any, any>>;
 };
 
 // we save actions in a global registry, so we can call them again
@@ -39,7 +40,13 @@ export class Action<TSliceName extends string, TParams extends any[]> {
     }
 
     const actionBuilder = action.opts.userCallback(...params);
-    return actionBuilder.opts.calcUserSliceState(storeState);
+    const result = actionBuilder.opts.calcUserSliceState(storeState);
+
+    if (result != null && typeof result === 'object' && Updater in result) {
+      return (result as UpdaterType<any>)[Updater] as any;
+    }
+
+    return result as any;
   }
 
   actionId: ActionId;
@@ -72,15 +79,13 @@ export class Action<TSliceName extends string, TParams extends any[]> {
 
 // This is built new every time user calls mySliceAction({x:2})
 //  and will also be built when a step is applied.
-export class ActionBuilder<
-  TSliceName extends string,
-  TState extends object,
-  TDep extends string,
-> {
+export class ActionBuilder<TSliceName extends string, TDep extends string> {
   constructor(
     public readonly opts: {
       name: TSliceName;
-      calcUserSliceState: (storeState: StoreState<TSliceName | TDep>) => TState;
+      calcUserSliceState: (
+        storeState: StoreState<TSliceName | TDep>,
+      ) => unknown | UpdaterType<TSliceName>;
     },
   ) {}
 

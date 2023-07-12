@@ -2,6 +2,7 @@ import { GetStoreState, expectType, IfEquals } from '../types';
 import { Slice, slice } from '../slice';
 import { testCleanup } from '../helpers/test-cleanup';
 import { InferDepNameFromSlice } from '../types';
+import { UpdaterType } from 'src/slice/base-slice';
 
 beforeEach(() => {
   testCleanup();
@@ -76,7 +77,7 @@ describe('slice', () => {
         let result = mySlice.update(storeState, {
           a: 2,
         });
-        expectType<{ a: number }, typeof result>(result);
+        expectType<UpdaterType<'mySlice'>, typeof result>(result);
       };
 
       () => {
@@ -101,7 +102,7 @@ describe('slice', () => {
             a: 2,
           };
         });
-        expectType<{ a: number }, typeof result>(result);
+        expectType<UpdaterType<'mySlice'>, typeof result>(result);
       };
     });
   });
