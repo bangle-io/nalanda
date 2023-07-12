@@ -110,9 +110,7 @@ export class Effect {
   private _run(): void {
     // if runCount is 0, always= run, to ensure the effect runs at least once
     if (this.runCount > 0) {
-      const depChanged = this.runInstance.didDependenciesStateChange(
-        this.rootStore,
-      );
+      const depChanged = this.runInstance.didDependenciesStateChange();
 
       if (!depChanged) {
         return;

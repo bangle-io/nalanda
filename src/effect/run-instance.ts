@@ -1,7 +1,6 @@
 import { AnySlice } from '../types';
 import { DerivativeStore } from '../base-store';
 import { Store } from '../store';
-import { OperationStore } from '../operation';
 import { CleanupCallback } from '../cleanup';
 
 type Dependencies = Map<AnySlice, Array<{ field: string; value: unknown }>>;
@@ -66,9 +65,9 @@ export class RunInstance {
     this.effectStore = new EffectStore(this, rootStore, this.name);
   }
 
-  didDependenciesStateChange(store: Store<any>): boolean {
+  didDependenciesStateChange(): boolean {
     for (const [slice, fields] of this._dependencies) {
-      const currentSliceState = slice.get(store.state) as Record<
+      const currentSliceState = slice.get(this.rootStore.state) as Record<
         string,
         unknown
       >;

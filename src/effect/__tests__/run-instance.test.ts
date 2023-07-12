@@ -1,193 +1,174 @@
-import { slice } from '../../slice';
+import { Store } from '../../store';
+import { Slice, slice } from '../../slice';
 import { AnySlice } from '../../types';
 import { RunInstance } from '../run-instance';
+import { testCleanup } from '../../helpers';
 
-// describe('RunInstance', () => {
-//   let sliceA: AnySlice;
-//   let sliceB: AnySlice;
+let sliceA: Slice<
+  'slice1',
+  {
+    foo: string;
+  },
+  never
+>;
+let sliceB: Slice<
+  'slice2',
+  {
+    sliceBField: string;
+    sliceBOtherField: string;
+  },
+  never
+>;
+let store: Store;
 
-//   beforeEach(() => {
-//     // Initialize your slices here. The actual initialization depends on your implementation
-//     sliceA = slice([], {
-//       name: 'slice1',
-//       state: {
-//         foo: 'bar',
-//       },
-//     });
-//     sliceB = slice([], {
-//       name: 'slice2',
-//       state: {
-//         foo: 'bar',
-//       },
-//     });
-//   });
+beforeEach(() => {
+  testCleanup();
+  // Initialize your slices here. The actual initialization depends on your implementation
+  sliceA = slice([], {
+    name: 'slice1',
+    state: {
+      foo: 'bar',
+    },
+  });
+  sliceB = slice([], {
+    name: 'slice2',
+    state: {
+      sliceBField: 'bar',
+      sliceBOtherField: 'bizz',
+    },
+  });
+  store = Store.create({
+    storeName: 'test',
+    slices: [sliceA, sliceB],
+  });
+});
 
-//   describe('isDependency', () => {
-//     it('should identify tracked slice correctly', () => {
-//       let runInstance = new RunInstance();
+describe('RunInstance', () => {
+  describe('dependencies.has', () => {
+    it('should identify tracked slice correctly', () => {
+      let runInstance = new RunInstance(store, 'test');
 
-//       runInstance.addTrackedField(sliceA, 'foo', 'bar');
+      runInstance.addTrackedField(sliceA, 'foo', 'bar');
 
-//       expect(runInstance.isDependency(sliceA)).toBe(true);
-//       expect(runInstance.isDependency(sliceB)).toBe(false);
-//     });
-//   });
+      expect(runInstance.dependencies.has(sliceA)).toBe(true);
+      expect(runInstance.dependencies.has(sliceB)).toBe(false);
+    });
+  });
+});
 
-//   describe('didDependenciesStateChange', () => {
-//     it('should return false for a blank instance', () => {
-//       let runInstance1 = new RunInstance();
+describe('didDependenciesStateChange', () => {
+  it('should return false for a blank instance', () => {
+    let runInstance1 = new RunInstance(store, 'test');
 
-//       expect(runInstance1.didDependenciesStateChange()).toBe(false);
-//     });
+    expect(runInstance1.didDependenciesStateChange()).toBe(false);
+  });
 
-//     it('should return true for an instance with dependencies but no prev dependencies', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
+  it('should return false when value is the same', () => {
+    let runInstance1 = new RunInstance(store, 'test');
+    runInstance1.addTrackedField(sliceA, 'foo', 'bar');
 
-//       expect(runInstance1.didDependenciesStateChange()).toBe(true);
-//       expect(runInstance1.isDependency(sliceA)).toBe(true);
-//     });
+    expect(runInstance1.didDependenciesStateChange()).toBe(false);
+    expect(runInstance1.dependencies.has(sliceA)).toBe(true);
+  });
 
-//     it('should return true if dependencies have been added', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
+  it('should return true if tracked things have changed', () => {
+    let runInstance1 = new RunInstance(store, 'test');
+    runInstance1.addTrackedField(sliceA, 'foo', 'bar');
 
-//       let runInstance2 = runInstance1.newRun();
-//       expect(runInstance2.isDependency(sliceA)).toBe(false);
+    let runInstance2 = runInstance1.newRun();
+    expect(runInstance2.dependencies.has(sliceA)).toBe(false);
 
-//       runInstance2.addTrackedField(sliceA, 'foo', 'xyz');
+    runInstance2.addTrackedField(sliceA, 'foo', 'xyz');
 
-//       expect(runInstance2.isDependency(sliceA)).toBe(true);
+    expect(runInstance2.dependencies.has(sliceA)).toBe(true);
 
-//       expect(runInstance1.didDependenciesStateChange()).toBe(true);
-//     });
+    expect(runInstance2.didDependenciesStateChange()).toBe(true);
+  });
 
-//     it('should return false if previous and current dependencies are the same', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', 'bar');
+  it('should return true when store state have changed', () => {
+    let myAction = sliceA.action((val: string) => {
+      return sliceA.tx((state) => {
+        return sliceA.update(state, { foo: val });
+      });
+    });
 
-//       expect(runInstance2.didDependenciesStateChange()).toBe(false);
-//     });
+    let runInstance1 = new RunInstance(store, 'test');
+    runInstance1.addTrackedField(sliceA, 'foo', sliceA.get(store.state).foo);
 
-//     it('should return false if previous and current dependencies are the same', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
-//       runInstance1.addTrackedField(sliceB, 'xyz', 'abc');
+    expect(runInstance1.didDependenciesStateChange()).toBe(false);
 
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', 'bar');
-//       runInstance2.addTrackedField(sliceB, 'xyz', 'abc');
+    store.dispatch(myAction('xyz'));
 
-//       expect(runInstance2.didDependenciesStateChange()).toBe(false);
-//     });
+    expect(runInstance1.didDependenciesStateChange()).toBe(true);
 
-//     it('should return false if tracking same field with different non-primitive values, same value different instances', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', { prop: 'bar' });
+    let runInstance2 = runInstance1.newRun();
 
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', { prop: 'bar' });
+    expect(runInstance2.didDependenciesStateChange()).toBe(false);
 
-//       expect(runInstance2.didDependenciesStateChange()).toBe(true);
-//     });
+    runInstance2.addTrackedField(sliceA, 'foo', sliceA.get(store.state).foo);
 
-//     it('should return false if tracking same field with different non-primitive values, same value different instances', () => {
-//       let runInstance1 = new RunInstance();
+    expect(runInstance2.didDependenciesStateChange()).toBe(false);
+  });
 
-//       const val = { prop: 'bar' };
-//       runInstance1.addTrackedField(sliceA, 'foo', val);
+  it('should only focus on the tracked field and ignore other fields in the slice', () => {
+    let updateField = sliceB.action((val: string) => {
+      return sliceB.tx((state) => {
+        return sliceB.update(state, { sliceBField: val });
+      });
+    });
 
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', val);
+    let updateOtherField = sliceB.action((val: string) => {
+      return sliceB.tx((state) => {
+        return sliceB.update(state, { sliceBOtherField: val });
+      });
+    });
 
-//       expect(runInstance2.didDependenciesStateChange()).toBe(false);
-//     });
+    let runInstance1 = new RunInstance(store, 'test');
+    runInstance1.addTrackedField(
+      sliceB,
+      'sliceBField',
+      sliceB.get(store.state).sliceBField,
+    );
 
-//     it('should return true if current dependencies changed value', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', 'baz');
+    expect(runInstance1.didDependenciesStateChange()).toBe(false);
 
-//       expect(runInstance2.didDependenciesStateChange()).toBe(true);
-//     });
+    store.dispatch(updateOtherField('xyz'));
 
-//     it('should return true if a field was added to current dependencies', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', 'bar');
-//       runInstance2.addTrackedField(sliceA, 'baz', 'qux');
+    expect(runInstance1.didDependenciesStateChange()).toBe(false);
 
-//       expect(runInstance2.didDependenciesStateChange()).toBe(true);
-//     });
+    store.dispatch(updateField('xyz'));
 
-//     it('should return true if a slice was added to current dependencies and is being tracked', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
-//       runInstance1.addTrackedField(sliceB, 'baz', 'qux');
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', 'bar');
-//       runInstance2.addTrackedField(sliceB, 'baz', 'quux');
+    expect(runInstance1.didDependenciesStateChange()).toBe(true);
+  });
+});
 
-//       expect(runInstance2.didDependenciesStateChange()).toBe(true);
-//     });
+describe('#newRun', () => {
+  it('executes all cleanup callbacks on creating a new RunInstance', () => {
+    const runInstance = new RunInstance(store, 'test');
+    const cleanupCallback1 = jest.fn();
+    const cleanupCallback2 = jest.fn();
 
-//     it('should return false if a slice was added to prev dependencies but is not being tracked currently', () => {
-//       let runInstance1 = new RunInstance();
-//       runInstance1.addTrackedField(sliceA, 'foo', 'bar');
+    runInstance.addCleanup(cleanupCallback1);
+    runInstance.addCleanup(cleanupCallback2);
 
-//       let runInstance2 = runInstance1.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', 'bar');
-//       runInstance2.addTrackedField(sliceB, 'baz', 'qux');
+    let runInstance2 = runInstance.newRun();
+    expect(runInstance.newRun()).toBeInstanceOf(RunInstance);
 
-//       let runInstance3 = runInstance2.newRun();
-//       runInstance2.addTrackedField(sliceA, 'foo', 'bar');
+    expect(cleanupCallback1).toBeCalledTimes(1);
+    expect(cleanupCallback2).toBeCalledTimes(1);
 
-//       expect(runInstance3.didDependenciesStateChange()).toBe(false);
+    expect(runInstance2.newRun()).toBeInstanceOf(RunInstance);
 
-//       runInstance3.addTrackedField(sliceA, 'foo', 'barrr');
+    expect(cleanupCallback2).toBeCalledTimes(1);
+  });
 
-//       expect(runInstance3.didDependenciesStateChange()).toBe(true);
-//     });
-//   });
+  it('creates a fresh RunInstance  without carrying forward any tracked fields', () => {
+    const initialRunInstance = new RunInstance(store, 'test');
+    initialRunInstance.addTrackedField(sliceA, 'property', 'value');
+    expect(initialRunInstance.dependencies.has(sliceA)).toBe(true);
 
-//   describe('#newRun', () => {
-//     it('executes all cleanup callbacks on creating a new RunInstance', () => {
-//       const runInstance = new RunInstance();
-//       const cleanupCallback1 = jest.fn();
-//       const cleanupCallback2 = jest.fn();
+    const newRunInstance = initialRunInstance.newRun();
 
-//       runInstance.addCleanup(cleanupCallback1);
-//       runInstance.addCleanup(cleanupCallback2);
-
-//       expect(runInstance.newRun()).toBeInstanceOf(RunInstance);
-
-//       expect(cleanupCallback1).toBeCalled();
-//       expect(cleanupCallback2).toBeCalled();
-//     });
-
-//     it('creates a fresh RunInstance  without carrying forward any tracked fields', () => {
-//       const initialRunInstance = new RunInstance();
-//       initialRunInstance.addTrackedField(sliceA, 'property', 'value');
-//       expect(initialRunInstance.isDependency(sliceA)).toBe(true);
-
-//       const newRunInstance = initialRunInstance.newRun();
-
-//       expect(newRunInstance.isDependency(sliceA)).toBe(false);
-//     });
-
-//     it('creates a new RunInstance without carrying forward cleanup callbacks', () => {
-//       const initialRunInstance = new RunInstance();
-//       initialRunInstance.addCleanup(() => {});
-
-//       expect(initialRunInstance.cleanups.size).toBe(1);
-
-//       const newRunInstance = initialRunInstance.newRun();
-
-//       expect(newRunInstance.cleanups.size).toBe(0);
-//     });
-//   });
-// });
+    expect(newRunInstance.dependencies.has(sliceA)).toBe(false);
+  });
+});
