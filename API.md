@@ -3,7 +3,7 @@
 ## basic
 
 ```ts
-createSlice([], {
+slice([], {
   name: 'sliceName',
   state: {
     a: 1,
@@ -14,14 +14,14 @@ createSlice([], {
 ## With selectors
 
 ```ts
-const key = createKey([sliceA], {
+const key = sliceKey([sliceA], {
   name: 'sliceName',
   state: {
     a: 1,
   },
 });
 
-const sel0 = key.createSelector(
+const sel0 = key.selector(
   // will have sliceA
   (state) => {
     return key.get(state).z;
@@ -31,7 +31,7 @@ const sel0 = key.createSelector(
   },
 );
 
-const sel1 = key.createSelector(
+const sel1 = key.selector(
   // will have sliceA
   (state) => {
     const otherSel = sel0(state);
@@ -43,7 +43,7 @@ const sel1 = key.createSelector(
   },
 );
 
-const slice = key.createSlice({
+const slice = key.slice({
   derivedState: {
     a: sel1,
   },
@@ -58,6 +58,8 @@ generally prefer using selectors, but we have this for flexibility
 const myQuery = createQuery<StoreState>(({ param: X }) => {
   return (storeState): T => {};
 });
+
+key.createQuery(); // <-- like this
 
 const result = myQuery(store.state, { param: 1 });
 ```
@@ -75,7 +77,7 @@ and not burden the user with naming actions
 without helpers
 
 ```ts
-const myAction = slice.createAction((obj: { x: number }) => {
+const myAction = slice.action((obj: { x: number }) => {
   return (storeState) => {
     return {
       ...slice.get(storeState),
@@ -83,12 +85,14 @@ const myAction = slice.createAction((obj: { x: number }) => {
     };
   };
 });
+
+myAction; // (params: P) => Transaction<SliceName, P[]>
 ```
 
 with helpers
 
 ```ts
-const myAction = slice.createAction((obj: { x: number }) => {
+const myAction = slice.action((obj: { x: number }) => {
   return slice.tx((storeState) => {
     return slice.update(storeState, { x: obj.x });
   });
@@ -100,7 +104,7 @@ let tx: Transaction = slice.tx((storeState: StoreState): SliceState => {});
 ### Serialization
 
 ```ts
-const myAction = slice.createAction(
+const myAction = slice.action(
   z.object({
     x: z.number(),
   }),
@@ -171,12 +175,12 @@ Using auto dependency thing
 
 ```ts
 effect((store) => {
-  key.name('myEffect'); // or use function name
+  store.name('myEffect'); // or use function name
 
-  const valA = sliceA.get(store); // this will be tracked
-  const valT = sliceA.get(store, (val) => val.t); // this will be selective tracked, when t changes
+  const valA = sliceA.track.foo(store, { isEqual }); // this will be tracked
+  const valT = sliceA.track(store, (val) => val.t, { isEqual }); // this will be selective tracked, when t changes
 
-  const valB = sliceB.get(untracked(key)); // this will be un-tracked
+  const valB = sliceB.get(store.state); // this will be un-tracked
 
   cleanup(store, () => {});
   cleanup(store, () => {}); // can have multiple
@@ -191,12 +195,12 @@ effect((store) => {
 
 ```ts
 effect(async (store) => {
-  const valT = sliceA.get(store, (val) => val.t); // this will be selective tracked, when t changes
+  const valT = sliceA.track.foo(); // this will be selective tracked, when t changes
 
   const abort = new AbortController();
   const data = await fetch('someurl');
 
-  const valC = sliceB.get(store); // TODO: should this be tracked?
+  const valC = sliceB.track(store); // TODO: should this be tracked?
 
   cleanup(store, () => {
     abort.abort();
@@ -235,21 +239,13 @@ type Opts = {
 
 ## Refs
 
-```ts
-effect((store) => {
-  const ref = createRef(store, false);
-});
-```
-
-## Shared Refs
-
 Refs that can be shared with other effects
 
 ```ts
-const sharedRef = createSharedRef(false);
+const getMyRef = ref(false);
 
 effect((store) => {
-  const ref = sharedRef(store);
+  const myRef = getMyRef(store);
 });
 ```
 
@@ -259,7 +255,7 @@ effect((store) => {
 
 - we should follow angular style here to allow for cleanup, so that async await can work.
   - When an effect is terminated, the dispatch function should become a no-op. This should be customizable if someone
-    wants to not cancel the efffect on a new trigger.
+    wants to not cancel the effect on a new trigger.
 - running it once
 
 ```ts

@@ -1,6 +1,4 @@
-export * from './react';
-export * from './vanilla';
-export * from './effects';
-export * from './sync';
-export * from './merge';
-export { createDispatchSpy } from './test-helpers/test-helpers';
+export { slice } from './slice';
+export { store } from './store';
+export { effect } from './effect';
+export { operation } from './operation';
