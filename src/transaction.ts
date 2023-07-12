@@ -17,7 +17,7 @@ export const TX_META_STORE_NAME = 'store-name';
 type TransactionOpts = {};
 
 export class Transaction<TSliceName extends string> {
-  public metadata = new Metadata();
+  public readonly metadata = new Metadata();
 
   readonly txId = idGeneration.createTransactionId();
 

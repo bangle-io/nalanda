@@ -1,13 +1,14 @@
-import { Store } from './store';
-import { StoreState } from './store-state';
-import { Transaction } from './transaction';
+import type { Operation } from './operation';
+import type { Store } from './store';
+import type { StoreState } from './store-state';
+import type { Transaction } from './transaction';
 
 export type InferSliceNameFromStore<T> = T extends BaseStore<infer TSliceName>
   ? TSliceName
   : never;
 
 export type Dispatch = (
-  txn: Transaction<any>,
+  txn: Transaction<any> | Operation,
   opts?: {
     debugInfo?: string;
   },

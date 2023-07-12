@@ -3,7 +3,7 @@ import { testCleanup } from '../../helpers';
 import { Store } from '../../store';
 import waitForExpect from 'wait-for-expect';
 import { effect } from '../effect';
-import { cleanup } from '../run-instance';
+import { cleanup } from '../../cleanup';
 
 beforeEach(() => {
   testCleanup();

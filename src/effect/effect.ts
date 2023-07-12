@@ -2,6 +2,7 @@ import { AnySlice } from '../types';
 import { BaseStore, InferSliceNameFromStore } from '../base-store';
 import { Store } from '../store';
 import { EffectStore, RunInstance } from './run-instance';
+import { hasIdleCallback } from '../helpers';
 
 export type ValidEffectStore<
   TStoreSlices extends string,
@@ -27,11 +28,6 @@ export type EffectCreator = (store: Store<any>) => Effect;
 export type EffectCallback<TStore extends BaseStore<any>> = (
   store: EffectStore<InferSliceNameFromStore<TStore>>,
 ) => void | Promise<void>;
-
-export type CleanupCallback = () => void | Promise<void>;
-
-const hasIdleCallback =
-  typeof window !== 'undefined' && 'requestIdleCallback' in window;
 
 export class Effect {
   private runInstance: RunInstance;

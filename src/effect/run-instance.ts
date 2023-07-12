@@ -1,16 +1,13 @@
 import { AnySlice } from '../types';
-import type { CleanupCallback } from './effect';
 import { DerivativeStore } from '../base-store';
 import { Store } from '../store';
+import { OperationStore } from '../operation';
+import { CleanupCallback } from '../cleanup';
 
 type Dependencies = Map<AnySlice, Array<{ field: string; value: unknown }>>;
 type ConvertToReadonlyMap<T> = T extends Map<infer K, infer V>
   ? ReadonlyMap<K, V>
   : T;
-
-export function cleanup(store: EffectStore<any>, cb: CleanupCallback): void {
-  store._runInstance?.addCleanup(cb);
-}
 
 /**
  * @internal
@@ -33,6 +30,10 @@ export class EffectStore<
    * @internal
    */
   override _destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
     this._runInstance = undefined;
     super._destroy();
   }
@@ -100,9 +101,11 @@ export class RunInstance {
   }
 
   newRun(): RunInstance {
-    this._cleanups.forEach((cleanup) => {
-      void cleanup();
-    });
+    if (!this.effectStore.destroyed) {
+      this._cleanups.forEach((cleanup) => {
+        void cleanup();
+      });
+    }
 
     this.effectStore._destroy();
     return new RunInstance(this.rootStore, this.name);
