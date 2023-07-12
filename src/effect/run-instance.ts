@@ -8,9 +8,6 @@ type ConvertToReadonlyMap<T> = T extends Map<infer K, infer V>
   ? ReadonlyMap<K, V>
   : T;
 
-/**
- * @internal
- */
 export class EffectStore<
   TSliceName extends string,
 > extends DerivativeStore<TSliceName> {

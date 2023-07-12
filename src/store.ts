@@ -51,6 +51,12 @@ const DEFAULT_DISPATCH_OPERATION: DispatchOperation = (store, operation) => {
   operation.run(store);
 };
 
+export function store<TSliceName extends string>(
+  opts: StoreOpts<TSliceName>,
+): Store<TSliceName> {
+  return Store.create(opts);
+}
+
 export class Store<TSliceName extends string = any>
   implements BaseStore<TSliceName>
 {

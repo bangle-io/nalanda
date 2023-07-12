@@ -44,7 +44,10 @@ export abstract class DerivativeStore<TSliceName extends string>
         `Cannot dispatch on a stale effect "${this.name}" run. This is likely a bug in your code.`,
       );
     } else {
-      this._rootStore.dispatch(txn, opts);
+      this._rootStore.dispatch(txn, {
+        ...opts,
+        debugInfo: this.name + (opts?.debugInfo ? ` (${opts.debugInfo})` : ''),
+      });
     }
   };
 

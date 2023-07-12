@@ -1,7 +1,8 @@
 import { AnySlice } from '../types';
 import { BaseStore, InferSliceNameFromStore } from '../base-store';
 import { Store } from '../store';
-import { EffectStore, RunInstance } from './run-instance';
+import { RunInstance } from './run-instance';
+import type { EffectStore } from './run-instance';
 import { hasIdleCallback } from '../helpers';
 
 export type ValidEffectStore<

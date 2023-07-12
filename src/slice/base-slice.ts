@@ -2,8 +2,7 @@ import type { SliceId } from '../types';
 import { idGeneration } from '../helpers';
 import type { Slice } from './slice';
 import type { StoreState } from '../store-state';
-import { Store } from 'src/store';
-import { EffectStore } from 'src/effect';
+import type { EffectStore } from 'src/effect';
 
 export type UserSliceOpts<
   TSliceName extends string,
