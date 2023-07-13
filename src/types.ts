@@ -1,5 +1,5 @@
 import type { BaseSlice, Slice } from './slice';
-import { StoreState } from './store-state';
+import type { StoreState } from './store-state';
 
 export type AnySlice = Slice<any, any, any>;
 

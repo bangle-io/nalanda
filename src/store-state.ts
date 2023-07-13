@@ -1,12 +1,12 @@
 import { Action } from './action';
-import type { AnySlice, SliceId } from './types';
+import { calcReverseDependencies, validateSlices } from './helpers';
 import type { Slice } from './slice';
 import type { Step, Transaction } from './transaction';
-import { calcReverseDependencies, validateSlices } from './helpers';
+import type { AnySlice, SliceId } from './types';
 
 export type StoreStateOpts<TSliceName extends string> = {
   stateOverride?: Record<SliceId, Record<string, unknown>>;
-  slices: Slice<TSliceName, any, any>[];
+  slices: Array<Slice<TSliceName, any, any>>;
 };
 
 type StoreStateConfig<TSliceName extends string> =
@@ -75,6 +75,7 @@ export class StoreState<TSliceName extends string> {
     if (opts.stateOverride) {
       for (const [sliceId, override] of Object.entries(opts.stateOverride)) {
         const id = sliceId as SliceId;
+
         if (!sliceStateMap[id]) {
           throw new Error(
             `StoreState.create: slice with id "${id}" does not exist`,
@@ -97,31 +98,6 @@ export class StoreState<TSliceName extends string> {
     protected config: StoreStateConfig<TSliceName>,
   ) {}
 
-  /**
-   * @internal
-   */
-  _updateSliceStateManager(
-    sliceStateManager: SliceStateManager,
-  ): StoreState<TSliceName> {
-    return new StoreState(
-      {
-        ...this.sliceStateMap,
-        [sliceStateManager.slice.sliceId]: sliceStateManager,
-      },
-      this.config,
-    );
-  }
-
-  getSliceStateManager(sliceId: SliceId): SliceStateManager {
-    const manager = this.sliceStateMap[sliceId];
-    if (!manager) {
-      throw new Error(
-        `StoreState.resolveSliceState: slice with id "${sliceId}" does not exist`,
-      );
-    }
-    return manager;
-  }
-
   applyTransaction(txn: Transaction<any>): StoreState<TSliceName> {
     if (txn.isDestroyed) {
       throw new Error(
@@ -129,15 +105,27 @@ export class StoreState<TSliceName extends string> {
       );
     }
 
-    return txn.steps.reduce((storeState, step) => {
+    return txn.steps.reduce<StoreState<TSliceName>>((storeState, step) => {
       return storeState
         .getSliceStateManager(step.targetSliceId)
         .applyStep(storeState, step);
-    }, this as StoreState<TSliceName>);
+    }, this);
   }
 
   getSliceState(sliceId: SliceId): unknown {
     return this.getSliceStateManager(sliceId).sliceState;
+  }
+
+  getSliceStateManager(sliceId: SliceId): SliceStateManager {
+    const manager = this.sliceStateMap[sliceId];
+
+    if (!manager) {
+      throw new Error(
+        `StoreState.resolveSliceState: slice with id "${sliceId}" does not exist`,
+      );
+    }
+
+    return manager;
   }
 
   /**
@@ -169,6 +157,7 @@ export class StoreState<TSliceName extends string> {
 
     return result;
   }
+
   /**
    * Returns slices that have changed compared to the provided store state.
    * does not take into account slices that were removed in the current store state and exist
@@ -199,11 +188,53 @@ export class StoreState<TSliceName extends string> {
   get _storeStateKey() {
     return this.config.storeStateKey;
   }
+
+  /**
+   * @internal
+   */
+  _updateSliceStateManager(
+    sliceStateManager: SliceStateManager,
+  ): StoreState<TSliceName> {
+    return new StoreState(
+      {
+        ...this.sliceStateMap,
+        [sliceStateManager.slice.sliceId]: sliceStateManager,
+      },
+      this.config,
+    );
+  }
 }
 
 export class RestrictionManager {
   private _restrict: Set<SliceId> | undefined = undefined;
   private _restrictionOwner: SliceId | undefined = undefined;
+
+  checkRestriction(sliceId: SliceId) {
+    if (!this._restrictionOwner) {
+      return;
+    }
+
+    if (this.isAllowed(sliceId)) {
+      return;
+    }
+
+    throw new Error(
+      `StoreState.getSliceState: slice with id "${sliceId}" cannot be accessed as it is not part of the dependency graph of Slice ${this._restrictionOwner}`,
+    );
+  }
+
+  private isAllowed(sliceId: SliceId) {
+    return sliceId === this._restrictionOwner || this._restrict?.has(sliceId);
+  }
+
+  _clearRestriction(owner: SliceId) {
+    if (this._restrictionOwner !== owner) {
+      return;
+    }
+
+    this._restrictionOwner = undefined;
+    this._restrict = new Set();
+  }
 
   _restrictSliceAndDeps(
     owner: SliceId,
@@ -218,32 +249,5 @@ export class RestrictionManager {
 
     this._restrictionOwner = owner;
     this._restrict = deps;
-  }
-
-  _clearRestriction(owner: SliceId) {
-    if (this._restrictionOwner !== owner) {
-      return;
-    }
-
-    this._restrictionOwner = undefined;
-    this._restrict = new Set();
-  }
-
-  private isAllowed(sliceId: SliceId) {
-    return sliceId === this._restrictionOwner || this._restrict?.has(sliceId);
-  }
-
-  checkRestriction(sliceId: SliceId) {
-    if (!this._restrictionOwner) {
-      return;
-    }
-
-    if (this.isAllowed(sliceId)) {
-      return;
-    }
-
-    throw new Error(
-      `StoreState.getSliceState: slice with id "${sliceId}" cannot be accessed as it is not part of the dependency graph of Slice ${this._restrictionOwner}`,
-    );
   }
 }

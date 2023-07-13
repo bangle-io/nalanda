@@ -1,4 +1,4 @@
-export type { EffectStore } from './run-instance';
+export type { Effect, EffectCallback, EffectOpts } from './effect';
 export { effect } from './effect';
-export type { Effect, EffectOpts, EffectCallback } from './effect';
 export { EffectManager } from './effect-manager';
+export type { EffectStore } from './run-instance';

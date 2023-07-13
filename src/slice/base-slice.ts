@@ -1,8 +1,8 @@
-import type { SliceId } from '../types';
+import type { EffectStore } from '../effect';
 import { idGeneration } from '../helpers';
-import type { Slice } from './slice';
 import type { StoreState } from '../store-state';
-import type { EffectStore } from 'src/effect';
+import type { SliceId } from '../types';
+import type { Slice } from './slice';
 
 export type UserSliceOpts<
   TSliceName extends string,
@@ -11,7 +11,7 @@ export type UserSliceOpts<
 > = {
   name: TSliceName;
   state: TState;
-  dependencies: Slice<TDep, any, any>[];
+  dependencies: Array<Slice<TDep, any, any>>;
 };
 
 export type CalcDerivedState = (
@@ -45,7 +45,7 @@ export abstract class BaseSlice<
 > {
   readonly name: TSliceName;
   readonly initialState: TState;
-  readonly dependencies: Slice<TDep, any, any>[];
+  readonly dependencies: Array<Slice<TDep, any, any>>;
   readonly sliceId: SliceId;
 
   constructor(opts: CreateSliceOpts<TSliceName, TState, TDep>) {

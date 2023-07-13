@@ -22,22 +22,7 @@ export abstract class BaseStore<TSliceName extends string> {
 export abstract class DerivativeStore<TSliceName extends string>
   implements BaseStore<TSliceName>
 {
-  private _destroyed = false;
   private lastStateBeforeDestroy: StoreState<TSliceName> | undefined;
-
-  get destroyed(): boolean {
-    return this._destroyed;
-  }
-
-  /**
-   * @internal
-   */
-  _rootStore: Store<any> | undefined;
-
-  constructor(_rootStore: Store<any>, public readonly name: string) {
-    this._rootStore = _rootStore;
-  }
-
   dispatch: Dispatch = (txn, opts) => {
     if (!this._rootStore) {
       console.error(
@@ -51,11 +36,26 @@ export abstract class DerivativeStore<TSliceName extends string>
     }
   };
 
+  private _destroyed = false;
+
+  /**
+   * @internal
+   */
+  _rootStore: Store | undefined;
+  constructor(_rootStore: Store, public readonly name: string) {
+    this._rootStore = _rootStore;
+  }
+
+  get destroyed(): boolean {
+    return this._destroyed;
+  }
+
   get state(): StoreState<TSliceName> {
     if (!this._rootStore) {
       console.warn(
         `Trying to access store state of a destroyed store "${this.name}", this will give stale data and cause memory leaks.`,
       );
+
       return this.lastStateBeforeDestroy!;
     }
 

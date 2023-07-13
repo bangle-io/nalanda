@@ -1,4 +1,4 @@
-import { EffectStore } from './effect';
+import type { EffectStore } from './effect';
 import { OperationStore } from './operation';
 
 export type CleanupCallback = () => void | Promise<void>;

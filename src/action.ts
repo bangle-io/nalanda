@@ -1,9 +1,11 @@
-import { StoreState } from './store-state';
-import { Slice } from './slice';
-import { Step, Transaction } from './transaction';
 import { idGeneration } from './helpers';
+import type { Slice } from './slice';
+import type { UpdaterType } from './slice/base-slice';
+import { Updater } from './slice/base-slice';
+import type { StoreState } from './store-state';
+import type { Step } from './transaction';
+import { Transaction } from './transaction';
 import type { ActionId, SliceId } from './types';
-import { Updater, UpdaterType } from './slice/base-slice';
 
 export type UserActionCallback<
   TParams extends any[],
@@ -20,6 +22,33 @@ export type ActionOpts<TSliceName extends string, TParams extends any[]> = {
 export const actionRegistry = new Map<ActionId, Action<any, any>>();
 
 export class Action<TSliceName extends string, TParams extends any[]> {
+  actionId: ActionId;
+  constructor(public readonly opts: ActionOpts<TSliceName, TParams>) {
+    const hint = opts.userCallback.name;
+    this.actionId = idGeneration.createActionId(opts.slice.sliceId, hint);
+
+    if (actionRegistry.has(this.actionId)) {
+      throw new Error(`ActionId "${this.actionId}" can not already exist`);
+    }
+    actionRegistry.set(this.actionId, this);
+  }
+
+  /**
+   * @internal
+   */
+  getTransactionBuilder(): (...params: TParams) => Transaction<TSliceName> {
+    return (...params) => {
+      const sliceStateBuilder = this.opts.userCallback(...params);
+
+      return sliceStateBuilder.makeTxn({
+        params,
+        actionId: this.actionId,
+        sliceId: this.opts.slice.sliceId,
+        sliceName: this.opts.slice.name,
+      });
+    };
+  }
+
   /**
    * Executes action based on params
    *
@@ -47,33 +76,6 @@ export class Action<TSliceName extends string, TParams extends any[]> {
     }
 
     return result as any;
-  }
-
-  actionId: ActionId;
-
-  constructor(public readonly opts: ActionOpts<TSliceName, TParams>) {
-    const hint = opts.userCallback.name;
-    this.actionId = idGeneration.createActionId(opts.slice.sliceId, hint);
-
-    if (actionRegistry.has(this.actionId)) {
-      throw new Error(`ActionId "${this.actionId}" can not already exist`);
-    }
-    actionRegistry.set(this.actionId, this);
-  }
-
-  /**
-   * @internal
-   */
-  getTransactionBuilder(): (...params: TParams) => Transaction<TSliceName> {
-    return (...params) => {
-      const sliceStateBuilder = this.opts.userCallback(...params);
-      return sliceStateBuilder.makeTxn({
-        params,
-        actionId: this.actionId,
-        sliceId: this.opts.slice.sliceId,
-        sliceName: this.opts.slice.name,
-      });
-    };
   }
 }
 

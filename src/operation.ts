@@ -1,8 +1,8 @@
-import { Store } from './store';
 import { DerivativeStore } from './base-store';
-import { Metadata } from './transaction';
-import { CleanupCallback } from './cleanup';
+import type { CleanupCallback } from './cleanup';
 import { hasIdleCallback } from './helpers';
+import type { Store } from './store';
+import { Metadata } from './transaction';
 
 export const OP_NAME = 'OPERATION_NAME';
 
@@ -31,26 +31,11 @@ export type OperationCallback<
 export class OperationStore<
   TSliceName extends string = any,
 > extends DerivativeStore<TSliceName> {
-  private readonly _cleanupCallbacks: Set<CleanupCallback> = new Set();
   private cleanupRan = false;
-
-  public _runCleanup(): void {
-    if (this.cleanupRan) {
-      return;
-    }
-
-    for (const cleanup of this._cleanupCallbacks) {
-      try {
-        void cleanup();
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    this.cleanupRan = true;
-  }
+  private readonly _cleanupCallbacks: Set<CleanupCallback> = new Set();
 
   constructor(
-    _rootStore: Store<any>,
+    _rootStore: Store,
     name: string,
     private readonly opts: OperationOpts,
   ) {
@@ -66,10 +51,26 @@ export class OperationStore<
         `Adding a new cleanup to ${this.name} as cleanups have already run`,
       );
       void cb();
+
       return;
     }
 
     this._cleanupCallbacks.add(cb);
+  }
+
+  _runCleanup(): void {
+    if (this.cleanupRan) {
+      return;
+    }
+
+    for (const cleanup of this._cleanupCallbacks) {
+      try {
+        void cleanup();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    this.cleanupRan = true;
   }
 }
 
@@ -96,6 +97,7 @@ function createOperationRunner<
   return (...params: TParams) => {
     const run = (rootStore: Store) => {
       let operationExecutor = cache.get(rootStore);
+
       if (!operationExecutor) {
         operationExecutor = new OperationExecutor(cb, opts, name);
         cache.set(rootStore, operationExecutor);
@@ -105,6 +107,7 @@ function createOperationRunner<
     const metadata = new Metadata();
 
     metadata.appendMetadata(OP_NAME, name);
+
     return {
       name,
       run,
@@ -114,13 +117,30 @@ function createOperationRunner<
 }
 
 class OperationExecutor {
-  opStore: OperationStore<any> | undefined;
+  opStore: OperationStore | undefined;
 
   constructor(
     public readonly operationCallback: AnyOperationCallback,
     public readonly opts: OperationOpts = {},
     public readonly name: string,
   ) {}
+
+  private deferExecution(cb: () => void, waitFor: number): void {
+    if (hasIdleCallback) {
+      window.requestIdleCallback(cb, { timeout: waitFor });
+    } else {
+      setTimeout(cb, waitFor);
+    }
+  }
+
+  run(rootStore: Store, params: unknown[]): void {
+    this.scheduler(() => {
+      this.opStore?._runCleanup();
+      const opStore = new OperationStore(rootStore, this.name, this.opts);
+      this.opStore = opStore;
+      void this._run(opStore, params);
+    });
+  }
 
   private scheduler(cb: () => void): void {
     const waitFor =
@@ -135,37 +155,22 @@ class OperationExecutor {
     }
   }
 
-  private deferExecution(cb: () => void, waitFor: number): void {
-    if (hasIdleCallback) {
-      window.requestIdleCallback(cb, { timeout: waitFor });
-    } else {
-      setTimeout(cb, waitFor);
-    }
-  }
-
   private async _run(
-    opStore: OperationStore<any>,
+    opStore: OperationStore,
     params: unknown[],
   ): Promise<void> {
     if (opStore.destroyed || this.opStore?._rootStore?.destroyed) {
       console.warn(
         `Operation ${this.name} can not run after the store was destroyed`,
       );
+
       return;
     }
 
     const result = this.operationCallback(...params)(opStore);
+
     if (result instanceof Promise) {
       await result;
     }
-  }
-
-  public run(rootStore: Store, params: unknown[]): void {
-    this.scheduler(() => {
-      this.opStore?._runCleanup();
-      const opStore = new OperationStore(rootStore, this.name, this.opts);
-      this.opStore = opStore;
-      void this._run(opStore, params);
-    });
   }
 }

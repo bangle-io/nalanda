@@ -1,4 +1,4 @@
-import { DerivativeStore } from './base-store';
+import type { DerivativeStore } from './base-store';
 import { Store } from './store';
 
 export type RefObject<T> = {
@@ -7,11 +7,11 @@ export type RefObject<T> = {
 
 export function ref<T>(
   init: () => T,
-): (store: DerivativeStore<any>) => RefObject<T> {
-  const cache = new WeakMap<Store<any>, RefObject<T>>();
+): (store: DerivativeStore<any> | Store) => RefObject<T> {
+  const cache = new WeakMap<Store, RefObject<T>>();
 
-  return (store: DerivativeStore<any>) => {
-    const rootStore = store._rootStore;
+  return (store) => {
+    const rootStore = store instanceof Store ? store : store._rootStore;
 
     if (!rootStore) {
       throw new Error(

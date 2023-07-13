@@ -1,18 +1,15 @@
-import { AnySlice, InferSliceNameFromSlice } from '../types';
-import {
-  Action,
-  UserActionCallback,
-  ActionBuilder as ActionBuilder,
-} from '../action';
+import type { UserActionCallback } from '../action';
+import { Action, ActionBuilder } from '../action';
 import type { StoreState } from '../store-state';
-import { Transaction } from '../transaction';
-import {
-  BaseSlice,
+import type { Transaction } from '../transaction';
+import type { AnySlice, InferSliceNameFromSlice } from '../types';
+import type {
   CreateSliceOpts,
   UpdaterType,
   UserSliceOpts,
   ValidEffectStore,
 } from './base-slice';
+import { BaseSlice } from './base-slice';
 
 export class Slice<
   TSliceName extends string,
@@ -53,17 +50,6 @@ export class Slice<
     return action.getTransactionBuilder();
   }
 
-  tx(
-    calcSliceState: (
-      storeState: StoreState<TSliceName | TDep>,
-    ) => TState | UpdaterType<TSliceName>,
-  ): ActionBuilder<TSliceName, any> {
-    return new ActionBuilder({
-      name: this.name,
-      calcUserSliceState: calcSliceState,
-    });
-  }
-
   //   TODO implement
   query<TParams extends any[], TQuery>(
     cb: (
@@ -90,9 +76,21 @@ export class Slice<
     return new Proxy(result, {
       get: (target, prop: string) => {
         store._addTrackedField(this, prop, target[prop]!());
+
         return target[prop];
       },
     }) as any;
+  }
+
+  tx(
+    calcSliceState: (
+      storeState: StoreState<TSliceName | TDep>,
+    ) => TState | UpdaterType<TSliceName>,
+  ): ActionBuilder<TSliceName, any> {
+    return new ActionBuilder({
+      name: this.name,
+      calcUserSliceState: calcSliceState,
+    });
   }
 }
 

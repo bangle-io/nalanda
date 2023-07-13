@@ -1,24 +1,22 @@
-import { BaseStore, Dispatch } from './base-store';
-import { Slice } from './slice';
-import { StoreState, StoreStateOpts } from './store-state';
+import type { BaseStore, Dispatch } from './base-store';
+import type { Effect, EffectCallback, EffectOpts } from './effect';
+import { effect, EffectManager } from './effect';
+import type { EffectCreator } from './effect/effect';
+import { calcReverseDependencies } from './helpers';
+import type { Operation, OperationCallback, OperationOpts } from './operation';
+import { operation } from './operation';
+import type { Slice } from './slice';
+import type { StoreStateOpts } from './store-state';
+import { StoreState } from './store-state';
 import {
+  Transaction,
   TX_META_DISPATCH_SOURCE,
   TX_META_STORE_NAME,
-  Transaction,
 } from './transaction';
-import { EffectManager, effect } from './effect';
-import type { Effect, EffectCallback, EffectOpts } from './effect';
-import { calcReverseDependencies } from './helpers';
-import { SliceId } from './types';
-import {
-  Operation,
-  OperationCallback,
-  OperationOpts,
-  operation,
-} from './operation';
+import type { SliceId } from './types';
 
 type StoreOpts<TSliceName extends string = any> = {
-  slices: Slice<TSliceName, any, any>[];
+  slices: Array<Slice<TSliceName, any, any>>;
   stateOverride?: NonNullable<StoreStateOpts<TSliceName>['stateOverride']>;
   dispatchTransaction?: DispatchTransaction;
   dispatchOperation?: DispatchOperation;
@@ -38,7 +36,7 @@ type InternalStoreConfig<TSliceName extends string = any> = {
   reverseSliceDependencies: Record<SliceId, Set<SliceId>>;
 };
 
-const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction = (
+export const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction = (
   store,
   updateState,
   tx,
@@ -47,7 +45,10 @@ const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction = (
   updateState(newState);
 };
 
-const DEFAULT_DISPATCH_OPERATION: DispatchOperation = (store, operation) => {
+export const DEFAULT_DISPATCH_OPERATION: DispatchOperation = (
+  store,
+  operation,
+) => {
   operation.run(store);
 };
 
@@ -60,15 +61,6 @@ export function store<TSliceName extends string>(
 export class Store<TSliceName extends string = any>
   implements BaseStore<TSliceName>
 {
-  private _destroyed = false;
-
-  private _effectsManager: EffectManager;
-
-  private _dispatchTxn: DispatchTransaction;
-  private _dispatchOperation: DispatchOperation;
-
-  private _state: StoreState<TSliceName>;
-
   static create<TSliceName extends string>(opts: StoreOpts<TSliceName>) {
     const slicesLookup = Object.fromEntries(
       opts.slices.map((slice) => [slice.sliceId, slice]),
@@ -82,10 +74,36 @@ export class Store<TSliceName extends string = any>
     return new Store(opts, config);
   }
 
-  get state(): StoreState<TSliceName> {
-    return this._state;
-  }
+  private updateState = (state: StoreState<any>) => {
+    const oldState = this._state;
+    this._state = state;
+    this._effectsManager.run(this._state._getChangedSlices(oldState));
+  };
 
+  readonly dispatch: Dispatch = (txn, opts) => {
+    if (this._destroyed) {
+      return;
+    }
+
+    txn.metadata.setMetadata(TX_META_STORE_NAME, this.opts.storeName);
+
+    if (opts?.debugInfo) {
+      txn.metadata.setMetadata(TX_META_DISPATCH_SOURCE, opts.debugInfo);
+    }
+
+    if (txn instanceof Transaction) {
+      this._dispatchTxn(this, this.updateState, txn);
+    } else {
+      const operation = txn;
+      this._dispatchOperation(this, operation);
+    }
+  };
+
+  private _destroyed = false;
+  private _dispatchOperation: DispatchOperation;
+  private _dispatchTxn: DispatchTransaction;
+  private _effectsManager: EffectManager;
+  private _state: StoreState<TSliceName>;
   private constructor(
     public readonly opts: StoreOpts<TSliceName>,
     protected readonly config: InternalStoreConfig<TSliceName>,
@@ -101,29 +119,17 @@ export class Store<TSliceName extends string = any>
     this._effectsManager = new EffectManager(this.opts.slices);
   }
 
-  private updateState = (state: StoreState<any>) => {
-    const oldState = this._state;
-    this._state = state;
-    this._effectsManager.run(this._state._getChangedSlices(oldState));
-  };
+  get destroyed() {
+    return this._destroyed;
+  }
 
-  readonly dispatch: Dispatch = (txn, opts) => {
-    if (this._destroyed) {
-      return;
-    }
+  get name() {
+    return this.opts.storeName;
+  }
 
-    txn.metadata.setMetadata(TX_META_STORE_NAME, this.opts.storeName);
-    if (opts?.debugInfo) {
-      txn.metadata.setMetadata(TX_META_DISPATCH_SOURCE, opts.debugInfo);
-    }
-
-    if (txn instanceof Transaction) {
-      this._dispatchTxn(this, this.updateState, txn);
-    } else {
-      const operation = txn;
-      this._dispatchOperation(this, operation);
-    }
-  };
+  get state(): StoreState<TSliceName> {
+    return this._state;
+  }
 
   destroy() {
     this._destroyed = true;
@@ -150,7 +156,7 @@ export class Store<TSliceName extends string = any>
     return op;
   }
 
-  get destroyed() {
-    return this._destroyed;
+  registerEffect(ef: EffectCreator) {
+    this._effectsManager.registerEffect(ef(this));
   }
 }

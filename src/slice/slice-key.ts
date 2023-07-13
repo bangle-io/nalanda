@@ -1,9 +1,5 @@
-import {
-  CreateSliceOpts,
-  BaseSlice,
-  UserSliceOpts,
-  ValidStoreState,
-} from './base-slice';
+import { shallowEqual } from '../helpers';
+import type { StoreState, StoreStateKey } from '../store-state';
 import type {
   AnySlice,
   ExtractReturnTypes,
@@ -11,9 +7,13 @@ import type {
   InferSliceNameFromSlice,
   NoInfer,
 } from '../types';
+import type {
+  CreateSliceOpts,
+  UserSliceOpts,
+  ValidStoreState,
+} from './base-slice';
+import { BaseSlice } from './base-slice';
 import { Slice } from './slice';
-import { StoreState, StoreStateKey } from '../store-state';
-import { shallowEqual } from '../helpers';
 
 type AnyDerivedState = Record<string, Selector<any, any>>;
 
@@ -56,18 +56,18 @@ export class SliceKey<
     return new SliceKey(opts);
   }
 
+  private constructor(
+    public readonly opts: CreateSliceOpts<TSliceName, TState, TDep>,
+  ) {
+    super(opts);
+  }
+
   override get<TStoreSlices extends string>(
     storeState: ValidStoreState<TStoreSlices, TSliceName>,
   ): TState {
     return storeState.resolve(this.sliceId, {
       skipDerivedData: true,
     }) as TState;
-  }
-
-  private constructor(
-    public readonly opts: CreateSliceOpts<TSliceName, TState, TDep>,
-  ) {
-    super(opts);
   }
 
   selector<TSelectData>(
@@ -140,6 +140,7 @@ export function getValue<TStoreState extends StoreState<any>, TSelectData>(
 
   const newDerivedValue = selector(storeState);
   valCache.set(storeState, newDerivedValue);
+
   return newDerivedValue;
 }
 
@@ -163,6 +164,7 @@ export function equalityGetValue<
   if (!prevValCache.has(storeState._storeStateKey)) {
     prevValCache.set(storeState._storeStateKey, newDerivedValue);
     valCache.set(storeState, newDerivedValue);
+
     return newDerivedValue;
   }
 
@@ -171,17 +173,19 @@ export function equalityGetValue<
 
   if (equalFn(newDerivedValue, prevVal)) {
     valCache.set(storeState, prevVal);
+
     return prevVal;
   }
 
   prevValCache.set(storeState._storeStateKey, newDerivedValue);
   valCache.set(storeState, newDerivedValue);
+
   return newDerivedValue;
 }
 
 export function calcDerivedState(
   storeState: StoreState<any>,
-  derivedEntries: [string, Selector<any, any>][],
+  derivedEntries: Array<[string, Selector<any, any>]>,
   prevDerivedValueCache: WeakMap<StoreStateKey, Record<string, unknown>>,
 ): Record<string, unknown> {
   const newDerivedState = Object.fromEntries(
@@ -194,6 +198,7 @@ export function calcDerivedState(
 
   if (!prevDerivedState) {
     prevDerivedValueCache.set(storeState._storeStateKey, newDerivedState);
+
     return newDerivedState;
   }
 
@@ -202,5 +207,6 @@ export function calcDerivedState(
   }
 
   prevDerivedValueCache.set(storeState._storeStateKey, newDerivedState);
+
   return newDerivedState;
 }
