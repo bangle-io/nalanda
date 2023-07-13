@@ -95,8 +95,7 @@ export class SliceKey<
       Record<string, unknown>
     >();
 
-    // TODO add checks to ensure selectors are from the same slice id
-    return Slice.create({
+    const newSlice = Slice.create({
       ...this.opts,
       sliceId: this.sliceId,
       calcDerivedState: (storeState) => {
@@ -106,7 +105,9 @@ export class SliceKey<
           prevDerivedValueCache,
         );
       },
-    }) as AnySlice;
+    });
+
+    return newSlice as any;
   }
 }
 

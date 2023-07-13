@@ -76,7 +76,7 @@ export class Slice<
   track<TStoreSlices extends string>(
     store: ValidEffectStore<TStoreSlices, TSliceName>,
   ): {
-    [TKey in keyof TState]: () => TState[TKey];
+    [TKey in keyof TState]-?: () => TState[TKey];
   } {
     const result = Object.fromEntries(
       Object.keys(this.get(store.state as StoreState<any>)).map((key) => [
