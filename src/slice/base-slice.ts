@@ -82,9 +82,10 @@ export abstract class BaseSlice<
     };
   }
 }
+
+export const Updater = Symbol('Updater');
+
 export type UpdaterType<TSliceName> = {
   name: TSliceName;
   [Updater]: unknown;
 };
-
-export const Updater = Symbol('Updater');

@@ -124,6 +124,7 @@ export class Effect {
     }
 
     this.runInstance = this.runInstance.newRun();
+    console.debug(`Running effect ${this.name} ${this.runCount}`);
     void this.callback(this.runInstance.effectStore);
     this.runCount++;
   }
