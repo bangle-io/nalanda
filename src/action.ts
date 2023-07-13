@@ -87,8 +87,7 @@ export class ActionBuilder<TSliceName extends string, TDep extends string> {
       name: TSliceName;
       calcUserSliceState: (
         storeState: StoreState<TSliceName | TDep>,
-        // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-      ) => unknown | UpdaterType<TSliceName>;
+      ) => unknown;
     },
   ) {}
 
