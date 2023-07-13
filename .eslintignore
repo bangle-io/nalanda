@@ -9,3 +9,4 @@ tsup.config.ts
 theme.config.jsx
 documentation/dist
 documentation/.next
+documentation

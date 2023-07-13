@@ -618,15 +618,15 @@ describe('effect only', () => {
   });
 
   test('runs the effect if it has run once and dependencies have changed', async () => {
-    const { effect, callback, store } = setup();
+    const { effect, callback } = setup();
 
     effect.run();
 
     await sleep(5);
 
     jest
-      .spyOn(effect['runInstance'], 'didDependenciesStateChange')
-      .mockReturnValue(true);
+      .spyOn(effect['runInstance'], 'whatDependenciesStateChange')
+      .mockReturnValue('someChange');
 
     effect.run();
     await sleep(5);
@@ -635,14 +635,14 @@ describe('effect only', () => {
   });
 
   test('does not run the effect if it has run once and dependencies have not changed', async () => {
-    const { effect, callback, store } = setup();
+    const { effect, callback } = setup();
     effect.run();
 
     await sleep(5);
     expect(callback).toHaveBeenCalledTimes(1);
 
     jest
-      .spyOn(effect['runInstance'], 'didDependenciesStateChange')
+      .spyOn(effect['runInstance'], 'whatDependenciesStateChange')
       .mockReturnValue(false);
 
     effect.run();

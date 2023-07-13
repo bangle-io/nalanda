@@ -12,6 +12,7 @@ module.exports = {
     project: ['./tsconfig.json'],
     tsconfigRootDir: __dirname,
   },
+
   rules: {
     '@typescript-eslint/no-unsafe-assignment': 'off',
     'prefer-const': 'off',
@@ -25,5 +26,6 @@ module.exports = {
     '@typescript-eslint/no-empty-function': 'off',
     '@typescript-eslint/restrict-template-expressions': 'warn',
     '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-unused-vars': 'off',
   },
 };
