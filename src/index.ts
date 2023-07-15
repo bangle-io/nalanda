@@ -4,6 +4,7 @@ export type { EffectStore } from './effect';
 export type { Effect } from './effect';
 export type { EffectCreator } from './effect';
 export { effect } from './effect';
+export { isSlice } from './helpers';
 export { shallowEqual } from './helpers';
 export type { Operation } from './operation';
 export type { OperationStore } from './operation';

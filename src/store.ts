@@ -82,6 +82,7 @@ export class Store<TSliceName extends string = any>
 
     this._effectsManager.run(this._state._getChangedSlices(oldState));
   };
+
   readonly dispatch: Dispatch<any> = (txn, opts) => {
     if (this._destroyed) {
       return;
