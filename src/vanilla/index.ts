@@ -1,3 +1,4 @@
+export type { ValidStoreState } from './slice';
 export type { Dispatch } from './base-store';
 export { cleanup } from './cleanup';
 export type { EffectStore } from './effect';
@@ -10,7 +11,7 @@ export type { Operation } from './operation';
 export type { OperationStore } from './operation';
 export { operation } from './operation';
 export { ref } from './ref';
-export type { Slice } from './slice';
+export type { Slice, BaseSlice } from './slice';
 export type { SliceKey } from './slice';
 export { slice } from './slice';
 export { sliceKey } from './slice';
