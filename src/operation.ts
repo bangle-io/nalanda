@@ -15,9 +15,9 @@ export type OperationOpts = {
 
 const DEFAULT_MAX_WAIT = 15;
 
-export type Operation = {
+export type Operation<TSliceName extends string> = {
   name: string;
-  run: (rootStore: Store) => void;
+  run: (rootStore: Store<TSliceName>) => void;
   metadata: Metadata;
 };
 
@@ -77,7 +77,7 @@ export class OperationStore<
 export function operation<TSliceName extends string>(opts?: OperationOpts) {
   return <TParams extends any[]>(
     cb: OperationCallback<TSliceName, TParams>,
-  ): ((...params: TParams) => Operation) => {
+  ): ((...params: TParams) => Operation<TSliceName>) => {
     const cache = new WeakMap<Store, OperationExecutor>();
     const name = cb.name || 'anonymous-operation';
 
@@ -93,7 +93,7 @@ function createOperationRunner<
   cb: OperationCallback<TSliceName, TParams>,
   name: string,
   opts?: OperationOpts,
-): (...params: TParams) => Operation {
+): (...params: TParams) => Operation<TSliceName> {
   return (...params: TParams) => {
     const run = (rootStore: Store) => {
       let operationExecutor = cache.get(rootStore);

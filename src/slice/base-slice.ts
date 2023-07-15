@@ -61,6 +61,13 @@ export abstract class BaseSlice<
     return storeState.resolve(this.sliceId) as TState;
   }
 
+  query<TParams extends any[], TQuery>(
+    cb: (...params: TParams) => (storeState: StoreState<TSliceName>) => TQuery,
+  ): // TODO - currently TDep is not included as part of storeState
+  (storeState: StoreState<any>, ...params: TParams) => TQuery {
+    return (storeState, ...params) => cb(...params)(storeState);
+  }
+
   update<TStoreSlices extends string>(
     storeState: ValidStoreState<TStoreSlices, TSliceName>,
     updater: ((cur: TState) => Partial<TState>) | Partial<TState>,
@@ -72,9 +79,17 @@ export abstract class BaseSlice<
     const newSliceState =
       typeof updater === 'function' ? updater(sliceState) : updater;
 
-    const mergedState = opts.replace
-      ? newSliceState
-      : { ...sliceState, ...newSliceState };
+    let mergedState: Partial<TState>;
+
+    if (opts.replace) {
+      mergedState = newSliceState;
+    }
+    // maintain reference equality if possible
+    else if (newSliceState === sliceState) {
+      mergedState = newSliceState;
+    } else {
+      mergedState = { ...sliceState, ...newSliceState };
+    }
 
     return {
       name: this.name,

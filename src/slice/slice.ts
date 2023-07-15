@@ -50,15 +50,6 @@ export class Slice<
     return action.getTransactionBuilder();
   }
 
-  //   TODO implement
-  query<TParams extends any[], TQuery>(
-    cb: (
-      ...params: TParams
-    ) => (storeState: StoreState<TSliceName | TDep>) => TQuery,
-  ): (storeState: StoreState<TSliceName | TDep>, ...params: TParams) => TQuery {
-    return cb as any;
-  }
-
   track<TStoreSlices extends string>(
     store: ValidEffectStore<TStoreSlices, TSliceName>,
   ): TState {

@@ -86,6 +86,12 @@ const myAction = slice.action((obj: { x: number }) => {
   };
 });
 
+const myAction2 = slice.simpleAction((obj: { x: number }) => {
+  return (storeState) => {
+    return slice.update(storeState, { x });
+  };
+});
+
 myAction; // (params: P) => Transaction<SliceName, P[]>
 ```
 

@@ -1,24 +1,23 @@
 import { calcReverseDependencies } from '../helpers';
-import { DebugLogger } from '../logger';
-import { AnySlice, SliceId } from '../types';
-import { Effect } from './effect';
+import type { DebugLogger } from '../logger';
+import type { AnySlice, SliceId } from '../types';
+import type { Effect } from './effect';
 
 export class EffectManager {
-  private effects: Effect[] = [];
   slicesLookup: Record<SliceId, AnySlice>;
-
   reverseDependencies: Record<SliceId, Set<AnySlice>> = {};
+  private _effects: Set<Effect> = new Set();
 
   constructor(
-    private readonly slices: AnySlice[],
-    private readonly debug?: DebugLogger,
+    private readonly _slices: AnySlice[],
+    private readonly _debug?: DebugLogger,
   ) {
     this.slicesLookup = Object.fromEntries(
-      slices.map((slice) => [slice.sliceId, slice]),
+      _slices.map((slice) => [slice.sliceId, slice]),
     );
 
     this.reverseDependencies = Object.fromEntries(
-      Object.entries(calcReverseDependencies(slices)).map(
+      Object.entries(calcReverseDependencies(_slices)).map(
         ([sliceId, sliceIds]) => {
           return [
             sliceId,
@@ -30,11 +29,10 @@ export class EffectManager {
     );
   }
 
-  registerEffect(effect: Effect): void {
-    this.effects.push(effect);
-    queueMicrotask(() => {
-      effect.run();
-    });
+  destroy() {
+    for (const effect of this._effects) {
+      effect.destroy();
+    }
   }
 
   getAllSlicesChanged(slicesChanged?: AnySlice[]): undefined | Set<AnySlice> {
@@ -53,16 +51,26 @@ export class EffectManager {
     return allSlicesChanges;
   }
 
+  registerEffect(effect: Effect): void {
+    if (this._effects.has(effect)) {
+      throw new Error(`Effect already registered ${effect.name}`);
+    }
+
+    this._effects.add(effect);
+    queueMicrotask(() => {
+      effect.run();
+    });
+  }
+
   run(slicesChanged?: AnySlice[]) {
     const allSlices = this.getAllSlicesChanged(slicesChanged);
-    for (const effect of this.effects) {
+    for (const effect of this._effects) {
       effect.run(allSlices);
     }
   }
 
-  destroy() {
-    for (const effect of this.effects) {
-      effect.destroy();
-    }
+  unregisterEffect(effect: Effect): void {
+    effect.destroy();
+    this._effects.delete(effect);
   }
 }

@@ -3,15 +3,16 @@ import type { Effect, EffectCallback, EffectOpts } from './effect';
 import { effect, EffectManager } from './effect';
 import type { EffectCreator } from './effect/effect';
 import { calcReverseDependencies } from './helpers';
-import { DebugLogger, opLog, txLog } from './logger';
+import type { DebugLogger } from './logger';
+import { opLog, txLog } from './logger';
 import type { Operation, OperationCallback, OperationOpts } from './operation';
 import { operation } from './operation';
 import type { Slice } from './slice';
 import type { StoreStateOpts } from './store-state';
 import { StoreState } from './store-state';
 import {
-  Transaction,
   META_DISPATCHER,
+  Transaction,
   TX_META_STORE_NAME,
 } from './transaction';
 import type { SliceId } from './types';
@@ -24,7 +25,7 @@ type StoreOpts<TSliceName extends string = any> = {
   storeName: string;
   debug?: DebugLogger;
 };
-type DispatchOperation = (store: Store, operation: Operation) => void;
+type DispatchOperation = (store: Store, operation: Operation<any>) => void;
 
 type DispatchTransaction = (
   store: Store,
@@ -81,8 +82,7 @@ export class Store<TSliceName extends string = any>
 
     this._effectsManager.run(this._state._getChangedSlices(oldState));
   };
-
-  readonly dispatch: Dispatch = (txn, opts) => {
+  readonly dispatch: Dispatch<any> = (txn, opts) => {
     if (this._destroyed) {
       return;
     }
@@ -103,6 +103,7 @@ export class Store<TSliceName extends string = any>
     }
   };
 
+  private _abortController = new AbortController();
   private _destroyed = false;
   private _dispatchOperation: DispatchOperation;
   private _dispatchTxn: DispatchTransaction;
@@ -127,6 +128,10 @@ export class Store<TSliceName extends string = any>
     return this._destroyed;
   }
 
+  get destroySignal() {
+    return this._abortController.signal;
+  }
+
   get name() {
     return this.opts.storeName;
   }
@@ -139,6 +144,7 @@ export class Store<TSliceName extends string = any>
     this._destroyed = true;
 
     this._effectsManager.destroy();
+    this._abortController.abort();
   }
 
   effect(
@@ -165,5 +171,9 @@ export class Store<TSliceName extends string = any>
     this._effectsManager.registerEffect(effect);
 
     return effect;
+  }
+
+  unregisterEffect(ef: Effect): void {
+    this._effectsManager.unregisterEffect(ef);
   }
 }

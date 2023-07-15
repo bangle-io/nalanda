@@ -52,3 +52,14 @@ export type ExtractReturnTypes<
 > = {
   [K in keyof T]: T[K] extends (...args: any[]) => infer R ? R : never;
 } & {};
+
+/**
+ * Returns `true` if type `A` extends type `B`, `false` if not.
+ * If A is a subtype of B return true
+ *
+ * @param A Type
+ * @param B Type
+ * @return Boolean
+ */
+export type DoesExtendBool<A, B> = [A] extends [B] ? true : false;
+export type DoesExtend<A, B> = [A] extends [B] ? A : never;

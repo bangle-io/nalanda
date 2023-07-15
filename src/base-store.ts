@@ -7,15 +7,15 @@ export type InferSliceNameFromStore<T> = T extends BaseStore<infer TSliceName>
   ? TSliceName
   : never;
 
-export type Dispatch = (
-  txn: Transaction<any> | Operation,
+export type Dispatch<T> = (
+  txn: Transaction<any> | Operation<any>,
   opts?: {
     debugInfo?: string;
   },
 ) => void;
 
 export abstract class BaseStore<TSliceName extends string> {
-  abstract readonly dispatch: Dispatch;
+  abstract readonly dispatch: Dispatch<any>;
   abstract readonly state: StoreState<TSliceName>;
 }
 
@@ -23,7 +23,7 @@ export abstract class DerivativeStore<TSliceName extends string>
   implements BaseStore<TSliceName>
 {
   private lastStateBeforeDestroy: StoreState<TSliceName> | undefined;
-  dispatch: Dispatch = (txn, opts) => {
+  dispatch: Dispatch<any> = (txn, opts) => {
     if (!this._rootStore) {
       console.error(
         `Cannot dispatch on a stale effect "${this.name}" run. This is likely a bug in your code.`,

@@ -34,7 +34,7 @@ export interface EffectLog {
   changed: string;
 }
 
-export function opLog(op: Operation): OperationLog {
+export function opLog(op: Operation<any>): OperationLog {
   return {
     type: 'OPERATION',
     operationId: op.name,

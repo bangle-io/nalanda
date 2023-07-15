@@ -1,6 +1,6 @@
 import type { BaseStore, InferSliceNameFromStore } from '../base-store';
 import { hasIdleCallback } from '../helpers';
-import { DebugLogger } from '../logger';
+import type { DebugLogger } from '../logger';
 import type { Store } from '../store';
 import type { AnySlice } from '../types';
 import type { EffectStore } from './run-instance';
@@ -55,6 +55,9 @@ export class Effect {
   }
 
   destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.runInstance = this.runInstance.newRun();
     this.destroyed = true;
   }
@@ -119,6 +122,7 @@ export class Effect {
 
   private _run(): void {
     let fieldChanged: string = '';
+
     // if runCount is 0, always= run, to ensure the effect runs at least once
     if (this.runCount > 0) {
       const depChanged = this.runInstance.whatDependenciesStateChange();
