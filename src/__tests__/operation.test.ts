@@ -5,6 +5,8 @@ import waitForExpect from 'wait-for-expect';
 import { cleanup } from '../cleanup';
 import { ref } from '../ref';
 import { DerivativeStore } from '../base-store';
+import { operation } from '../operation';
+import { InferSliceNameFromSlice } from '../types';
 
 beforeEach(() => {
   testCleanup();
@@ -91,6 +93,116 @@ it('creates and executes an operation', async () => {
   await waitForExpect(() => {
     expect(cleanupCalled).toHaveBeenCalledTimes(1);
   });
+});
+
+test('type check operation before dispatching', async () => {
+  // should work when both slices are included
+  () => {
+    const opBuilder = operation<
+      | InferSliceNameFromSlice<typeof sliceB>
+      | InferSliceNameFromSlice<typeof sliceA>
+    >();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<
+      | InferSliceNameFromSlice<typeof sliceB>
+      | InferSliceNameFromSlice<typeof sliceA>
+      | 'some-slice'
+    >;
+    myStore.dispatch(testOperation('val1'));
+  };
+
+  // both slices are different
+  () => {
+    const opBuilder = operation<'wrong-slice'>();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<'some-slice'>;
+
+    // @ts-expect-error should not work
+    myStore.dispatch(testOperation('val1'));
+  };
+
+  //  two slices that are different
+  () => {
+    const opBuilder = operation<'wrong-slice' | 'slice-a'>();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<'some-slice'>;
+    // @ts-expect-error should not work
+    myStore.dispatch(testOperation('val1'));
+  };
+
+  //  two slices that are different
+  () => {
+    const opBuilder = operation<'wrong-slice' | 'slice-a'>();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<'some-slice' | 'some-slice-b'>;
+    // @ts-expect-error should not work
+    myStore.dispatch(testOperation('val1'));
+  };
+
+  //  two slices that are different
+  () => {
+    const opBuilder = operation<'slice-b' | 'slice-a'>();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<'slice-f' | 'slice-b' | 'slice-c' | 'slice-a'>;
+    myStore.dispatch(testOperation('val1'));
+  };
+
+  () => {
+    const opBuilder = operation<
+      'slice-a' | 'slice-b' | 'slice-c' | 'slice-d'
+    >();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<'slice-a' | 'slice-b'>;
+    // @ts-expect-error should not work
+    myStore.dispatch(testOperation('val1'), { debugInfo: true });
+  };
+
+  () => {
+    const opBuilder = operation<'slice-a' | 'slice-b'>();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<'slice-a' | 'slice-b' | 'slice-c' | 'slice-d'>;
+    myStore.dispatch(testOperation('val1'));
+  };
+
+  () => {
+    const opBuilder = operation<'slice-a' | 'slice-e'>();
+
+    const testOperation = opBuilder((val: string) => {
+      return (store) => {};
+    });
+
+    let myStore = {} as Store<'slice-a' | 'slice-b' | 'slice-c' | 'slice-d'>;
+    // @ts-expect-error should not work
+    myStore.dispatch(testOperation('val1'));
+  };
 });
 
 test('calling same operation multiple times', async () => {
