@@ -1,7 +1,6 @@
-import { idGeneration } from './helpers';
+import type { UpdaterType } from './helpers';
+import { idGeneration, Updater } from './helpers';
 import type { Slice } from './slice';
-import type { UpdaterType } from './slice/base-slice';
-import { Updater } from './slice/base-slice';
 import type { StoreState } from './store-state';
 import type { Step } from './transaction';
 import { Transaction } from './transaction';

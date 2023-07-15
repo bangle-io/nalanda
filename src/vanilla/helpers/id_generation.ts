@@ -22,16 +22,14 @@ export const testOnlyResetIdGeneration = () => {
 };
 
 class IdGeneration {
-  createTransactionId(): string {
-    return `tx_${idGenerators.txCounter++}`;
-  }
-
   createActionId(sliceId: SliceId, hint = ''): ActionId {
     let prefix = `a_${hint}[${sliceId}]`;
+
     if (sliceId in idGenerators.actionIdCounters) {
       return `${prefix}${idGenerators.actionIdCounters[sliceId]++}` as ActionId;
     } else {
       idGenerators.actionIdCounters[sliceId] = 0;
+
       return prefix as ActionId;
     }
   }
@@ -42,7 +40,12 @@ class IdGeneration {
     }
 
     idGenerators.sliceIdCounters[name] = 0;
+
     return `sl_${name}$` as SliceId;
+  }
+
+  createTransactionId(): string {
+    return `tx_${idGenerators.txCounter++}`;
   }
 }
 

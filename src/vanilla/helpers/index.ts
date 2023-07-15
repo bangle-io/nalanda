@@ -1,10 +1,7 @@
-import { Slice } from '../slice';
-import type { AnySlice } from '../types';
-
 export { calcReverseDependencies } from './dependency-helpers';
 export { idGeneration } from './id_generation';
+export { isSlice } from './is-slice';
 export { shallowEqual } from './shallow-equal';
-export { testCleanup } from './test-cleanup';
 export { validateSlices } from './validations';
 
 export function uuid(len = 10) {
@@ -14,6 +11,5 @@ export function uuid(len = 10) {
 export const hasIdleCallback =
   typeof window !== 'undefined' && 'requestIdleCallback' in window;
 
-export function isSlice(obj: unknown): obj is AnySlice {
-  return obj instanceof Slice;
-}
+export { Updater } from './updater';
+export type { UpdaterType } from './updater';

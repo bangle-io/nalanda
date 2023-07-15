@@ -1,5 +1,5 @@
 import { slice, sliceKey } from '../../slice';
-import { testCleanup } from '../../helpers';
+import { testCleanup } from '../../helpers/test-cleanup';
 import { Store } from '../../store';
 import waitForExpect from 'wait-for-expect';
 import { effect } from '../effect';

@@ -1,9 +1,9 @@
 import { useDebugValue, useState } from 'react';
 import useSyncExternalStoreExports from 'use-sync-external-store/shim';
 
-import type { Slice } from './slice';
-import type { Store } from './store';
-import type { AnySlice } from './types';
+import type { Slice } from '../vanilla/slice';
+import type { Store } from '../vanilla/store';
+import type { AnySlice } from '../vanilla/types';
 
 const { useSyncExternalStore } = useSyncExternalStoreExports;
 

@@ -1,4 +1,4 @@
-import { AnySlice } from 'src/types';
+import { AnySlice } from '../types';
 import {
   validateSlices,
   checkUniqueSliceId,

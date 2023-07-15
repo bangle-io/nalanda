@@ -1,10 +1,10 @@
-import { testCleanup } from '../helpers';
 import { slice } from '../slice';
 import { Store } from '../store';
 import { ref } from '../ref';
 import { effect } from '../effect';
 import { DerivativeStore } from '../base-store';
 import waitForExpect from 'wait-for-expect';
+import { testCleanup } from '../helpers/test-cleanup';
 
 const sliceA = slice([], {
   name: 'sliceA',

@@ -2,7 +2,7 @@ import { GetStoreState, expectType, IfEquals } from '../types';
 import { Slice, slice } from '../slice';
 import { testCleanup } from '../helpers/test-cleanup';
 import { InferDepNameFromSlice } from '../types';
-import { UpdaterType } from 'src/slice/base-slice';
+import { UpdaterType } from '../helpers';
 
 beforeEach(() => {
   testCleanup();

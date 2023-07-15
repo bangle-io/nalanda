@@ -1,7 +1,7 @@
 import { Transaction } from '../transaction';
-import { testCleanup } from '../helpers';
 import { sliceKey, slice } from '../slice';
 import { StoreState } from '../store-state';
+import { testCleanup } from '../helpers/test-cleanup';
 
 const sliceOne = slice([], {
   name: 'sliceOne',

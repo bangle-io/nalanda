@@ -1,11 +1,11 @@
 import type { UserActionCallback } from '../action';
 import { Action, ActionBuilder } from '../action';
+import { UpdaterType } from '../helpers';
 import type { StoreState } from '../store-state';
 import type { Transaction } from '../transaction';
 import type { AnySlice, InferSliceNameFromSlice } from '../types';
 import type {
   CreateSliceOpts,
-  UpdaterType,
   UserSliceOpts,
   ValidEffectStore,
 } from './base-slice';

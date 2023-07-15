@@ -2,7 +2,7 @@ import { Store } from '../../store';
 import { Slice, slice } from '../../slice';
 import { AnySlice } from '../../types';
 import { RunInstance } from '../run-instance';
-import { testCleanup } from '../../helpers';
+import { testCleanup } from '../../helpers/test-cleanup';
 
 let sliceA: Slice<
   'slice1',

@@ -10,6 +10,7 @@ export function validateSlices(slices: AnySlice[]) {
 function checkUniqDependency(slices: AnySlice[]) {
   for (const slice of slices) {
     const dependencies = slice.dependencies;
+
     if (
       new Set(dependencies.map((d) => d.sliceId)).size !== dependencies.length
     ) {
@@ -24,6 +25,7 @@ function checkUniqDependency(slices: AnySlice[]) {
 
 export function checkUniqueSliceId(slices: AnySlice[]) {
   const dups = checkUnique(slices.map((s) => s.sliceId));
+
   if (dups) {
     throw new Error('Duplicate slice ids ' + dups.join(', '));
   }
@@ -60,8 +62,14 @@ export function circularCheck(slices: AnySlice[]) {
 
   const checkCycle = (slice: AnySlice): boolean => {
     const sliceId = slice.sliceId;
-    if (stack.has(sliceId)) return true;
-    if (visited.has(sliceId)) return false;
+
+    if (stack.has(sliceId)) {
+      return true;
+    }
+
+    if (visited.has(sliceId)) {
+      return false;
+    }
 
     visited.add(sliceId);
     stack.add(sliceId);
@@ -72,11 +80,13 @@ export function circularCheck(slices: AnySlice[]) {
       }
     }
     stack.delete(sliceId);
+
     return false;
   };
 
   for (const slice of slices) {
     const cycle = checkCycle(slice);
+
     if (cycle) {
       const path = [...stack];
       path.push(slice.sliceId);
@@ -94,6 +104,7 @@ function checkDependencyOrder(slices: AnySlice[]) {
   let seenSliceIds = new Set<string>();
   for (const slice of slices) {
     const dependencies = slice.dependencies;
+
     if (dependencies !== undefined) {
       const depKeys = dependencies.map((d) => d.sliceId);
       for (const depKey of depKeys) {

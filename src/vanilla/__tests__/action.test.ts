@@ -4,7 +4,7 @@ import { Transaction } from '../transaction';
 import { Action, ActionBuilder } from '../action';
 import { idGeneration } from '../helpers';
 import { StoreState } from '../store-state';
-import { testCleanup } from '../helpers';
+import { testCleanup } from '../helpers/test-cleanup';
 
 afterEach(() => {
   testCleanup();

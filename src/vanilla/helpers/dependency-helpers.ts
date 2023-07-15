@@ -1,4 +1,4 @@
-import { AnySlice, SliceId } from '../types';
+import type { AnySlice, SliceId } from '../types';
 
 export function allDependencies(slices: AnySlice[]): Set<AnySlice> {
   const result = new Set<AnySlice>();
@@ -46,6 +46,7 @@ export function calcReverseDependencies(
   }
   const result = flattenReverseDependencies(reverseDependencies);
   calcReverseDependenciesCache.set(slices, result);
+
   return result;
 }
 

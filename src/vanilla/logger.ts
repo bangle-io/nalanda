@@ -1,10 +1,7 @@
-import { Operation } from './operation';
-import {
-  META_DISPATCHER,
-  TX_META_STORE_NAME,
-  Transaction,
-} from './transaction';
-import { SliceId } from './types';
+import type { Operation } from './operation';
+import type { Transaction } from './transaction';
+import { META_DISPATCHER, TX_META_STORE_NAME } from './transaction';
+import type { SliceId } from './types';
 
 type LogTypes = TransactionLog | OperationLog | EffectLog;
 
@@ -14,7 +11,7 @@ export interface TransactionLog {
   type: 'TRANSACTION';
   actionId: string | string[];
   dispatcher?: string | undefined;
-  params: unknown[] | Array<unknown[]>;
+  params: unknown[] | unknown[][];
   sourceSlices: SliceId | SliceId[];
   store?: string | undefined;
   targetSlices: SliceId | SliceId[];

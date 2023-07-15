@@ -99,30 +99,10 @@
       "require": "./dist/index.js"
     },
     "./package.json": "./package.json",
-    "./effects": {
-      "types": "./dist/effects/index.d.ts",
-      "import": "./dist/effects/index.mjs",
-      "require": "./dist/effects/index.js"
-    },
-    "./merge": {
-      "types": "./dist/merge/index.d.ts",
-      "import": "./dist/merge/index.mjs",
-      "require": "./dist/merge/index.js"
-    },
     "./react": {
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.mjs",
       "require": "./dist/react/index.js"
-    },
-    "./sync": {
-      "types": "./dist/sync/index.d.ts",
-      "import": "./dist/sync/index.mjs",
-      "require": "./dist/sync/index.js"
-    },
-    "./test-helpers": {
-      "types": "./dist/test-helpers/index.d.ts",
-      "import": "./dist/test-helpers/index.mjs",
-      "require": "./dist/test-helpers/index.js"
     },
     "./vanilla": {
       "types": "./dist/vanilla/index.d.ts",

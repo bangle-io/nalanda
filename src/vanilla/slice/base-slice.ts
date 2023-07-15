@@ -1,5 +1,6 @@
 import type { EffectStore } from '../effect';
-import { idGeneration } from '../helpers';
+import type { UpdaterType } from '../helpers';
+import { idGeneration, Updater } from '../helpers';
 import type { StoreState } from '../store-state';
 import type { SliceId } from '../types';
 import type { Slice } from './slice';
@@ -97,10 +98,3 @@ export abstract class BaseSlice<
     };
   }
 }
-
-export const Updater = Symbol('Updater');
-
-export type UpdaterType<TSliceName> = {
-  name: TSliceName;
-  [Updater]: unknown;
-};
