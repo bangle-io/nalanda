@@ -50,7 +50,10 @@ export class RunInstance {
   private _cleanups: Set<CleanupCallback> = new Set();
   private readonly _dependencies: Dependencies = new Map();
 
-  constructor(public readonly rootStore: Store, public readonly name: string) {
+  constructor(
+    public readonly rootStore: Store,
+    public readonly name: string,
+  ) {
     this.effectStore = new EffectStore(this, rootStore, this.name);
   }
 
