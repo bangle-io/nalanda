@@ -1,7 +1,7 @@
-import { AnySlice } from '../types';
 import { DerivativeStore } from '../base-store';
-import { Store } from '../store';
-import { CleanupCallback } from '../cleanup';
+import type { CleanupCallback } from '../cleanup';
+import type { Store } from '../store';
+import type { AnySlice } from '../types';
 
 type Dependencies = Map<AnySlice, Array<{ field: string; value: unknown }>>;
 type ConvertToReadonlyMap<T> = T extends Map<infer K, infer V>
@@ -16,10 +16,17 @@ export class EffectStore<
      * @internal
      */
     public _runInstance: RunInstance | undefined,
-    _rootStore: Store<any>,
+    _rootStore: Store,
     name: string,
   ) {
     super(_rootStore, name);
+  }
+
+  /**
+   * @internal
+   */
+  _addTrackedField(slice: AnySlice, field: string, val: unknown): void {
+    this._runInstance?.addTrackedField(slice, field, val);
   }
 
   /**
@@ -33,33 +40,52 @@ export class EffectStore<
     this._runInstance = undefined;
     super._destroy();
   }
-
-  /**
-   * @internal
-   */
-  _addTrackedField(slice: AnySlice, field: string, val: unknown): void {
-    this._runInstance?.addTrackedField(slice, field, val);
-  }
 }
 
 /**
  * @internal
  */
 export class RunInstance {
-  public effectStore: EffectStore<any>;
+  effectStore: EffectStore<any>;
+  private _cleanups: Set<CleanupCallback> = new Set();
   private readonly _dependencies: Dependencies = new Map();
+
+  constructor(public readonly rootStore: Store, public readonly name: string) {
+    this.effectStore = new EffectStore(this, rootStore, this.name);
+  }
 
   get dependencies(): ConvertToReadonlyMap<Dependencies> {
     return this._dependencies;
   }
 
-  private _cleanups: Set<CleanupCallback> = new Set();
+  addCleanup(cleanup: CleanupCallback): void {
+    this._cleanups.add(cleanup);
+  }
 
-  constructor(
-    public readonly rootStore: Store<any>,
-    public readonly name: string,
-  ) {
-    this.effectStore = new EffectStore(this, rootStore, this.name);
+  addTrackedField(slice: AnySlice, field: string, val: unknown): void {
+    const existing = this._dependencies.get(slice);
+
+    if (existing === undefined) {
+      this._dependencies.set(slice, [{ field, value: val }]);
+
+      return;
+    }
+
+    existing.push({ field, value: val });
+
+    return;
+  }
+
+  newRun(): RunInstance {
+    if (!this.effectStore.destroyed) {
+      this._cleanups.forEach((cleanup) => {
+        void cleanup();
+      });
+    }
+
+    this.effectStore._destroy();
+
+    return new RunInstance(this.rootStore, this.name);
   }
 
   whatDependenciesStateChange(): false | string {
@@ -77,33 +103,5 @@ export class RunInstance {
     }
 
     return false;
-  }
-
-  addCleanup(cleanup: CleanupCallback): void {
-    this._cleanups.add(cleanup);
-  }
-
-  addTrackedField(slice: AnySlice, field: string, val: unknown): void {
-    const existing = this._dependencies.get(slice);
-
-    if (existing === undefined) {
-      this._dependencies.set(slice, [{ field, value: val }]);
-      return;
-    }
-
-    existing.push({ field, value: val });
-
-    return;
-  }
-
-  newRun(): RunInstance {
-    if (!this.effectStore.destroyed) {
-      this._cleanups.forEach((cleanup) => {
-        void cleanup();
-      });
-    }
-
-    this.effectStore._destroy();
-    return new RunInstance(this.rootStore, this.name);
   }
 }

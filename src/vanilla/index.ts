@@ -1,26 +1,19 @@
-export type { ValidStoreState } from './slice';
 export type { Dispatch } from './base-store';
 export { cleanup } from './cleanup';
-export type { EffectStore } from './effect';
-export type { Effect } from './effect';
 export type { EffectCreator } from './effect';
-export { effect } from './effect';
-export { isSlice } from './helpers';
-export { shallowEqual } from './helpers';
+export { Effect, effect, EffectStore } from './effect';
+export { isSlice, shallowEqual } from './helpers';
 export type { Operation } from './operation';
-export type { OperationStore } from './operation';
-export { operation } from './operation';
+export { operation, OperationStore } from './operation';
 export { ref } from './ref';
-export type { Slice, BaseSlice } from './slice';
-export type { SliceKey } from './slice';
-export { slice } from './slice';
-export { sliceKey } from './slice';
-export type { Store } from './store';
+export type { ValidStoreState } from './slice';
+export { BaseSlice, Slice, slice, SliceKey, sliceKey } from './slice';
 export {
   DEFAULT_DISPATCH_OPERATION,
   DEFAULT_DISPATCH_TRANSACTION,
+  Store,
+  store,
 } from './store';
-export { store } from './store';
-export type { StoreState } from './store-state';
-export type { Transaction } from './transaction';
+export { StoreState } from './store-state';
+export { Transaction } from './transaction';
 export type { AnySlice, InferSliceNameFromSlice, SliceId } from './types';
