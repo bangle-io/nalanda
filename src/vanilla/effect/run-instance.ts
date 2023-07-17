@@ -50,6 +50,18 @@ export class RunInstance {
   private _cleanups: Set<CleanupCallback> = new Set();
   private readonly _dependencies: Dependencies = new Map();
 
+  /**
+   * @internal
+   * To keep track of how many times addTrackedField is called. If it's 0, then
+   * the user most likely forgot to destructure/access the tracked field.
+   *
+   * For example
+   * const foo = store.track() // this is incorrect and will not track anything
+   *
+   * const { foo } = store.track() // this is correct
+   */
+  _addTrackedCount = 0;
+
   constructor(
     public readonly rootStore: Store,
     public readonly name: string,
@@ -66,6 +78,8 @@ export class RunInstance {
   }
 
   addTrackedField(slice: AnySlice, field: string, val: unknown): void {
+    this._addTrackedCount++;
+
     const existing = this._dependencies.get(slice);
 
     if (existing === undefined) {

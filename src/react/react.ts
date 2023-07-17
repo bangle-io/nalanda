@@ -1,4 +1,4 @@
-import { useDebugValue, useState } from 'react';
+import { useDebugValue, useRef, useState } from 'react';
 import useSyncExternalStoreExports from 'use-sync-external-store/shim';
 
 import type { Slice } from '../vanilla/slice';
@@ -14,27 +14,27 @@ interface ReactAdapter<TSnapshot> {
   getSnapshot: () => TSnapshot;
 }
 
-export function createUseSliceHook<TAllSliceName extends string = any>(
+export function createUseTrackSliceHook<TAllSliceName extends string = any>(
   store: Store<TAllSliceName>,
 ) {
-  function useSlice<TSlice extends AnySlice, TSelectedData>(
-    sl: TSlice,
-    cb: (data: InferData<TSlice>) => TSelectedData,
-  ): [TSelectedData, Store<TAllSliceName>['dispatch']] {
+  function useSlice<TSlice extends AnySlice>(sl: TSlice): InferData<TSlice> {
+    const ref = useRef<InferData<TSlice>>();
+
     const [adapter] = useState(() => {
-      const adapter: ReactAdapter<TSelectedData> = {
+      const adapter: ReactAdapter<InferData<TSlice>> = {
         subscribe: (onStoreChange) => {
           const sliceEffect = store.effect((effectStore) => {
             const selectedData = sl.track(effectStore);
-            let response = cb(selectedData);
+            ref.current = selectedData;
 
-            // if the user returned the same object, we need to trigger tracking
-            // for all fields. Tracking is done implicitly by reading a field
-            if (response === selectedData) {
-              Object.entries(selectedData).forEach(([key, value]) => {
-                // iterate over all values to trigger tracking
-              });
-            }
+            queueMicrotask(() => {
+              if (effectStore._runInstance?._addTrackedCount === 0) {
+                console.warn(
+                  `You forgot to destructure/access the tracked field from ${sl.name}. This will not track any changes!.`,
+                );
+              }
+            });
+
             onStoreChange();
           });
 
@@ -43,9 +43,7 @@ export function createUseSliceHook<TAllSliceName extends string = any>(
           };
         },
         getSnapshot: () => {
-          const val = sl.get(store.state);
-
-          return cb(val);
+          return ref.current ?? sl.get(store.state);
         },
       };
 
@@ -56,7 +54,7 @@ export function createUseSliceHook<TAllSliceName extends string = any>(
 
     useDebugValue(data);
 
-    return [data, store.dispatch];
+    return data;
   }
 
   return useSlice;
