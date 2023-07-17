@@ -5,7 +5,7 @@ import { testCleanup } from '../helpers/test-cleanup';
 import { Transaction } from '../transaction';
 import { shallowEqual } from '../helpers';
 import {
-  calcDerivedState,
+  calcSliceDerivedState,
   equalityGetValue,
   getValue,
 } from '../slice/slice-key';
@@ -459,7 +459,7 @@ describe('calcDerivedState', () => {
 
   it('should generate new derived state and set it in the cache if there is no previous derived state', () => {
     const { storeState, derivedEntries, prevDerivedValueCache } = setup();
-    const derivedState = calcDerivedState(
+    const derivedState = calcSliceDerivedState(
       storeState,
       derivedEntries,
       prevDerivedValueCache,
@@ -482,7 +482,7 @@ describe('calcDerivedState', () => {
     };
     prevDerivedValueCache.set(storeState._storeStateKey, initialDerivedState);
 
-    const derivedState = calcDerivedState(
+    const derivedState = calcSliceDerivedState(
       storeState,
       derivedEntries,
       prevDerivedValueCache,
@@ -499,7 +499,7 @@ describe('calcDerivedState', () => {
     };
     prevDerivedValueCache.set(storeState._storeStateKey, initialDerivedState);
 
-    const derivedState = calcDerivedState(
+    const derivedState = calcSliceDerivedState(
       storeState,
       derivedEntries,
       prevDerivedValueCache,

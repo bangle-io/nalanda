@@ -184,6 +184,7 @@ export class StoreState<TSliceName extends string> {
 
   /**
    * @internal
+   * A unique key that is shared among all store states of a particular store.
    */
   get _storeStateKey() {
     return this.config.storeStateKey;

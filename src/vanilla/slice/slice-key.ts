@@ -99,7 +99,7 @@ export class SliceKey<
       ...this.opts,
       sliceId: this.sliceId,
       calcDerivedState: (storeState) => {
-        return calcDerivedState(
+        return calcSliceDerivedState(
           storeState,
           derivedEntries,
           prevDerivedValueCache,
@@ -183,7 +183,12 @@ export function equalityGetValue<
   return newDerivedValue;
 }
 
-export function calcDerivedState(
+/**
+ * Goes through the new derived state and old derived state and returns the new derived state if it has changed.
+ * Uses shallow object equality to determine if the derived state has changed.
+ * TODO: we can optimize this, by skipping the calls of selector if the state or the dependencies have not changed.
+ */
+export function calcSliceDerivedState(
   storeState: StoreState<any>,
   derivedEntries: Array<[string, Selector<any, any>]>,
   prevDerivedValueCache: WeakMap<StoreStateKey, Record<string, unknown>>,
