@@ -14,6 +14,7 @@ export type UserActionCallback<
 export type ActionOpts<TSliceName extends string, TParams extends any[]> = {
   slice: Slice<TSliceName, any, any>;
   userCallback: UserActionCallback<TParams, ActionBuilder<any, any>>;
+  debugName?: string | undefined;
 };
 
 // we save actions in a global registry, so we can call them again
@@ -23,7 +24,7 @@ export const actionRegistry = new Map<ActionId, Action<any, any>>();
 export class Action<TSliceName extends string, TParams extends any[]> {
   actionId: ActionId;
   constructor(public readonly opts: ActionOpts<TSliceName, TParams>) {
-    const hint = opts.userCallback.name;
+    const hint = opts.debugName || opts.userCallback.name;
     this.actionId = idGeneration.createActionId(opts.slice.sliceId, hint);
 
     if (actionRegistry.has(this.actionId)) {
