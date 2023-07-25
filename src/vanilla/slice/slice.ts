@@ -39,12 +39,42 @@ export class Slice<
     super(opts);
   }
 
+  simpleAction<TKey extends keyof TState>(
+    key: TKey,
+    updater?: (
+      val: TState[TKey],
+      state: StoreState<TSliceName | TDep>,
+    ) => Partial<TState>,
+  ) {
+    return this.action(
+      (val: TState[TKey]) => {
+        return this.tx((state) => {
+          return this.update(state, (existing) => {
+            if (!updater) {
+              return {
+                ...existing,
+                [key]: val,
+              };
+            }
+
+            return updater(val, state);
+          });
+        });
+      },
+      {
+        name: `simpleAction(${key.toString()})`,
+      },
+    );
+  }
+
   action<TParams extends any[]>(
     cb: UserActionCallback<TParams, ActionBuilder<any, any>>,
+    opts?: { name?: string },
   ): (...params: TParams) => Transaction<TSliceName> {
     const action = new Action<TSliceName, TParams>({
       slice: this,
       userCallback: cb,
+      debugName: opts?.name,
     });
 
     return action.getTransactionBuilder();

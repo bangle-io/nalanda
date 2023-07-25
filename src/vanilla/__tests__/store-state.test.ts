@@ -2,6 +2,7 @@ import { Transaction } from '../transaction';
 import { sliceKey, slice } from '../slice';
 import { StoreState } from '../store-state';
 import { testCleanup } from '../helpers/test-cleanup';
+import { expectType } from '../types';
 
 const sliceOne = slice([], {
   name: 'sliceOne',
@@ -425,5 +426,53 @@ describe('_getChangedSlices', () => {
 
     expect(storeState._getChangedSlices(initialStoreState)).toHaveLength(2);
     expect(initialStoreState._getChangedSlices(storeState)).toHaveLength(2);
+  });
+});
+
+describe('simple action', () => {
+  test('works', () => {
+    const sliceTwo = slice([], {
+      name: 'sliceTwo',
+      state: { keyTwo: 'valueTwo' },
+    });
+
+    const sliceOne = slice([sliceTwo], {
+      name: 'sliceOne',
+      state: {
+        keyOne: 'valueOne',
+        keyTwo: false,
+      },
+    });
+
+    const action1 = sliceOne.simpleAction('keyOne', (payload, state) => {
+      expectType<string, typeof payload>(payload);
+
+      expectType<StoreState<'sliceOne' | 'sliceTwo'>, typeof state>(state);
+
+      return {
+        keyOne: payload + 'abc',
+      };
+    });
+
+    const action2: (val: boolean) => Transaction<'sliceOne'> =
+      sliceOne.simpleAction('keyTwo');
+
+    let store = StoreState.create({
+      slices: [sliceTwo, sliceOne],
+    });
+
+    store = store.applyTransaction(action1('xyz'));
+
+    expect(store.resolve(sliceOne.sliceId)).toEqual({
+      keyOne: 'xyzabc',
+      keyTwo: false,
+    });
+
+    store = store.applyTransaction(action2(true));
+
+    expect(store.resolve(sliceOne.sliceId)).toEqual({
+      keyOne: 'xyzabc',
+      keyTwo: true,
+    });
   });
 });

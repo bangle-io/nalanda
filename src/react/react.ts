@@ -27,6 +27,8 @@ export function createUseTrackSliceHook<TAllSliceName extends string = any>(
             const selectedData = sl.track(effectStore);
             ref.current = selectedData;
 
+            onStoreChange();
+
             queueMicrotask(() => {
               if (effectStore._runInstance?._addTrackedCount === 0) {
                 console.warn(
@@ -34,8 +36,6 @@ export function createUseTrackSliceHook<TAllSliceName extends string = any>(
                 );
               }
             });
-
-            onStoreChange();
           });
 
           return () => {
