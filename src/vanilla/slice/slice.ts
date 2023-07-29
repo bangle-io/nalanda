@@ -51,13 +51,23 @@ export class Slice<
         return this.tx((state) => {
           return this.update(state, (existing) => {
             if (!updater) {
+              if (val === existing[key]) {
+                return existing;
+              }
+
               return {
                 ...existing,
                 [key]: val,
               };
             }
 
-            return updater(val, state);
+            const newVal = updater(val, state);
+
+            if (newVal === existing[key]) {
+              return existing;
+            }
+
+            return newVal;
           });
         });
       },

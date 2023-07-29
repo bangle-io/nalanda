@@ -143,7 +143,6 @@ export class Store<TSliceName extends string = any>
 
   destroy() {
     this._destroyed = true;
-
     this._effectsManager.destroy();
     this._abortController.abort();
   }

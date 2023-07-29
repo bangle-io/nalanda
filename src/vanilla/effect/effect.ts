@@ -121,6 +121,10 @@ export class Effect {
   }
 
   private _run(): void {
+    if (this.destroyed) {
+      return;
+    }
+
     let fieldChanged: string = '';
 
     // if runCount is 0, always= run, to ensure the effect runs at least once
