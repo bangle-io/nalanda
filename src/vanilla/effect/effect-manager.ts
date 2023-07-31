@@ -10,7 +10,9 @@ export class EffectManager {
 
   constructor(
     private readonly _slices: AnySlice[],
-    private readonly _debug?: DebugLogger,
+    private readonly _opts: {
+      debug?: DebugLogger | undefined;
+    },
   ) {
     this.slicesLookup = Object.fromEntries(
       _slices.map((slice) => [slice.sliceId, slice]),

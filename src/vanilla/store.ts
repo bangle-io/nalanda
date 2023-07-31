@@ -1,7 +1,7 @@
 import type { BaseStore, Dispatch } from './base-store';
 import type { Effect, EffectCallback, EffectOpts } from './effect';
 import { effect, EffectManager } from './effect';
-import type { EffectCreator } from './effect/effect';
+import type { EffectCreator, EffectScheduler } from './effect/effect';
 import { calcReverseDependencies } from './helpers';
 import type { DebugLogger } from './logger';
 import { opLog, txLog } from './logger';
@@ -24,6 +24,16 @@ type StoreOpts<TSliceName extends string = any> = {
   dispatchOperation?: DispatchOperation;
   storeName: string;
   debug?: DebugLogger;
+
+  /**
+   * If true, effects will not be triggered automatically. Instead, you must manually trigger
+   * them by calling `store.runEffects()`. Useful for testing.
+   */
+  manualEffectsTrigger?: boolean;
+  /**
+   * Overrides all effects schedulers for all effects in the store.
+   */
+  overrideEffectScheduler?: EffectScheduler;
 };
 type DispatchOperation = (store: Store, operation: Operation<any>) => void;
 
@@ -80,7 +90,9 @@ export class Store<TSliceName extends string = any>
     const oldState = this._state;
     this._state = state;
 
-    this._effectsManager.run(this._state._getChangedSlices(oldState));
+    if (!this.opts.manualEffectsTrigger) {
+      this._effectsManager.run(this._state._getChangedSlices(oldState));
+    }
   };
 
   readonly dispatch: Dispatch<any> = (txn, opts) => {
@@ -122,7 +134,9 @@ export class Store<TSliceName extends string = any>
     this._dispatchOperation =
       opts.dispatchOperation || DEFAULT_DISPATCH_OPERATION;
 
-    this._effectsManager = new EffectManager(this.opts.slices, this.opts.debug);
+    this._effectsManager = new EffectManager(this.opts.slices, {
+      debug: this.opts.debug,
+    });
   }
 
   get destroyed() {
@@ -149,7 +163,7 @@ export class Store<TSliceName extends string = any>
 
   effect(
     callback: EffectCallback<Store<TSliceName>>,
-    opts: EffectOpts = {},
+    opts: Partial<EffectOpts> = {},
   ): Effect {
     const ef = effect(callback, opts)(this);
     this._effectsManager.registerEffect(ef);
@@ -175,5 +189,12 @@ export class Store<TSliceName extends string = any>
 
   unregisterEffect(ef: Effect): void {
     this._effectsManager.unregisterEffect(ef);
+  }
+
+  /**
+   * Runs all effects in the store. Used along with `manualEffectsTrigger` option.
+   */
+  runEffects() {
+    this._effectsManager.run();
   }
 }

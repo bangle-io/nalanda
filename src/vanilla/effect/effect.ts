@@ -18,11 +18,29 @@ export type EffectOpts = {
    * Effects are deferred by default. If set to false, the effect will run immediately after
    * a store state change. If set to true, the effect will run anytime before maxWait.
    */
-  deferred?: boolean;
+  deferred: boolean;
   /**
    *
    */
-  maxWait?: number;
+  maxWait: number;
+  scheduler: EffectScheduler;
+};
+
+export type EffectScheduler = (
+  cb: () => void,
+  opts: Omit<EffectOpts, 'scheduler'> & {},
+) => void;
+
+const DEFAULT_SCHEDULER: EffectScheduler = (cb, opts) => {
+  if (opts.deferred) {
+    if (hasIdleCallback) {
+      window.requestIdleCallback(cb, { timeout: opts.maxWait });
+    } else {
+      setTimeout(cb, opts.maxWait);
+    }
+  } else {
+    queueMicrotask(cb);
+  }
 };
 
 export type EffectCreator = (store: Store) => Effect;
@@ -42,16 +60,19 @@ export class Effect {
 
   private runCount = 0;
 
+  private scheduler: EffectScheduler;
+
   name: string;
 
   constructor(
     private readonly callback: EffectCallback<EffectStore<any>>,
     private readonly rootStore: Store,
-    public readonly opts: Required<EffectOpts>,
+    public readonly opts: EffectOpts,
   ) {
     this.name = callback.name || 'anonymous';
     this.runInstance = new RunInstance(rootStore, this.name);
     this.debug = rootStore.opts.debug;
+    this.scheduler = rootStore.opts.overrideEffectScheduler || opts.scheduler;
   }
 
   destroy(): void {
@@ -81,21 +102,9 @@ export class Effect {
     this.scheduler(() => {
       this._run();
       this.pendingRun = false;
-    });
+    }, this.opts);
 
     return true;
-  }
-
-  private scheduler(cb: () => void): void {
-    if (this.opts.deferred) {
-      if (hasIdleCallback) {
-        window.requestIdleCallback(cb, { timeout: this.opts.maxWait });
-      } else {
-        setTimeout(cb, this.opts.maxWait);
-      }
-    } else {
-      queueMicrotask(cb);
-    }
   }
 
   private shouldQueueRun(slicesChanged?: Set<AnySlice>): boolean {
@@ -153,12 +162,17 @@ export class Effect {
 
 export function effect<TStore extends BaseStore<any>>(
   callback: EffectCallback<TStore>,
-  { deferred = true, maxWait = DEFAULT_MAX_WAIT }: EffectOpts = {},
+  {
+    deferred = true,
+    maxWait = DEFAULT_MAX_WAIT,
+    scheduler = DEFAULT_SCHEDULER,
+  }: Partial<EffectOpts> = {},
 ): EffectCreator {
   return (store: Store) => {
     const newEffect = new Effect(callback, store, {
       deferred,
       maxWait,
+      scheduler,
     });
 
     return newEffect;
