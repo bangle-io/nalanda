@@ -1,6 +1,6 @@
 # Welcome to Nalanda's Contribution Guide! 🎉
 
-We are thrilled that you're considering contributing to Nalanda! 🙌 Whether you're a first-time contributor or a seasoned open-source ninja, we appreciate every bit of effort you put in. To ensure a smooth and enjoyable contribution process, we've laid out some guidelines for you.
+We are thrilled that you're considering contributing to Nalanda! 🙌 Whether you're a first-time contributor or a seasoned open-source ninja, we appreciate every bit of effort you put in.
 
 ## 📜 Our Code of Conduct
 
@@ -10,13 +10,14 @@ Before you dive in, please take a moment to go through our [Code of Conduct](./C
 
 Having trouble? We'd love to help you out!
 
-> 🤝 Join our [Discord](https://discord.com/channels/832842880908263445/1143342344456917185) for a quick chat.
+- 🤝 Join our [Discord](https://discord.com/channels/832842880908263445/1143342344456917185) for a quick chat.
 
-> For broader topics, head over to [Github discussions](https://github.com/bangle-io/nalanda/discussions).
+- 📚 For broader topics, head over to [Github discussions](https://github.com/bangle-io/nalanda/discussions).
 
 ### 🛠 Setting Up Your Local Environment
 
 1. **Get the Code**: New to Github? Here's a [guide](https://docs.github.com/en/get-started/quickstart/fork-a-repo) to help you fork the repository.
+
 1. **Go Local**: Clone your fork and jump into the directory:
 
 ```sh
@@ -29,7 +30,7 @@ cd nalanda
 pnpm install
 ```
 
-4. **Build**:
+1. **Build**:
 
 ```sh
 pnpm run build
@@ -88,8 +89,6 @@ git push origin dev:alpha
 - **Report Issues**: [Open an issue](https://github.com/<repository-owner>/nalanda/issues/new) for bugs or feature requests.
 - **Join Discussions**: For broader topics, head over to [Github discussions](https://github.com/bangle-io/nalanda/discussions).
 - **Chat With Us**: Prefer real-time conversations? Here's our [Discord link](https://discord.com/channels/832842880908263445/1143342344456917185).
-
-Your insights, feedback, and contributions power Nalanda. Let's build something incredible together!
 
 ---
 
