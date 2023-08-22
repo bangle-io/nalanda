@@ -1,63 +1,96 @@
-# CONTRIBUTING to Nalanda
+# Welcome to Nalanda's Contribution Guide! 🎉
 
-Thank you ❤️ for considering contributing to Nalanda. Below are some guidelines to help you along the way.
+We are thrilled that you're considering contributing to Nalanda! 🙌 Whether you're a first-time contributor or a seasoned open-source ninja, we appreciate every bit of effort you put in. To ensure a smooth and enjoyable contribution process, we've laid out some guidelines for you.
 
-## Code of Conduct
+## 📜 Our Code of Conduct
 
-We have adopted a code of conduct that we expect project participants to adhere to. Please read the [Code of Conduct](./CODE_OF_CONDUCT.md) before contributing.
+Before you dive in, please take a moment to go through our [Code of Conduct](./CODE_OF_CONDUCT.md). It's essential to keep our community inclusive, supportive, and respectful.
 
-## Getting Started
+## 🚀 Getting Started
 
-> 💡 If you are stuck, we are more than happy to help over discord. Please join [here](https://discord.com/channels/832842880908263445/1143342344456917185).
+Having trouble? We'd love to help you out!
 
-### Setting up local environment
+> 🤝 Join our [Discord](https://discord.com/channels/832842880908263445/1143342344456917185) for a quick chat.
 
-1. **Fork/clone**: If you are new to Github, read [this](https://docs.github.com/en/get-started/quickstart/fork-a-repo) to learn how to fork a repository.
+> For broader topics, head over to [Github discussions](https://github.com/bangle-io/nalanda/discussions).
 
-1. **Clone** your fork locally ad navigate to the directory.
+### 🛠 Setting Up Your Local Environment
+
+1. **Get the Code**: New to Github? Here's a [guide](https://docs.github.com/en/get-started/quickstart/fork-a-repo) to help you fork the repository.
+1. **Go Local**: Clone your fork and jump into the directory:
 
 ```sh
 cd nalanda
 ```
 
-1. **Install** the dependencies using pnpm. Read instructions [here](https://pnpm.io/installation#using-corepack) to enable pnpm in your local machine.
+1. **Dependencies**: Make sure you've got `pnpm` set up. If not, check the instructions [here](https://pnpm.io/installation#using-corepack).
 
 ```sh
 pnpm install
 ```
 
-1. After making changes, you can **build** the library using:
+4. **Build**:
 
 ```sh
 pnpm run build
 ```
 
-## Documentation
+## 🔍 Testing Your Changes
 
-Documentation lives in the `documentation` directory.
+Before submitting a PR, make sure to test your changes locally. Here's how:
 
-## Testing
+- Ensure your changes don't break anything. Run the tests with:
 
-Before submitting any changes, ensure that:
+  ```sh
+  pnpm run test
+  ```
 
-All existing tests pass.
+- Check for lint errors with:
+
+  ```sh
+  pnpm run lint
+  ```
+
+- Add tests for new features or changes. We love tests! ❤️
+
+## 📚 Documentation
+
+For everything about Nalanda's documentation, head over to the `documentation` directory.
+
+## 📝 Submitting Changes
+
+### Commit conventions
+
+We use the [Angular Commit Message Conventions](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit). Make sure to prefix your PR title (e.g., `fix`, `feat`, `docs`). It helps us (and you) in understanding the gist of changes at a glance and generating changelogs.
+
+## 🚢 Releasing to the World
+
+> Note: this is only for maintainers.
+
+We use [Semantic release](https://semantic-release.gitbook.io). Releasing a new version is just two steps away:
+
+1. Push dev to the main branch:
 
 ```sh
-pnpm run test
+git push origin dev:main
 ```
 
-There are no lint errors.
+1. GitHub Actions will take over from here and publish the new version to npm.
+
+1. For an alpha release:
 
 ```sh
-pnpm run lint
+git push origin dev:alpha
 ```
 
-New features or changes include corresponding tests.
+## ❓ Questions or Need Help?
 
-## Questions?
+- **Report Issues**: [Open an issue](https://github.com/<repository-owner>/nalanda/issues/new) for bugs or feature requests.
+- **Join Discussions**: For broader topics, head over to [Github discussions](https://github.com/bangle-io/nalanda/discussions).
+- **Chat With Us**: Prefer real-time conversations? Here's our [Discord link](https://discord.com/channels/832842880908263445/1143342344456917185).
 
-If you have any questions, feel free to [open an issue](https://github.com/<repository-owner>/nalanda/issues/new) or reach out to the maintainers. Your feedback and contributions are valuable to us!
+Your insights, feedback, and contributions power Nalanda. Let's build something incredible together!
 
 ---
 
-Thank you for helping us improve Nalanda! 🚀
+Thank you for contributing to Nalanda! Together, we roar. 🚀
