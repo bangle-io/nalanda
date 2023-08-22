@@ -4,9 +4,11 @@ Thank you ❤️ for considering contributing to Nalanda. Below are some guideli
 
 ## Code of Conduct
 
-We have adopted a code of conduct that we expect project participants to adhere to. Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+We have adopted a code of conduct that we expect project participants to adhere to. Please read the [Code of Conduct](./CODE_OF_CONDUCT.md) before contributing.
 
 ## Getting Started
+
+> 💡 If you are stuck, we are more than happy to help over discord. Please join [here](https://discord.com/channels/832842880908263445/1143342344456917185).
 
 ### Setting up local environment
 
