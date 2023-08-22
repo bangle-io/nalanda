@@ -86,7 +86,7 @@ git push origin dev:alpha
 
 ## ❓ Questions or Need Help?
 
-- **Report Issues**: [Open an issue](https://github.com/<repository-owner>/nalanda/issues/new) for bugs or feature requests.
+- **Report Issues**: [Open an issue](https://github.com/bangle-io/nalanda/issues/new) for bugs or feature requests.
 - **Join Discussions**: For broader topics, head over to [Github discussions](https://github.com/bangle-io/nalanda/discussions).
 - **Chat With Us**: Prefer real-time conversations? Here's our [Discord link](https://discord.com/channels/832842880908263445/1143342344456917185).
 
