@@ -24,6 +24,7 @@ export type EffectOpts = {
    */
   maxWait: number;
   scheduler: EffectScheduler;
+  name?: string;
 };
 
 export type EffectScheduler = (
@@ -69,7 +70,7 @@ export class Effect {
     private readonly rootStore: Store,
     public readonly opts: EffectOpts,
   ) {
-    this.name = callback.name || 'anonymous';
+    this.name = opts.name || callback.name || 'anonymous';
     this.runInstance = new RunInstance(rootStore, this.name);
     this.debug = rootStore.opts.debug;
     this.scheduler = rootStore.opts.overrideEffectScheduler || opts.scheduler;
