@@ -62,7 +62,7 @@ For everything about Nalanda's documentation, head over to the `documentation` d
 
 ### Commit conventions
 
-We use the [Angular Commit Message Conventions](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit). Make sure to prefix your PR title (e.g., `fix`, `feat`, `docs`). It helps us (and you) in understanding the gist of changes at a glance and generating changelogs.
+We use the [Angular Commit Message Conventions](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit). Make sure to prefix your PR title (e.g., `fix`, `feat`, `docs`, `ci`, `refactor`, `build`). It helps us (and you) in understanding the gist of changes at a glance and generating changelogs.
 
 ## 🚢 Releasing to the World
 
