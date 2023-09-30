@@ -26,5 +26,6 @@ export default defineConfig({
   dts: true,
   clean: true,
   shims: false,
-  external: ['react', 'zod'],
+  minify: false,
+  external: ['react', 'react', 'react-dom', 'zod'],
 });
