@@ -1,11 +1,4 @@
-import {
-  Sandpack,
-  SandpackCodeEditor,
-  SandpackLayout,
-  SandpackPreview,
-  SandpackProvider,
-  useSandpack,
-} from '@codesandbox/sandpack-react';
+import { Sandpack } from '@codesandbox/sandpack-react';
 import { sandpackDark } from '@codesandbox/sandpack-themes';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
@@ -13,7 +6,14 @@ import { useEffect, useState } from 'react';
 import rawNsmCode from '../dist/nsm-docs-bundle/index.mjs?raw';
 import prettier from 'prettier';
 
-export function CodeBlockVanilla({ children }: { children: string }) {
+export function CodeBlockVanilla({
+  height,
+  children,
+}: {
+  height?: number;
+  children: string;
+}) {
+  const { theme } = useTheme();
   const code = `
 ${children.trim()}
   `.trim();
@@ -22,6 +22,8 @@ ${children.trim()}
     <Sandpack
       options={{
         layout: 'console',
+        editorHeight: height,
+        editorWidthPercentage: 70, // default - 50
       }}
       files={{
         '/index.ts': {
@@ -39,24 +41,24 @@ ${children.trim()}
           code: rawNsmCode,
         },
       }}
-      theme="light"
+      theme={theme === 'light' ? 'light' : 'dark'}
       template="vanilla-ts"
     />
   );
 }
 export function CodeBlock({ children }: { children: string }) {
+  const { theme } = useTheme();
+
   return (
     <Sandpack
-      options={{
-        layout: 'console',
-      }}
+      options={{}}
       files={{
         '/App.tsx': {
           // not doing trim causes weird errors
           code: children.trim(),
         },
       }}
-      theme="light"
+      theme={theme === 'light' ? 'light' : 'dark'}
       template={'react-ts'}
     />
   );
