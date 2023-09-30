@@ -1,3 +1,2 @@
-export { createUseTrackSliceHook } from './react';
-export type * from './vanilla';
-export * from './vanilla';
+export { createKey } from './vanilla/slice';
+export { createStore } from './vanilla/store';
