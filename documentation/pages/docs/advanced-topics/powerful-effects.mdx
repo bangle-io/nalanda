@@ -1,0 +1,47 @@
+## Custom isEqual camparison
+
+By default `track` uses `Object.is` to compare values. But this might not be useful in all cases.
+Nalanda allows you to pass a custom `isEqual` function to `track.<field>` to decide when a slice field has changed and the effect should be re-run.
+
+```typescript
+const userName = userSlice.track.userName(store, {
+    // prevent re-running of effect if 'userName' differs only in case
+  isEqual: (a, b) => a.toLocaleLowerCase() === b.toLocaleLowerCase(),
+});
+```
+
+## Not tracking changes
+
+While re-running effect whenever a slice field changes is helpful, sometimes you just want to read the state without tracking it.
+You can do this by using the `get` method instead of `track`.
+
+```typescript
+effect((store) => {
+  // effect will rerun only when 'isLoggedIn' changes
+  const { isLoggedIn } = loginSlice.track(store);
+  // effect will not rerun when 'userName' changes
+  const { userName } = userSlice.get(store.state);
+
+  if (isLoggedIn) {
+    console.log(`The user ${userName} is logged in`);
+  } else {
+    console.log(`Please login ${userName}`)
+  }
+});
+```
+
+## Conditional tracking
+
+If a condition is false, any tracking inside the condition will not be tracked (effects re-run will not depend on it) until the condition becomes true.
+
+In the following case when `isLoggedIn` becomes `true`, the effect will start tracking `userName` i.e. it will re-run whenever `userName` changes.
+
+```typescript
+effect((store) => {
+  const { isLoggedIn } = loginSlice.track(store);
+
+  if (isLoggedIn) {
+    const { userName } = userSlice.track(store); 
+  }
+});
+```

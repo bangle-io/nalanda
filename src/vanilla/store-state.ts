@@ -9,13 +9,11 @@ interface StoreStateOpts {
 
 export class StoreState {
   static create(options: { slices: Slice[] }) {
-    //  validateSlices(opts.slices);
-
     const sliceStateMap: Record<SliceId, SliceStateManager> =
       Object.fromEntries(
         options.slices.map((slice) => [
           slice.sliceId,
-          new SliceStateManager(slice, slice.initialState),
+          new SliceStateManager(slice, slice.initialValue),
         ]),
       );
 

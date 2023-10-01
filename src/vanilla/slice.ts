@@ -28,7 +28,7 @@ class Key {
 
   _knownFieldState = new Set<FieldState>();
 
-  state<TVal>(val: TVal) {
+  field<TVal>(val: TVal) {
     const fieldState = new FieldState(val, this);
     this._knownFieldState.add(fieldState);
     return fieldState;
@@ -70,7 +70,7 @@ class FieldState {
 export class Slice {
   sliceId: SliceId;
 
-  initialState: Record<FieldId, unknown>;
+  readonly initialValue: Record<FieldId, unknown>;
 
   constructor(
     public readonly name: string,
@@ -93,7 +93,7 @@ export class Slice {
       fieldState._fieldId = createFieldId(fieldName);
     }
 
-    this.initialState = Object.fromEntries(
+    this.initialValue = Object.fromEntries(
       Object.entries(stateSpec).map(([fieldName, fieldState]) => [
         fieldName,
         fieldState.initialValue,

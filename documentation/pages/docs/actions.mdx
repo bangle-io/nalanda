@@ -1,0 +1,41 @@
+# Actions
+
+Actions help you update your application state. They are the only way to update the state of your application.
+
+## Simple field update
+
+To update a field of your slice, you can use the `update` method on the field.
+
+```ts
+const key = createKey('counterSlice');
+const counter = key.field(0);
+
+function increment() {
+  return counter.update((val) => val + 1);
+}
+
+// store.js
+store.dispatch(increment());
+// Get the updated state
+counterSlice.get(store.state).counter; // 1
+```
+
+> Note: just calling `increment()` is not enough to update the state. You need to dispatch the action to the store.
+
+## Updating multiple fields in a single action
+
+```ts
+const userData = key.field(undefined);
+const isLoading = key.field(false);
+
+// Update multiple fields of a slice in a single action
+export function setUserData(userData) {
+  let txn = key.transaction();
+
+  return txn.update((state) => {
+    state = userData.set(state, userData);
+    state = isLoading.set(state, false);
+    return state;
+  });
+}
+```

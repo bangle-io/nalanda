@@ -3,8 +3,8 @@ import { createKey, createStore } from '../../index';
 test('basic setup', () => {
   const key = createKey('mySliceName');
 
-  const counter = key.state(0);
-  const counterNegative = key.state(-1);
+  const counter = key.field(0);
+  const counterNegative = key.field(-1);
 
   const counterSlice = key.slice({
     counter,

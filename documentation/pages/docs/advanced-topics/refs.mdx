@@ -1,0 +1,62 @@
+# Refs
+
+Ref (short for reference) is a special helper wrapper that allows you save value in a mutable fashion. 
+This allows you to persist data across multiple runs of an effects.
+
+```typescript
+import { ref } from "nalanda";
+
+const getValueRef = ref(initialValue);
+
+effect((store) => {
+  const valueRef = getValueRef(store);
+  valueRef.current; // to get the value
+  valueRef.current = "newValue"; // to set the value
+});
+```
+
+### Basic Usage
+
+Here is a basic example where ref is used to manage the abort a request across multiple effects.
+
+```ts
+import { ref } from "nalanda";
+
+const getAbortRef = ref(new AbortController());
+
+effect(async (store) => {
+  const abortRef = getAbortRef(store);
+
+  if (!abortRef.current.signal.aborted) {
+    const data = await fetchUserData();
+    // handle fetched data
+
+    // reset the abort controller
+    abortRef.current = new AbortController();
+  }
+});
+
+// an effect that can cancel the fetch
+effect(async (store) => {
+  const abortRef = getAbortRef(store);
+  const { isUserLoggedIn } = useSlice.track(store);
+
+  // if user logs out, cancel any ongoing fetch
+  if (!isUserLoggedIn) {
+    abortRef.current.abort();
+  }
+});
+```
+
+### When to use them?
+
+Refs share a lot of similarities with state. However, they are not the same. By default its a **good** idea to use slice state whever possible.
+
+1. When you don't need reactivity.
+Setting a ref value will not trigger a re-render. This is useful when you want to store a value that is not related to the UI.
+
+1. When you need to share imperative data across multiple effects.
+Things like `AbortController`, `setTimeout` and `setInterval` are good examples of things you want to share across multiple effects without the need to re-render.
+
+1. When the data is local to the effect.
+If you need to store a value that is local to the effect and does not need to be widenly available across your application. For example, storing a `setInterval` id to clear it later.
