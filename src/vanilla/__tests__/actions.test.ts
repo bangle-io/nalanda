@@ -59,105 +59,107 @@ describe('actions', () => {
     return { store };
   }
 
-  test('should increment counter', () => {
-    const { store } = setup();
-    const initStoreState = store.state;
+  describe('basic actions', () => {
+    test('should increment counter', () => {
+      const { store } = setup();
+      const initStoreState = store.state;
 
-    store.dispatch(increment());
+      store.dispatch(increment());
 
-    expect(counterSlice.get(store.state)).toEqual({
-      counter: 1,
-      counterNegative: -1,
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 1,
+        counterNegative: -1,
+      });
+
+      expect(counterSlice.get(initStoreState)).toEqual({
+        counter: 0,
+        counterNegative: -1,
+      });
     });
 
-    expect(counterSlice.get(initStoreState)).toEqual({
-      counter: 0,
-      counterNegative: -1,
+    test('should handle multiple increments', () => {
+      const { store } = setup();
+
+      store.dispatch(increment());
+      store.dispatch(increment());
+
+      expect(counter.get(store.state)).toBe(2);
+      expect(counterNegative.get(store.state)).toBe(-1);
+    });
+
+    test('should handle increment and decrement', () => {
+      const { store } = setup();
+
+      store.dispatch(increment());
+      store.dispatch(increment());
+      store.dispatch(decrement());
+
+      expect(counter.get(store.state)).toBe(2);
+      expect(counterNegative.get(store.state)).toBe(-2);
+    });
+
+    test('should maintain state correctness after actions', () => {
+      const { store } = setup();
+
+      store.dispatch(increment());
+      store.dispatch(increment());
+      store.dispatch(decrement());
+
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 2,
+        counterNegative: -2,
+      });
+    });
+
+    test('should update both counter and counterNegative with customUpdate', () => {
+      const { store } = setup();
+
+      store.dispatch(customUpdate({ counter: 3, counterNegative: -3 }));
+
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 3,
+        counterNegative: -3,
+      });
+    });
+
+    test('should handle multiple custom updates correctly', () => {
+      const { store } = setup();
+
+      store.dispatch(customUpdate({ counter: 2, counterNegative: -2 }));
+      store.dispatch(customUpdate({ counter: 5, counterNegative: -5 }));
+
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 5,
+        counterNegative: -5,
+      });
+    });
+
+    test('should maintain correct state after customUpdate and other actions', () => {
+      const { store } = setup();
+
+      store.dispatch(customUpdate({ counter: 2, counterNegative: -2 }));
+      store.dispatch(increment());
+      store.dispatch(decrement());
+
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 3,
+        counterNegative: -3,
+      });
+    });
+
+    test('should double increment the counter', () => {
+      const { store } = setup();
+
+      store.dispatch(chainedAction());
+
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 2,
+        counterNegative: -2, // Assuming counterNegative remains unaffected
+      });
     });
   });
 
-  test('should handle multiple increments', () => {
-    const { store } = setup();
-
-    store.dispatch(increment());
-    store.dispatch(increment());
-
-    expect(counter.get(store.state)).toBe(2);
-    expect(counterNegative.get(store.state)).toBe(-1);
-  });
-
-  test('should handle increment and decrement', () => {
-    const { store } = setup();
-
-    store.dispatch(increment());
-    store.dispatch(increment());
-    store.dispatch(decrement());
-
-    expect(counter.get(store.state)).toBe(2);
-    expect(counterNegative.get(store.state)).toBe(-2);
-  });
-
-  test('should maintain state correctness after actions', () => {
-    const { store } = setup();
-
-    store.dispatch(increment());
-    store.dispatch(increment());
-    store.dispatch(decrement());
-
-    expect(counterSlice.get(store.state)).toEqual({
-      counter: 2,
-      counterNegative: -2,
-    });
-  });
-
-  test('should update both counter and counterNegative with customUpdate', () => {
-    const { store } = setup();
-
-    store.dispatch(customUpdate({ counter: 3, counterNegative: -3 }));
-
-    expect(counterSlice.get(store.state)).toEqual({
-      counter: 3,
-      counterNegative: -3,
-    });
-  });
-
-  test('should handle multiple custom updates correctly', () => {
-    const { store } = setup();
-
-    store.dispatch(customUpdate({ counter: 2, counterNegative: -2 }));
-    store.dispatch(customUpdate({ counter: 5, counterNegative: -5 }));
-
-    expect(counterSlice.get(store.state)).toEqual({
-      counter: 5,
-      counterNegative: -5,
-    });
-  });
-
-  test('should maintain correct state after customUpdate and other actions', () => {
-    const { store } = setup();
-
-    store.dispatch(customUpdate({ counter: 2, counterNegative: -2 }));
-    store.dispatch(increment());
-    store.dispatch(decrement());
-
-    expect(counterSlice.get(store.state)).toEqual({
-      counter: 3,
-      counterNegative: -3,
-    });
-  });
-
-  test('should double increment the counter', () => {
-    const { store } = setup();
-
-    store.dispatch(chainedAction());
-
-    expect(counterSlice.get(store.state)).toEqual({
-      counter: 2,
-      counterNegative: -2, // Assuming counterNegative remains unaffected
-    });
-  });
-
-  describe('merging actions', () => {
+  describe('merging actions from another slice', () => {
     const key = createKey('myOtherSlice', [counterSlice]);
 
     const base = key.field(0);
