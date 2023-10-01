@@ -156,4 +156,47 @@ describe('actions', () => {
       counterNegative: -2, // Assuming counterNegative remains unaffected
     });
   });
+
+  describe('merging actions', () => {
+    const key = createKey('myOtherSlice', [counterSlice]);
+
+    const base = key.field(0);
+
+    function bumpByNumber(number: number) {
+      const txn = key.transaction();
+
+      return txn.update((state) => {
+        state = state.apply(
+          customUpdate({ counter: number, counterNegative: -number }),
+        );
+        state = state.apply(base.update((c) => c + number));
+        return state;
+      });
+    }
+    const baseSlice = key.slice({
+      base,
+    });
+
+    test('should work', () => {
+      const store = createStore({
+        slices: [counterSlice, baseSlice],
+      });
+
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 0,
+        counterNegative: -1,
+      });
+
+      store.dispatch(bumpByNumber(1));
+
+      expect(baseSlice.get(store.state)).toEqual({
+        base: 1,
+      });
+
+      expect(counterSlice.get(store.state)).toEqual({
+        counter: 1,
+        counterNegative: -1,
+      });
+    });
+  });
 });
