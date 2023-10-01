@@ -1,6 +1,5 @@
 import { CodeBlockVanilla } from '../../components/CodeBlock';
 
-
 # nalanda Documentation
 
 ## Introduction
@@ -12,6 +11,7 @@ import { CodeBlockVanilla } from '../../components/CodeBlock';
 To use `nalanda`, it is essential to set up a store, create a slice, and define a state.
 
 ### 1. Installing the Library
+
 Before setting up the store, ensure that `nalanda` is installed in your project.
 
 <CodeBlockVanilla height={600}>
@@ -26,25 +26,25 @@ const counter = key.field(0);
 
 // Define an action to update the state
 function increment() {
-  return counter.update((prev) => prev + 1);
+return counter.update((prev) => prev + 1);
 }
 
 // A slice is a collection of state fields and actions
 // this will be the only way to access the state from outside.
 const counterSlice = key.slice({
-  counter,
+counter,
 });
 
 // Set up the global store with your slice
 const store = createStore({
-  slices: [counterSlice],
+slices: [counterSlice],
 });
 
 // Log the initial state value
 console.log(counterSlice.get(store.state)); // 0
 
 // Dispatch an action to update the state
-// store.dispatch(increment());
+store.dispatch(increment());
 
 // Log the updated state value
 console.log(counterSlice.get(store.state)); // 1

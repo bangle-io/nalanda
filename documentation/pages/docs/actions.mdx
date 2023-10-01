@@ -2,6 +2,8 @@
 
 Actions help you update your application state. They are the only way to update the state of your application.
 
+> Always keep your actions in the same file as the slice and key. See more about [structuring your code](./structuring-your-code).
+
 ## Simple field update
 
 To update a field of your slice, you can use the `update` method on the field.
@@ -22,19 +24,62 @@ counterSlice.get(store.state).counter; // 1
 
 > Note: just calling `increment()` is not enough to update the state. You need to dispatch the action to the store.
 
-## Updating multiple fields in a single action
+## Updating many fields
 
 ```ts
+// userDataSlice.ts
+const key = createKey('userDataSlice');
+
 const userData = key.field(undefined);
 const isLoading = key.field(false);
 
 // Update multiple fields of a slice in a single action
-export function setUserData(userData) {
-  let txn = key.transaction();
+function setUserData(data) {
+  const txn = key.transaction();
 
   return txn.update((state) => {
-    state = userData.set(state, userData);
-    state = isLoading.set(state, false);
+    state = state.apply(userData.update(data));
+    state = state.apply(isLoading.update(false));
+    return state;
+  });
+}
+
+export const userDataSlice = key.slice({
+  actions: {
+    setUserData,
+  },
+  fields: {
+    // ...
+  },
+});
+```
+
+## Merging transactions
+
+You can merge transaction from external actions into your slice's action. This is useful when you want to also change the state of other slices in one single action.
+
+In the example below we merge the transaction from an external `setUserData` action (see section above):
+
+```ts
+import { userDataSlice } from './userDataSlice';
+
+// set the userDataSlice as the dependency
+const key = createKey('loginSlice', [userDataSlice]);
+
+const loggedIn = key.field(false);
+
+function loginUser(data) {
+  const txn = key.transaction();
+
+  return txn.update((state) => {
+    // get the transaction from the external action
+    const userDataTxn = userDataSlice.setUserData(data);
+
+    state = state.apply(userDataTxn);
+    state = state.apply(loggedIn.update(true));
+
+    // the new state contains both the changes from the external action
+    // and the changes from this action
     return state;
   });
 }

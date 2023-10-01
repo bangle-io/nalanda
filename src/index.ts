@@ -1,2 +1,1 @@
-export { createKey } from './vanilla/slice';
-export { createStore } from './vanilla/store';
+export { createStore, createKey } from './vanilla/index';

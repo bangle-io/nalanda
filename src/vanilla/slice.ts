@@ -2,6 +2,7 @@ import { createFieldId } from './helpers/create-ids';
 import { idGeneration } from './helpers/id-generation';
 import { throwValidationError } from './helpers/throw-error';
 import type { StoreState } from './store-state';
+import { Transaction } from './transaction';
 import type { SliceId, FieldId } from './types';
 
 export function createKey(name: string, dependencies: Slice[] = []) {
@@ -45,17 +46,21 @@ class Key {
 
     return this._slice;
   }
+
+  transaction() {
+    return new Transaction();
+  }
 }
 
-class FieldState {
+export class FieldState<T = any> {
   _fieldId: FieldId | undefined;
 
   constructor(
-    public readonly initialValue: unknown,
+    public readonly initialValue: T,
     public readonly key: Key,
   ) {}
 
-  get(storeState: StoreState): unknown {
+  get(storeState: StoreState): T {
     if (!this._fieldId) {
       throwValidationError(
         `Cannot access state before Slice "${this.key.name}" has been created.`,
@@ -63,7 +68,29 @@ class FieldState {
     }
     const slice = this.key._assertedSlice();
 
-    return slice.get(storeState)[this._fieldId];
+    return slice.get(storeState)[this._fieldId] as T;
+  }
+
+  isEqual(a: T, b: T): boolean {
+    // TODO: allow users to provide a custom equality function
+    return Object.is(a, b);
+  }
+
+  update(val: T | ((val: T) => T)): Transaction {
+    const txn = this.key.transaction();
+
+    txn._addStep({
+      cb: (state: StoreState) => {
+        const slice = this.key._assertedSlice();
+        const manager = state._getSliceStateManager(slice);
+
+        const newManager = manager._updateFieldState(this, val);
+
+        return state._updateSliceStateManager(slice, newManager);
+      },
+    });
+
+    return txn;
   }
 }
 
@@ -71,6 +98,22 @@ export class Slice {
   sliceId: SliceId;
 
   readonly initialValue: Record<FieldId, unknown>;
+
+  get dependencies(): Slice[] {
+    return this.key.dependencies;
+  }
+
+  /**
+   * Called when the user overrides the initial value of a slice in the store.
+   */
+  _verifyInitialValueOverride(val: Record<FieldId, unknown>): void {
+    // TODO: when user provides an override, do more checks
+    if (Object.keys(val).length !== Object.keys(this.initialValue).length) {
+      throwValidationError(
+        `Slice "${this.name}" has fields that are not defined in the override. Did you forget to pass a state field?`,
+      );
+    }
+  }
 
   constructor(
     public readonly name: string,
@@ -102,6 +145,6 @@ export class Slice {
   }
 
   get(storeState: StoreState) {
-    return storeState._getSliceState(this);
+    return storeState._getSliceStateManager(this).sliceState;
   }
 }

@@ -1,16 +1,21 @@
 import { createKey, createStore } from '../../index';
+import { testCleanup } from '../helpers/test-cleanup';
+
+const key = createKey('mySliceName');
+
+const counter = key.field(0);
+const counterNegative = key.field(-1);
+
+const counterSlice = key.slice({
+  counter,
+  counterNegative,
+});
+
+afterEach(() => {
+  testCleanup();
+});
 
 test('basic setup', () => {
-  const key = createKey('mySliceName');
-
-  const counter = key.field(0);
-  const counterNegative = key.field(-1);
-
-  const counterSlice = key.slice({
-    counter,
-    counterNegative,
-  });
-
   const store = createStore({
     slices: [counterSlice],
   });

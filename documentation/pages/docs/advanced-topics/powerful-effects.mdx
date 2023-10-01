@@ -5,7 +5,7 @@ Nalanda allows you to pass a custom `isEqual` function to `track.<field>` to dec
 
 ```typescript
 const userName = userSlice.track.userName(store, {
-    // prevent re-running of effect if 'userName' differs only in case
+  // prevent re-running of effect if 'userName' differs only in case
   isEqual: (a, b) => a.toLocaleLowerCase() === b.toLocaleLowerCase(),
 });
 ```
@@ -25,7 +25,7 @@ effect((store) => {
   if (isLoggedIn) {
     console.log(`The user ${userName} is logged in`);
   } else {
-    console.log(`Please login ${userName}`)
+    console.log(`Please login ${userName}`);
   }
 });
 ```
@@ -41,7 +41,7 @@ effect((store) => {
   const { isLoggedIn } = loginSlice.track(store);
 
   if (isLoggedIn) {
-    const { userName } = userSlice.track(store); 
+    const { userName } = userSlice.track(store);
   }
 });
 ```

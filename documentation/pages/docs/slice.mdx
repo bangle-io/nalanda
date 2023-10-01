@@ -1,0 +1,113 @@
+# Slice
+
+A slice is a fundamental data structure that facilitates robust state management for your application.
+It consolidates actions, state fields, selector fields, and effects.
+It is crucial to **only export** the slice, enabling it to serve as a gatekeeper for the rest of your application
+, maintaining encapsulation and integrity.
+
+## Creating a slice
+
+To create a slice:
+
+```ts
+import { createKey } from 'nalanda';
+
+const key = createKey('loginSlice');
+
+// create fields
+const isLoggedIn = key.field(false);
+
+// create actions
+function loginUser() {
+  return counter.update(true);
+}
+
+// Only export the slice
+export const loginSlice = key.slice({
+  fields: {
+    isLoggedIn,
+  },
+  actions: {
+    loginUser,
+  },
+});
+```
+
+### Best practices
+
+1. **Export slice only**: One export the slice and notthing else, even for testing purposes
+
+2. **One slice per file**: Keep a single slice per file to streamline locating slices and their dependencies.
+
+### Registering a slice
+
+To register your slice in the centralized store:
+
+```ts
+import { createStore } from 'nalanda';
+
+const store = createStore({
+  slices: [loginSlice],
+});
+```
+
+## Usage
+
+Use a slice wherever there's access to the store or the store state, typically in UI components, effects, or other slices.
+
+### In another Slice's action
+
+In the following example we are using the `loginSlice` in another slice's action.
+
+```ts
+// userSlice.ts
+// userSlice.ts
+import { createKey } from 'nalanda';
+import { loginSlice } from './loginSlice';
+
+const key = createKey('mySliceName', [loginSlice]); // Pass loginSlice as a dependency
+
+const userNameField = key.field<string | undefined>(undefined);
+
+function setUserName(userName) {
+  const txn = key.transaction();
+  return txn.update((state) => {
+    // Check if user is logged in
+    if (!loginSlice.get(state).isLoggedIn) return state;
+
+    const newState = state.apply(userNameField.update(userName));
+
+    return newState;
+  });
+}
+
+export const userSlice = key.slice({
+  fields: {
+    userName: userNameField,
+  },
+  actions: {
+    setUserName,
+  },
+});
+```
+
+For more details, refer to the [actions](./actions) documentation.
+
+### In an Effect
+
+In the following example we are using the `loginSlice` in an effect.
+
+```ts
+import { loginSlice } from './loginSlice';
+import { effect } from 'nalanda';
+
+effect((store) => {
+  const { isLoggedIn } = loginSlice.get(store.state);
+
+  if (isLoggedIn) {
+    // Execute specific actions
+  }
+});
+```
+
+For additional information, visit the [effects](./effects) documentation.
