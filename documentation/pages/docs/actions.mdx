@@ -29,12 +29,13 @@ const userData = key.field(undefined);
 const isLoading = key.field(false);
 
 // Update multiple fields of a slice in a single action
-export function setUserData(userData) {
+export function setUserData(data) {
   let txn = key.transaction();
 
+  
   return txn.update((state) => {
-    state = userData.set(state, userData);
-    state = isLoading.set(state, false);
+    state = state.apply(userData.update(data))
+    state = state.apply(isLoading.update(false))
     return state;
   });
 }

@@ -1,5 +1,6 @@
 import type { Slice } from './slice';
 import { StoreState } from './store-state';
+import { Transaction } from './transaction';
 
 interface StoreConfig {
   name: string;
@@ -17,5 +18,9 @@ export class Store {
     this.state = StoreState.create({
       slices: config.slices,
     });
+  }
+
+  dispatch(transaction: Transaction): void {
+    this.state = this.state.apply(transaction);
   }
 }

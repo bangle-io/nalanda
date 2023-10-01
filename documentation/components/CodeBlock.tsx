@@ -23,6 +23,7 @@ ${children.trim()}
       options={{
         layout: 'console',
         editorHeight: height,
+        showRefreshButton: true,
         editorWidthPercentage: 70, // default - 50
       }}
       files={{

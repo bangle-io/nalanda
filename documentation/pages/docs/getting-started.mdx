@@ -44,7 +44,7 @@ const store = createStore({
 console.log(counterSlice.get(store.state)); // 0
 
 // Dispatch an action to update the state
-// store.dispatch(increment());
+store.dispatch(increment());
 
 // Log the updated state value
 console.log(counterSlice.get(store.state)); // 1
