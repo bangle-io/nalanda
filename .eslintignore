@@ -6,6 +6,7 @@ node_modules
 *.js
 *.cjs
 tsup.config.ts
+tsup-docs.config.ts
 theme.config.jsx
 documentation/dist
 documentation/.next
