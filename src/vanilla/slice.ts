@@ -99,6 +99,22 @@ export class Slice {
 
   readonly initialValue: Record<FieldId, unknown>;
 
+  get dependencies(): Slice[] {
+    return this.key.dependencies;
+  }
+
+  /**
+   * Called when the user overrides the initial value of a slice in the store.
+   */
+  _verifyInitialValueOverride(val: Record<FieldId, unknown>): void {
+    // TODO: when user provides an override, do more checks
+    if (Object.keys(val).length !== Object.keys(this.initialValue).length) {
+      throwValidationError(
+        `Slice "${this.name}" has fields that are not defined in the override. Did you forget to pass a state field?`,
+      );
+    }
+  }
+
   constructor(
     public readonly name: string,
     private stateSpec: Record<FieldId, FieldState>,

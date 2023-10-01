@@ -1,0 +1,121 @@
+# Slice
+
+A slice is the central data structure for building a robust state management for your app.
+
+A slice sums up all of you actions, state fields, selector fields, and effects. It is expected that only **export** the slice so it can act as gatekeeper for the rest of your app.
+
+## Creating a slice
+
+```ts
+import { createKey } from 'nalanda';
+
+const key = createKey('mySliceName');
+
+// create fields
+const isLoggedIn = key.field(false);
+
+// create actions
+function loginUser() {
+  return counter.update(true);
+}
+
+// Only export the slice
+export const loginSlice = key.slice({
+  fields: {
+    isLoggedIn,
+  },
+  actions: {
+    loginUser,
+  },
+});
+```
+
+### Best practices
+
+1. The slice is a singleton. It is expected that you **only export** the slice and not the key or any other fields or actions.
+    - **Never** export the key, fields, or actions - even for testing.
+
+2. Always have *one slice* per file. This makes it easier to find the slice and its dependencies.
+
+### Registering a slice
+
+Register your slice in your centralized store so that it can be used in your application.
+
+```ts
+import { createStore } from 'nalanda';
+
+const store = createStore({
+  slices: [
+    loginSlice
+  ],
+});
+```
+
+## Usage
+
+You can use slice whereever you have access to the store or the store state. This is usually in your UI components, effects, or other slices.
+
+### Using in another slice's action
+
+In the following example we are using the `loginSlice` in another slice's action.
+
+
+```ts
+// userSlice.ts
+import { createKey } from "nalanda";
+
+import { loginSlice } from "./loginSlice";
+
+const key = createKey(
+  "mySliceName",
+  // make sure to pass in the loginSlice as a dependency
+  [loginSlice],
+);
+const userNameField = key.field("");
+
+function setUserName(userName) {
+  const txn = key.transaction();
+  return txn.update((state) => {
+    // only update the state if the user is logged in
+    if (!loginSlice.get(state).isLoggedIn) {
+      return state;
+    }
+    // apply the update to the state to produce a new state with the updated userName
+    const newState = state.apply(userNameField.update(userName));
+
+    return newState;
+  });
+}
+
+export const userSlice = key.slice({
+  fields: {
+    userName: userNameField,
+  },
+  actions: {
+    setUserName,
+  },
+});
+```
+
+See more in the [actions](./actions) page.
+
+
+### Using in an effect
+
+In the following example we are using the `loginSlice` in an effect.
+
+```ts
+
+import { loginSlice } from './loginSlice';
+import { effect } from 'nalanda';
+
+effect(store => {
+    const { isLoggedIn } = loginSlice.get(store.state);
+
+    if (isLoggedIn) {
+        // do something
+    }
+});
+```
+
+See more in the [effects](./effects) page.

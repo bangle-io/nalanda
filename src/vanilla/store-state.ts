@@ -2,31 +2,72 @@ import type { FieldState, Slice } from './slice';
 import { SliceId } from './types';
 import { throwValidationError } from './helpers/throw-error';
 import { Transaction } from './transaction';
+import { calcReverseDependencies } from './helpers/dependency-helpers';
 
-interface StoreStateOpts {
+type SliceStateMap = Record<SliceId, SliceStateManager>;
+
+interface StoreStateConfig {
   slices: Slice[];
-  sliceStateMap: Record<SliceId, SliceStateManager>;
+  sliceStateMap: SliceStateMap;
+  computed: {
+    slicesLookup: Record<SliceId, Slice>;
+    reverseSliceDependencies: Record<SliceId, Set<SliceId>>;
+  };
+}
+
+function slicesComputedInfo(options: {
+  slices: Slice[];
+}): StoreStateConfig['computed'] {
+  const slicesLookup = Object.fromEntries(
+    options.slices.map((slice) => [slice.sliceId, slice]),
+  );
+
+  return {
+    slicesLookup,
+    reverseSliceDependencies: calcReverseDependencies(options.slices),
+  };
 }
 
 export class StoreState {
-  static create(options: { slices: Slice[] }) {
-    const sliceStateMap: Record<SliceId, SliceStateManager> =
-      Object.fromEntries(
-        options.slices.map((slice) => [
-          slice.sliceId,
-          SliceStateManager.new(slice),
-        ]),
-      );
+  static create(options: {
+    slices: Slice[];
+    stateOverride?: Record<SliceId, Record<string, unknown>>;
+  }) {
+    const sliceStateMap: SliceStateMap = Object.fromEntries(
+      options.slices.map((slice) => [
+        slice.sliceId,
+        SliceStateManager.new(slice),
+      ]),
+    );
+
+    const computed = slicesComputedInfo(options);
+
+    if (options.stateOverride) {
+      for (const [sliceId, override] of Object.entries(options.stateOverride)) {
+        const id = sliceId as SliceId;
+
+        if (!sliceStateMap[id]) {
+          throwValidationError(
+            `StoreState.create: slice with id "${id}" does not exist`,
+          );
+        }
+
+        const slice = computed.slicesLookup[id]!;
+
+        sliceStateMap[id] = SliceStateManager.new(slice, override);
+      }
+    }
 
     return new StoreState({
       slices: options.slices,
       sliceStateMap,
+      computed,
     });
   }
-  constructor(private options: StoreStateOpts) {}
+  constructor(private config: StoreStateConfig) {}
 
   _getSliceStateManager(slice: Slice): SliceStateManager {
-    const stateMap = this.options.sliceStateMap[slice.sliceId];
+    const stateMap = this.config.sliceStateMap[slice.sliceId];
 
     if (!stateMap) {
       throwValidationError(
@@ -41,24 +82,24 @@ export class StoreState {
     sliceStateManager: SliceStateManager,
   ): StoreState {
     const sliceStateMap = {
-      ...this.options.sliceStateMap,
+      ...this.config.sliceStateMap,
       [slice.sliceId]: sliceStateManager,
     };
     return new StoreState({
-      ...this.options,
+      ...this.config,
       sliceStateMap,
     });
   }
 
   apply(transaction: Transaction): StoreState {
-    if (transaction._isConsumed()) {
+    if (transaction._isDestroyed()) {
       throwValidationError(
         `Transaction "${transaction.id}" has already been applied.`,
       );
     }
 
     const steps = transaction._getSteps();
-    transaction._markConsumed();
+    transaction._destroy();
 
     return steps.reduce((storeState, step) => {
       return step.cb(storeState);
@@ -67,8 +108,14 @@ export class StoreState {
 }
 
 class SliceStateManager {
-  static new(slice: Slice) {
-    return new SliceStateManager(slice, slice.initialValue);
+  static new(slice: Slice, sliceStateOverride?: Record<string, unknown>) {
+    if (sliceStateOverride) {
+      slice._verifyInitialValueOverride(sliceStateOverride);
+    }
+    return new SliceStateManager(
+      slice,
+      sliceStateOverride ?? slice.initialValue,
+    );
   }
 
   constructor(

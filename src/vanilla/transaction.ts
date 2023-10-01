@@ -1,18 +1,21 @@
 import { idGeneration } from './helpers/id-generation';
-import { FieldState } from './slice';
 import { StoreState } from './store-state';
+
 type Step = { cb: (storeState: StoreState) => StoreState };
 
-export class Transaction {
-  id: string;
+export const META_DISPATCHER = 'DEBUG__DISPATCHER';
+export const TX_META_STORE_NAME = 'store-name';
 
-  private consumed = false;
+export class Transaction {
+  readonly id = idGeneration.createTransactionId();
+
+  private destroyed = false;
+
+  readonly metadata = new Metadata();
 
   private steps: Array<Step>;
 
   constructor() {
-    this.id = idGeneration.createTransactionId();
-
     this.steps = [];
   }
 
@@ -31,11 +34,35 @@ export class Transaction {
     this.steps.push(step);
   }
 
-  _markConsumed() {
-    this.consumed = true;
+  _destroy() {
+    this.destroyed = true;
   }
 
-  _isConsumed() {
-    return this.consumed;
+  _isDestroyed() {
+    return this.destroyed;
+  }
+}
+
+export class Metadata {
+  private _metadata: Record<string, string> = Object.create(null);
+
+  appendMetadata(key: string, val: string) {
+    let existing = this.getMetadata(key);
+    this.setMetadata(key, existing ? existing + ',' + val : val);
+  }
+
+  fork(): Metadata {
+    const meta = new Metadata();
+    meta._metadata = { ...this._metadata };
+
+    return meta;
+  }
+
+  getMetadata(key: string) {
+    return this._metadata[key];
+  }
+
+  setMetadata(key: string, val: string) {
+    this._metadata[key] = val;
   }
 }
