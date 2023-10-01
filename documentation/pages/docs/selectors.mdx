@@ -5,11 +5,11 @@ Selectors help you to create state that is derived from other fields or other sl
 In the following example we are using the `loginSlice` and `userSlice` in a selector.
 
 ```ts
-import { loginSlice } from "./loginSlice";
-import { userSlice } from "./userSlice";
+import { loginSlice } from './loginSlice';
+import { userSlice } from './userSlice';
 
 const key = createKey(
-  "myAppSlice",
+  'myAppSlice',
   // declare the dependencies
   [loginSlice, userSlice],
 );
@@ -22,10 +22,9 @@ const nameField = key.selector((state) => {
     return userName;
   }
 
-  return "Guest";
+  return 'Guest';
 });
 ```
-
 
 ## Composing selectors
 

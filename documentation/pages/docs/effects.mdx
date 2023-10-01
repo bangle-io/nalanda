@@ -5,7 +5,7 @@ import { CodeBlockVanilla } from '../../components/CodeBlock';
 Effects help you perform side effects in your application. They are used to perform tasks such as fetching data from a server, logging to the console, or interacting with the browser.
 
 ```typescript
-import { effect } from 'nalanda'
+import { effect } from 'nalanda';
 
 effect((store) => {
   // effect will rerun whenever userSlice changes
@@ -15,24 +15,21 @@ effect((store) => {
   if (isLoggedIn) {
     console.log(`The user ${userName} is logged in`);
   } else {
-    console.log(`Please login ${userName}`)
+    console.log(`Please login ${userName}`);
   }
 });
 ```
 
 > Note: All effects will run atleast **once** after the store is initialized.
 
-
 ## Tracking
 
-The tracking methods tracks any changes to the slice fields and re-runs the effect whenever it changes. 
+The tracking methods tracks any changes to the slice fields and re-runs the effect whenever it changes.
 There are two ways to track changes in a slice.
 
 ```typescript
-
 // destructured form
 const { userName, userAddress } = userSlice.track(store);
-
 
 // direct access
 const userName = userSlice.track.userName(store);
@@ -62,5 +59,3 @@ effect(async (store) => {
   });
 });
 ```
-
-

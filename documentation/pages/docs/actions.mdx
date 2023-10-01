@@ -28,7 +28,7 @@ counterSlice.get(store.state).counter; // 1
 
 ```ts
 // userDataSlice.ts
-const key = createKey("userDataSlice");
+const key = createKey('userDataSlice');
 
 const userData = key.field(undefined);
 const isLoading = key.field(false);
@@ -75,8 +75,8 @@ function loginUser(data) {
     // get the transaction from the external action
     const userDataTxn = userDataSlice.setUserData(data);
 
-    state = state.apply(userDataTxn)
-    state = state.apply(loggedIn.update(true))
+    state = state.apply(userDataTxn);
+    state = state.apply(loggedIn.update(true));
 
     // the new state contains both the changes from the external action
     // and the changes from this action

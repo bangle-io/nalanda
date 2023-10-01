@@ -47,9 +47,7 @@ To register your slice in the centralized store:
 import { createStore } from 'nalanda';
 
 const store = createStore({
-  slices: [
-    loginSlice
-  ],
+  slices: [loginSlice],
 });
 ```
 
@@ -61,16 +59,15 @@ Use a slice wherever there's access to the store or the store state, typically i
 
 In the following example we are using the `loginSlice` in another slice's action.
 
-
 ```ts
 // userSlice.ts
 // userSlice.ts
-import { createKey } from "nalanda";
-import { loginSlice } from "./loginSlice";
+import { createKey } from 'nalanda';
+import { loginSlice } from './loginSlice';
 
-const key = createKey("mySliceName", [loginSlice]); // Pass loginSlice as a dependency
+const key = createKey('mySliceName', [loginSlice]); // Pass loginSlice as a dependency
 
-const userNameField = key.field<string|undefined>(undefined);
+const userNameField = key.field<string | undefined>(undefined);
 
 function setUserName(userName) {
   const txn = key.transaction();
@@ -104,12 +101,12 @@ In the following example we are using the `loginSlice` in an effect.
 import { loginSlice } from './loginSlice';
 import { effect } from 'nalanda';
 
-effect(store => {
-    const { isLoggedIn } = loginSlice.get(store.state);
-    
-    if (isLoggedIn) {
-        // Execute specific actions
-    }
+effect((store) => {
+  const { isLoggedIn } = loginSlice.get(store.state);
+
+  if (isLoggedIn) {
+    // Execute specific actions
+  }
 });
 ```
 
