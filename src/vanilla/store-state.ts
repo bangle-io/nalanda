@@ -1,5 +1,5 @@
 import type { FieldState, Slice } from './slice';
-import { SliceId } from './types';
+import { FieldId, SliceId } from './types';
 import { throwValidationError } from './helpers/throw-error';
 import { Transaction } from './transaction';
 import { calcReverseDependencies } from './helpers/dependency-helpers';
@@ -66,6 +66,21 @@ export class StoreState {
   }
   constructor(private config: StoreStateConfig) {}
 
+  apply(transaction: Transaction): StoreState {
+    if (transaction._isDestroyed()) {
+      throwValidationError(
+        `Transaction "${transaction.id}" has already been applied.`,
+      );
+    }
+
+    const steps = transaction._getSteps();
+    transaction._destroy();
+
+    return steps.reduce((storeState, step) => {
+      return step.cb(storeState);
+    }, this as StoreState);
+  }
+
   _getSliceStateManager(slice: Slice): SliceStateManager {
     const stateMap = this.config.sliceStateMap[slice.sliceId];
 
@@ -91,19 +106,27 @@ export class StoreState {
     });
   }
 
-  apply(transaction: Transaction): StoreState {
-    if (transaction._isDestroyed()) {
-      throwValidationError(
-        `Transaction "${transaction.id}" has already been applied.`,
-      );
-    }
+  /**
+   * Returns slices that have changed compared to the provided store state.
+   * does not take into account slices that were removed in the current store state and exist
+   * in the provided store state.
+   */
+  _getChangedSlices(otherStoreState: StoreState): Slice[] {
+    const diff: Slice[] = [];
 
-    const steps = transaction._getSteps();
-    transaction._destroy();
+    Object.values(this.config.sliceStateMap).forEach((sliceStateManager) => {
+      const slice = sliceStateManager.slice;
+      const sliceState = sliceStateManager.sliceState;
 
-    return steps.reduce((storeState, step) => {
-      return step.cb(storeState);
-    }, this as StoreState);
+      const otherSliceState =
+        otherStoreState.config.sliceStateMap[slice.sliceId]?.sliceState;
+
+      if (sliceState !== otherSliceState) {
+        diff.push(sliceStateManager.slice);
+      }
+    });
+
+    return diff;
   }
 }
 
@@ -120,7 +143,7 @@ class SliceStateManager {
 
   constructor(
     public readonly slice: Slice,
-    public readonly sliceState: Record<string, unknown>,
+    public readonly sliceState: Record<FieldId, unknown>,
   ) {}
 
   _getFieldState(field: FieldState): unknown {

@@ -13,8 +13,7 @@ describe('actions', () => {
   const counterNegative = key.field(-1);
 
   const counterSlice = key.slice({
-    counter,
-    counterNegative,
+    fields: { counter, counterNegative },
   });
 
   function increment() {
@@ -176,7 +175,7 @@ describe('actions', () => {
       });
     }
     const baseSlice = key.slice({
-      base,
+      fields: { base },
     });
 
     test('should work', () => {
