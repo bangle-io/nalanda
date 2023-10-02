@@ -7,8 +7,7 @@ const counter = key.field(0);
 const counterNegative = key.field(-1);
 
 const counterSlice = key.slice({
-  counter,
-  counterNegative,
+  fields: { counter, counterNegative },
 });
 
 afterEach(() => {
