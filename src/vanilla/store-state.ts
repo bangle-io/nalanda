@@ -1,8 +1,9 @@
-import type { FieldState, Slice } from './slice';
+import type { Slice } from './slice';
 import { FieldId, SliceId } from './types';
 import { throwValidationError } from './helpers/throw-error';
 import { Transaction } from './transaction';
 import { calcReverseDependencies } from './helpers/dependency-helpers';
+import { StateField } from './field';
 
 type SliceStateMap = Record<SliceId, SliceStateManager>;
 
@@ -137,7 +138,7 @@ class SliceStateManager {
     }
     return new SliceStateManager(
       slice,
-      sliceStateOverride ?? slice.initialValue,
+      sliceStateOverride ?? slice._initialStateFieldValue,
     );
   }
 
@@ -146,12 +147,12 @@ class SliceStateManager {
     public readonly sliceState: Record<FieldId, unknown>,
   ) {}
 
-  _getFieldState(field: FieldState): unknown {
+  _getFieldState(field: StateField): unknown {
     const fieldState = this.sliceState[field._fieldId!];
     return fieldState;
   }
 
-  _updateFieldState(field: FieldState, updater: any): SliceStateManager {
+  _updateFieldState(field: StateField, updater: any): SliceStateManager {
     const oldValue = this._getFieldState(field);
     const newValue =
       typeof updater === 'function' ? updater(oldValue) : updater;

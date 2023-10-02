@@ -51,6 +51,8 @@ export function createStore(config: StoreOptions) {
 
 export class Store extends BaseStore {
   private _state: StoreState;
+  public readonly initialState: StoreState;
+
   private effectsManager: EffectManager;
   private destroyed = false;
   private registeredSlicesEffect = false;
@@ -78,6 +80,7 @@ export class Store extends BaseStore {
     this._state = StoreState.create({
       slices: options.slices,
     });
+    this.initialState = this._state;
 
     this._dispatchTxn =
       options.overrides?.dispatchTransactionOverride ||

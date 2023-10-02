@@ -1,7 +1,8 @@
 import { BaseStore } from '../base-store';
+import type { BaseField } from '../field';
 import { hasIdleCallback } from '../helpers/has-idle-callback';
 import type { DebugLogger } from '../logger';
-import { FieldState, Slice } from '../slice';
+import { Slice } from '../slice';
 import type { Store } from '../store';
 import { Transaction } from '../transaction';
 import { EffectRun } from './effect-run';
@@ -159,7 +160,7 @@ export class Effect {
       return;
     }
 
-    let fieldChanged: FieldState | undefined;
+    let fieldChanged: BaseField<unknown> | undefined;
 
     // if runCount == 0, always run, to ensure the effect runs at least once
     if (this.runCount != 0) {

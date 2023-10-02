@@ -1,16 +1,22 @@
 import type { EffectCallback, EffectOpts, EffectStore } from './effect/effect';
+import {
+  StateField,
+  type BaseField,
+  BaseFieldOptions,
+  DerivedField,
+} from './field';
 import { createFieldId } from './helpers/create-ids';
 import { idGeneration } from './helpers/id-generation';
 import { throwValidationError } from './helpers/throw-error';
 import type { StoreState } from './store-state';
 import { Transaction } from './transaction';
-import type { SliceId, FieldId } from './types';
+import type { SliceId, FieldId, NoInfer } from './types';
 
 export function createKey(name: string, dependencies: Slice[] = []) {
   return new Key(name, dependencies);
 }
 
-class Key {
+export class Key {
   constructor(
     public readonly name: string,
     public readonly dependencies: Slice[],
@@ -30,15 +36,15 @@ class Key {
     return this._slice;
   }
 
-  _knownFieldState = new Set<FieldState>();
+  _knownFields = new Set<BaseField<any>>();
 
-  field<TVal>(val: TVal) {
-    const fieldState = new FieldState(val, this);
-    this._knownFieldState.add(fieldState);
+  field<TVal>(val: TVal, options: BaseFieldOptions<NoInfer<TVal>> = {}) {
+    const fieldState = new StateField(val, this, options);
+    this._knownFields.add(fieldState);
     return fieldState;
   }
 
-  slice<TFieldsSpec extends Record<string, FieldState>>({
+  slice<TFieldsSpec extends Record<string, BaseField<any>>>({
     fields,
     actions,
   }: {
@@ -63,68 +69,30 @@ class Key {
   effect(callback: EffectCallback, opts: Partial<EffectOpts> = {}) {
     this._effectCallbacks.push([callback, opts]);
   }
-}
 
-export class FieldState<T = any> {
-  _fieldId: FieldId | undefined;
-
-  constructor(
-    public readonly initialValue: T,
-    public readonly key: Key,
-  ) {}
-
-  _getFromSliceState(sliceState: Record<FieldId, unknown>): T {
-    return sliceState[this._fieldId!] as T;
-  }
-
-  get(storeState: StoreState): T {
-    if (!this._fieldId) {
-      throwValidationError(
-        `Cannot access state before Slice "${this.key.name}" has been created.`,
-      );
-    }
-    const slice = this.key._assertedSlice();
-
-    return slice.get(storeState)[this._fieldId] as T;
-  }
-
-  isEqual(a: T, b: T): boolean {
-    // TODO: allow users to provide a custom equality function
-    return Object.is(a, b);
-  }
-
-  update(val: T | ((val: T) => T)): Transaction {
-    const txn = this.key.transaction();
-
-    txn._addStep({
-      cb: (state: StoreState) => {
-        const slice = this.key._assertedSlice();
-        const manager = state._getSliceStateManager(slice);
-
-        const newManager = manager._updateFieldState(this, val);
-
-        if (newManager === manager) {
-          return state;
-        }
-
-        return state._updateSliceStateManager(slice, newManager);
-      },
-    });
-
-    return txn;
+  derive<TVal>(
+    cb: (storeState: StoreState) => TVal,
+    options: BaseFieldOptions<NoInfer<TVal>> = {},
+  ) {
+    const derivedField = new DerivedField(cb, this, options);
+    this._knownFields.add(derivedField);
+    return derivedField;
   }
 }
 
-type MapSliceState<TFieldsSpec extends Record<string, FieldState>> = {
-  [K in keyof TFieldsSpec]: TFieldsSpec[K] extends FieldState<infer T>
+type MapSliceState<TFieldsSpec extends Record<string, BaseField<any>>> = {
+  [K in keyof TFieldsSpec]: TFieldsSpec[K] extends BaseField<infer T>
     ? T
     : never;
 };
 
-export class Slice<TFieldsSpec extends Record<string, FieldState> = any> {
+export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
   sliceId: SliceId;
 
-  readonly initialValue: MapSliceState<TFieldsSpec>;
+  _initialStateFieldValue: Record<FieldId, any> = {};
+  private derivedFields: Record<FieldId, DerivedField<any>> = {};
+
+  private getCache = new WeakMap<StoreState, any>();
 
   get dependencies(): Slice[] {
     return this._key.dependencies;
@@ -135,7 +103,10 @@ export class Slice<TFieldsSpec extends Record<string, FieldState> = any> {
    */
   _verifyInitialValueOverride(val: Record<FieldId, unknown>): void {
     // TODO: when user provides an override, do more checks
-    if (Object.keys(val).length !== Object.keys(this.initialValue).length) {
+    if (
+      Object.keys(val).length !==
+      Object.keys(this._initialStateFieldValue).length
+    ) {
       throwValidationError(
         `Slice "${this.name}" has fields that are not defined in the override. Did you forget to pass a state field?`,
       );
@@ -149,38 +120,100 @@ export class Slice<TFieldsSpec extends Record<string, FieldState> = any> {
   ) {
     this.sliceId = idGeneration.createSliceId(name);
 
-    if (_key._knownFieldState.size !== Object.keys(fieldsSpec).length) {
+    if (_key._knownFields.size !== Object.keys(fieldsSpec).length) {
       throwValidationError(
         `Slice "${name}" has fields that are not defined in the state spec. Did you forget to pass a state field?`,
       );
     }
 
-    for (const [fieldName, fieldState] of Object.entries(fieldsSpec)) {
-      if (!_key._knownFieldState.has(fieldState)) {
+    for (const [fieldName, field] of Object.entries(fieldsSpec)) {
+      if (!_key._knownFields.has(field)) {
         throwValidationError(`Field "${fieldName}" was not found.`);
       }
 
-      fieldState._fieldId = createFieldId(fieldName);
+      field._fieldId = createFieldId(fieldName);
+
+      if (field instanceof StateField) {
+        this._initialStateFieldValue[field._fieldId] = field.initialValue;
+      } else if (field instanceof DerivedField) {
+        this.derivedFields[field._fieldId] = field;
+      }
+    }
+  }
+
+  /**
+   * Get a field value from the slice state. Slightly faster than `get`.
+   */
+  getField<T extends keyof TFieldsSpec>(
+    storeState: StoreState,
+    fieldName: T,
+  ): MapSliceState<TFieldsSpec>[T] {
+    const id = fieldName as FieldId;
+
+    if (this.derivedFields[id]) {
+      return this.derivedFields[id]!.get(storeState);
     }
 
-    this.initialValue = Object.fromEntries(
-      Object.entries(fieldsSpec).map(([fieldName, fieldState]) => [
-        fieldName,
-        fieldState.initialValue,
-      ]),
-    ) as any;
+    return storeState._getSliceStateManager(this).sliceState[id] as any;
   }
 
   get(storeState: StoreState): MapSliceState<TFieldsSpec> {
-    return storeState._getSliceStateManager(this).sliceState as any;
+    const existing = this.getCache.get(storeState);
+
+    if (existing) {
+      return existing;
+    }
+
+    // TODO: compare using object merge with dynamic getters
+    const result = new Proxy(
+      storeState._getSliceStateManager(this).sliceState,
+      {
+        get: (target, prop: FieldId, receiver) => {
+          // this could have been a simple undefined check, but for some reason
+          // jest  is hijacking the proxy
+          if (this.derivedFields[prop] instanceof DerivedField) {
+            return this.derivedFields[prop]!.get(storeState);
+          }
+
+          return Reflect.get(target, prop, receiver);
+        },
+
+        has: (target, prop) => {
+          if (this.derivedFields[prop as FieldId] instanceof DerivedField) {
+            return true;
+          }
+          return Reflect.has(target, prop);
+        },
+
+        ownKeys: (target) => {
+          return [
+            ...Reflect.ownKeys(target),
+            ...Object.keys(this.derivedFields),
+          ];
+        },
+
+        getOwnPropertyDescriptor: (target, prop) => {
+          if (this.derivedFields[prop as FieldId] instanceof DerivedField) {
+            return {
+              configurable: true,
+              enumerable: true,
+            };
+          }
+          return Reflect.getOwnPropertyDescriptor(target, prop);
+        },
+      },
+    ) as any;
+
+    this.getCache.set(storeState, result);
+
+    return result;
   }
 
   track(store: EffectStore): MapSliceState<TFieldsSpec> {
     return new Proxy(this.get(store.state), {
-      get: (target, prop: FieldId) => {
-        const val = target[prop];
-
-        const field: FieldState = this.fieldsSpec[prop]!;
+      get: (target, prop: FieldId, receiver) => {
+        const val = Reflect.get(target, prop, receiver);
+        const field: BaseField<unknown> = this.fieldsSpec[prop]!;
 
         // track this field
         store._getRunInstance().addTrackedField(this, field, val);
@@ -188,5 +221,22 @@ export class Slice<TFieldsSpec extends Record<string, FieldState> = any> {
         return val;
       },
     });
+  }
+
+  /**
+   * Similar to `track`, but only tracks a single field.
+   */
+  trackField<T extends keyof TFieldsSpec>(
+    store: EffectStore,
+    fieldName: T,
+  ): MapSliceState<TFieldsSpec>[T] {
+    const id = fieldName as FieldId;
+    const val = this.getField(store.state, id);
+    const field: BaseField<unknown> = this.fieldsSpec[id]!;
+
+    // track this field
+    store._getRunInstance().addTrackedField(this, field, val);
+
+    return val as any;
   }
 }

@@ -1,9 +1,12 @@
 import type { CleanupCallback } from '../cleanup';
-import { loggerWarn } from '../helpers/logger-warn';
-import type { FieldState, Slice } from '../slice';
+import { BaseField } from '../field';
+import type { Slice } from '../slice';
 import type { Store } from '../store';
 
-type Dependencies = Map<Slice, Array<{ field: FieldState; value: unknown }>>;
+type Dependencies = Map<
+  Slice,
+  Array<{ field: BaseField<unknown>; value: unknown }>
+>;
 type ConvertToReadonlyMap<T> = T extends Map<infer K, infer V>
   ? ReadonlyMap<K, V>
   : T;
@@ -52,7 +55,7 @@ export class EffectRun {
     this._cleanups.add(cleanup);
   }
 
-  addTrackedField(slice: Slice, field: FieldState, val: unknown): void {
+  addTrackedField(slice: Slice, field: BaseField<unknown>, val: unknown): void {
     this.addTrackedCount++;
 
     const existing = this._dependencies.get(slice);
@@ -68,12 +71,15 @@ export class EffectRun {
     return;
   }
 
-  whatDependenciesStateChange(): undefined | FieldState {
+  whatDependenciesStateChange(): undefined | BaseField<any> {
     for (const [slice, fields] of this._dependencies) {
       const currentSliceState = slice.get(this.store.state);
 
       for (const { field, value } of fields) {
-        const oldVal = field._getFromSliceState(currentSliceState);
+        const oldVal = field._getFromSliceState(
+          currentSliceState,
+          this.store.state,
+        );
 
         if (!field.isEqual(oldVal, value)) {
           return field;
