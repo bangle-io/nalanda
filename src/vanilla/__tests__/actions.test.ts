@@ -27,7 +27,7 @@ describe('actions', () => {
   function customUpdate(val: { counter: number; counterNegative: number }) {
     const txn = key.transaction();
 
-    return txn.update((state) => {
+    return txn.step((state) => {
       state = state.apply(counter.update(val.counter));
       state = state.apply(counterNegative.update(val.counterNegative));
       return state;
@@ -38,14 +38,14 @@ describe('actions', () => {
     const txn = key.transaction();
 
     return txn
-      .update((state) => {
+      .step((state) => {
         state = state.apply(counter.update((c) => c + 1));
         return state;
       })
-      .update((state) => {
+      .step((state) => {
         return state.apply(counterNegative.update((c) => c - 1));
       })
-      .update((state) => {
+      .step((state) => {
         return state.apply(counter.update((c) => c + 1));
       });
   }
@@ -166,7 +166,7 @@ describe('actions', () => {
     function bumpByNumber(number: number) {
       const txn = key.transaction();
 
-      return txn.update((state) => {
+      return txn.step((state) => {
         state = state.apply(
           customUpdate({ counter: number, counterNegative: -number }),
         );

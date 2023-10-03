@@ -1,13 +1,9 @@
 import type { CleanupCallback } from '../cleanup';
-import { BaseField } from '../slice/field';
-import type { Slice } from '../slice/slice';
+import type { BaseField } from '../slice/field';
 import type { Store } from '../store';
 
 type TrackedFieldObj = { field: BaseField<unknown>; value: unknown };
 
-/**
- * @internal
- */
 export class EffectRun {
   private cleanups: Set<CleanupCallback> = new Set();
   private readonly trackedFields: TrackedFieldObj[] = [];

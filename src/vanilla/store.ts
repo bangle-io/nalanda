@@ -5,13 +5,13 @@ import {
   type EffectOpts,
   type EffectScheduler,
 } from './effect/effect';
+import { EffectManager } from './effect/effect-manager';
+import { StoreState } from './store-state';
 import type { DebugLogger } from './logger';
 import type { Operation } from './effect/operation';
 import type { Slice } from './slice/slice';
-import { StoreState } from './store-state';
-import { Transaction } from './transaction';
 import type { SliceId } from './types';
-import { EffectManager } from './effect/effect-manager';
+import { Transaction } from './transaction';
 
 interface StoreOptions {
   name?: string;

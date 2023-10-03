@@ -98,21 +98,17 @@ export class StateField<TVal = any> extends BaseField<TVal> {
   update(val: TVal | ((val: TVal) => TVal)): Transaction {
     const txn = this.key.transaction();
 
-    txn._addStep({
-      cb: (state: StoreState) => {
-        const slice = this.key._assertedSlice();
-        const manager = state._getSliceStateManager(slice);
+    return txn.step((state: StoreState) => {
+      const slice = this.key._assertedSlice();
+      const manager = state._getSliceStateManager(slice);
 
-        const newManager = manager._updateFieldState(this, val);
+      const newManager = manager._updateFieldState(this, val);
 
-        if (newManager === manager) {
-          return state;
-        }
+      if (newManager === manager) {
+        return state;
+      }
 
-        return state._updateSliceStateManager(slice, newManager);
-      },
+      return state._updateSliceStateManager(slice, newManager);
     });
-
-    return txn;
   }
 }

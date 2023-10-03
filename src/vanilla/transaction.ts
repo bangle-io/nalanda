@@ -1,5 +1,5 @@
 import { genTransactionID } from './helpers/id-generation';
-import { StoreState } from './store-state';
+import type { StoreState } from './store-state';
 
 type Step = { cb: (storeState: StoreState) => StoreState };
 
@@ -19,19 +19,14 @@ export class Transaction {
     this.steps = [];
   }
 
-  update(cb: Step['cb']): Transaction {
-    this._addStep({
-      cb,
-    });
-    return this;
-  }
-
   _getSteps(): ReadonlyArray<Step> {
     return this.steps;
   }
 
-  _addStep(step: Step) {
-    this.steps.push(step);
+  step(cb: Step['cb']): Transaction {
+    this.steps.push({ cb });
+
+    return this;
   }
 
   _destroy() {
