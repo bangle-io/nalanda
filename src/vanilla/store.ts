@@ -7,7 +7,7 @@ import {
 } from './effect/effect';
 import type { DebugLogger } from './logger';
 import type { Operation } from './effect/operation';
-import type { Slice } from './slice';
+import type { Slice } from './slice/slice';
 import { StoreState } from './store-state';
 import { Transaction } from './transaction';
 import type { SliceId } from './types';

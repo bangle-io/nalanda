@@ -1,4 +1,4 @@
-import { idGeneration } from './helpers/id-generation';
+import { genTransactionID } from './helpers/id-generation';
 import { StoreState } from './store-state';
 
 type Step = { cb: (storeState: StoreState) => StoreState };
@@ -7,7 +7,7 @@ export const META_DISPATCHER = 'DEBUG__DISPATCHER';
 export const TX_META_STORE_NAME = 'store-name';
 
 export class Transaction {
-  readonly id = idGeneration.createTransactionId();
+  readonly id = genTransactionID();
 
   private destroyed = false;
 

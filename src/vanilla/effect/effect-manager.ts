@@ -1,6 +1,6 @@
 import { calcReverseDependencies } from '../helpers/dependency-helpers';
 import type { DebugLogger } from '../logger';
-import { Slice } from '../slice';
+import { Slice } from '../slice/slice';
 import type { SliceId } from '../types';
 import type { Effect } from './effect';
 
@@ -37,6 +37,9 @@ export class EffectManager {
     }
   }
 
+  /**
+   * Will include all slices that depend on the slices that changed.
+   */
   getAllSlicesChanged(slicesChanged?: Slice[]): undefined | Set<Slice> {
     if (slicesChanged === undefined) {
       return undefined;
@@ -65,9 +68,9 @@ export class EffectManager {
   }
 
   run(slicesChanged?: Slice[]) {
-    const allSlices = this.getAllSlicesChanged(slicesChanged);
+    const allSlicesChanged = this.getAllSlicesChanged(slicesChanged);
     for (const effect of this._effects) {
-      effect.run(allSlices);
+      effect.run(allSlicesChanged);
     }
   }
 

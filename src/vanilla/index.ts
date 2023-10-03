@@ -1,2 +1,2 @@
-export { createKey } from './slice';
+export { createKey } from './slice/key';
 export { createStore } from './store';

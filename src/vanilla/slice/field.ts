@@ -1,33 +1,44 @@
-import { throwValidationError } from './helpers/throw-error';
-import type { Key } from './slice';
-import { StoreState } from './store-state';
-import { Transaction } from './transaction';
-import type { FieldId } from './types';
+import { EffectStore } from '../effect/effect';
+import { fieldIdCounters } from '../helpers/id-generation';
+import { throwValidationError } from '../helpers/throw-error';
+import type { Key } from './key';
+import { StoreState } from '../store-state';
+import { Transaction } from '../transaction';
+import type { FieldId } from '../types';
 
 export type BaseFieldOptions<TVal> = {
   equal?: (a: TVal, b: TVal) => boolean;
 };
 
 export abstract class BaseField<TVal> {
-  _fieldId: FieldId | undefined;
+  readonly id: FieldId;
+
+  name: string | undefined;
 
   constructor(
     public readonly key: Key,
     public readonly options: BaseFieldOptions<TVal>,
-  ) {}
+  ) {
+    this.id = fieldIdCounters.generate(key.name);
+  }
+
+  _getSlice() {
+    return this.key._assertedSlice();
+  }
 
   abstract get(storeState: StoreState): TVal;
-
-  abstract _getFromSliceState(
-    sliceState: Record<FieldId, unknown>,
-    storeState: StoreState,
-  ): TVal;
 
   isEqual(a: TVal, b: TVal): boolean {
     if (this.options.equal) {
       return this.options.equal(a, b);
     }
     return Object.is(a, b);
+  }
+
+  track(store: EffectStore) {
+    const value = this.get(store.state);
+    store._getRunInstance().addTrackedField(this, value);
+    return value;
   }
 }
 
@@ -42,15 +53,8 @@ export class DerivedField<TVal> extends BaseField<TVal> {
 
   private getCache = new WeakMap<StoreState, any>();
 
-  _getFromSliceState(
-    sliceState: Record<FieldId, unknown>,
-    storeState: StoreState,
-  ): TVal {
-    return this.deriveCallback(storeState);
-  }
-
   get(storeState: StoreState): TVal {
-    if (!this._fieldId) {
+    if (!this.id) {
       throwValidationError(
         `Cannot access state before Slice "${this.key.name}" has been created.`,
       );
@@ -79,22 +83,16 @@ export class StateField<TVal = any> extends BaseField<TVal> {
     super(key, options);
   }
 
-  _getFromSliceState(
-    sliceState: Record<FieldId, unknown>,
-    storeState: StoreState,
-  ): TVal {
-    return sliceState[this._fieldId!] as TVal;
-  }
-
   get(storeState: StoreState): TVal {
-    if (!this._fieldId) {
+    if (!this.id) {
       throwValidationError(
         `Cannot access state before Slice "${this.key.name}" has been created.`,
       );
     }
     const slice = this.key._assertedSlice();
-
-    return slice.get(storeState)[this._fieldId] as TVal;
+    return storeState
+      ._getSliceStateManager(slice)
+      ._getFieldStateVal(this) as TVal;
   }
 
   update(val: TVal | ((val: TVal) => TVal)): Transaction {
