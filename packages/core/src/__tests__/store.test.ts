@@ -1,4 +1,4 @@
-import { createKey, createStore } from '../../index';
+import { createKey, createStore } from '../index';
 import { testCleanup } from '../helpers/test-cleanup';
 
 const key = createKey('mySliceName');

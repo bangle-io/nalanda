@@ -1,9 +1,8 @@
 {
-  "name": "nalanda",
-  "sideEffects": false,
+  "name": "nalanda-workspace",
+  "private": true,
   "version": "0.0.0",
   "description": "",
-  "main": "dist/index.js",
   "authors": [
     {
       "name": "Kushan Joshi",
@@ -19,55 +18,17 @@
     "url": "https://github.com/bangle-io/nalanda/issues"
   },
   "scripts": {
-    "test": "jest",
-    "lint": "npm-run-all -l --aggregate-output --parallel lint:*",
-    "lint:eslint": "eslint .",
-    "lint:tsc": "tsc --noEmit",
-    "lint:prettier": "prettier src --check",
-    "build": "tsup",
-    "format": "prettier src --write",
-    "preview-docs": "pnpm --filter documentation run preview",
-    "build-docs": "pnpm --filter documentation run build"
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "build-docs": "pnpm -r --filter documentation build"
   },
   "keywords": [],
   "license": "MIT",
   "dependencies": {
-    "use-sync-external-store": "^1.2.0"
-  },
-  "files": [
-    "package.json",
-    "dist",
-    "src",
-    "README.md",
-    "LICENSE.txt",
-    "!**/.gitattributes"
-  ],
-  "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/commit-analyzer": "10.0.4",
-    "@semantic-release/exec": "6.0.3",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^9.2.1",
-    "@semantic-release/npm": "^10.0.6",
-    "@swc/core": "^1.3.90",
-    "@swc/jest": "^0.2.29",
-    "@types/jest": "^29.5.5",
-    "@types/react": "^18.2.23",
-    "@types/react-dom": "^18.2.8",
-    "@types/use-sync-external-store": "^0.0.4",
-    "@typescript-eslint/eslint-plugin": "^6.7.3",
-    "@typescript-eslint/parser": "^6.7.3",
-    "eslint": "^8.50.0",
-    "jest": "^29.7.0",
-    "npm-run-all": "^4.1.5",
-    "prettier": "^3.0.3",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "semantic-release": "^21.1.2",
-    "tsup": "^7.2.0",
+    "tsconfig": "workspace:*",
     "typescript": "^5.2.2",
-    "wait-for-expect": "^3.0.2",
-    "zod": "^3.22.2"
+    "prettier": "^3.0.3"
   },
   "prettier": {
     "singleQuote": true,
@@ -75,40 +36,5 @@
     "quoteProps": "consistent",
     "arrowParens": "always",
     "printWidth": 80
-  },
-  "peerDependencies": {
-    "react": ">=17.0",
-    "zod": ">=3.20.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "zod": {
-      "optional": true
-    }
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./package.json": "./package.json",
-    "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.mjs",
-      "require": "./dist/react/index.js"
-    },
-    "./vanilla": {
-      "types": "./dist/vanilla/index.d.ts",
-      "import": "./dist/vanilla/index.mjs",
-      "require": "./dist/vanilla/index.js"
-    }
-  },
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts"
+  }
 }

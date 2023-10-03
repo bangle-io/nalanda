@@ -55,20 +55,18 @@ key.effect(async (store) => {
 You pass a type argument to `ref` to specify the type of the value you want to store.
 
 ```ts /<string |undefined>/
-const getUsernameRef = ref<string |undefined>(undefined)
+const getUsernameRef = ref<string | undefined>(undefined);
 
 key.effect(async (store) => {
-    const usernameRef = getUsernameRef(store);
+  const usernameRef = getUsernameRef(store);
 
-    // fetch username if not set
-    if (!usernameRef.current) {
-        const username = await fetchUsername();
-        usernameRef.current = username;
-    }
-})
+  // fetch username if not set
+  if (!usernameRef.current) {
+    const username = await fetchUsername();
+    usernameRef.current = username;
+  }
+});
 ```
-
-
 
 ### When to use them?
 

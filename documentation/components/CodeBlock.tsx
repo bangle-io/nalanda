@@ -2,8 +2,7 @@ import { Sandpack } from '@codesandbox/sandpack-react';
 import { sandpackDark } from '@codesandbox/sandpack-themes';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-// @ts-expect-error - no types
-import rawNsmCode from '../dist/nsm-docs-bundle/index.mjs?raw';
+// import rawNsmCode from "../dist/nsm-docs-bundle/index.mjs?raw";
 import prettier from 'prettier';
 
 export function CodeBlockVanilla({
@@ -39,7 +38,8 @@ ${children.trim()}
         },
         '/node_modules/nalanda/index.mjs': {
           hidden: true,
-          code: rawNsmCode,
+          code: '',
+          // code: rawNsmCode,
         },
       }}
       theme={theme === 'light' ? 'light' : 'dark'}
