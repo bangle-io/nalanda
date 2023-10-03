@@ -10,6 +10,7 @@ import type { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
 import type { FieldId, NoInfer } from '../types';
 import { Slice } from './slice';
+import { Operation } from '../effect/operation';
 
 /**
  * @param name - The name of the slice.
@@ -92,6 +93,10 @@ export class Key {
    */
   transaction() {
     return new Transaction();
+  }
+
+  operation() {
+    return new Operation();
   }
 
   effect(callback: EffectCallback, opts: Partial<EffectOpts> = {}) {

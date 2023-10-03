@@ -1,14 +1,42 @@
 import { BaseStore } from '../base-store';
-import type { CleanupCallback } from '../cleanup';
+import type { CleanupCallback } from './cleanup';
 import { Store } from '../store';
 import type { Transaction } from '../transaction';
 
 export type OperationOpts = {
-  deferred?: boolean;
-  maxWait?: number;
+  name?: string;
 };
 
-export class Operation {}
+type OperationCallback = (store: OperationStore) => Promise<void>;
+
+export class Operation {
+  private callbacks: OperationCallback[] = [];
+  executed = false;
+
+  constructor(private opts: OperationOpts = {}) {}
+
+  exec(callback: (store: OperationStore) => void | Promise<void>): Operation {
+    this.callbacks.push(async (store) => callback(store));
+    return this;
+  }
+
+  async _run(store: Store): Promise<void> {
+    if (this.executed) {
+      return;
+    }
+    const operationStore = new OperationStore(
+      store,
+      this.opts?.name || 'operation',
+      this.opts,
+    );
+    this.executed = true;
+    const callbacks = this.callbacks;
+    this.callbacks = [];
+    for (const callback of callbacks) {
+      await callback(operationStore);
+    }
+  }
+}
 
 export class OperationStore extends BaseStore {
   private cleanupRan = false;
