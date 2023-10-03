@@ -1,30 +1,32 @@
-# Refs
+# Ref
 
-Ref (short for reference) is a special helper wrapper that allows you save value in a mutable fashion.
-This allows you to persist data across multiple runs of an effects.
+Ref (short for reference) is a mutable object that allows you save value without any reactivity.
+This allows you to share data across multiple runs of an effects.
 
-```typescript
+### Usage
+
+```ts {3}
 import { ref } from 'nalanda';
 
 const getValueRef = ref(initialValue);
 
 effect((store) => {
   const valueRef = getValueRef(store);
-  valueRef.current; // to get the value
   valueRef.current = 'newValue'; // to set the value
 });
 ```
 
-### Basic Usage
+### Sharing ref between effects
 
-Here is a basic example where ref is used to manage the abort a request across multiple effects.
+Here is an example where a shared ref is used to manage aborting of a request across multiple effects.
 
 ```ts
 import { ref } from 'nalanda';
 
+const key = createKey('mySlice', []);
 const getAbortRef = ref(new AbortController());
 
-effect(async (store) => {
+key.effect(async (store) => {
   const abortRef = getAbortRef(store);
 
   if (!abortRef.current.signal.aborted) {
@@ -37,7 +39,7 @@ effect(async (store) => {
 });
 
 // an effect that can cancel the fetch
-effect(async (store) => {
+key.effect(async (store) => {
   const abortRef = getAbortRef(store);
   const { isUserLoggedIn } = useSlice.track(store);
 
@@ -47,6 +49,26 @@ effect(async (store) => {
   }
 });
 ```
+
+### Typescript
+
+You pass a type argument to `ref` to specify the type of the value you want to store.
+
+```ts /<string |undefined>/
+const getUsernameRef = ref<string |undefined>(undefined)
+
+key.effect(async (store) => {
+    const usernameRef = getUsernameRef(store);
+
+    // fetch username if not set
+    if (!usernameRef.current) {
+        const username = await fetchUsername();
+        usernameRef.current = username;
+    }
+})
+```
+
+
 
 ### When to use them?
 
