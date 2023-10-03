@@ -71,7 +71,7 @@ const userNameField = key.field<string | undefined>(undefined);
 
 function setUserName(userName) {
   const txn = key.transaction();
-  return txn.update((state) => {
+  return txn.step((state) => {
     // Check if user is logged in
     if (!loginSlice.get(state).isLoggedIn) return state;
 

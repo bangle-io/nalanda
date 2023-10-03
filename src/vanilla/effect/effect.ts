@@ -1,12 +1,12 @@
 import { BaseStore } from '../base-store';
-import type { BaseField } from '../slice/field';
-import { hasIdleCallback } from '../helpers/has-idle-callback';
-import type { DebugLogger } from '../logger';
-import { Slice } from '../slice/slice';
-import type { Store } from '../store';
-import { Transaction } from '../transaction';
 import { EffectRun } from './effect-run';
-import { Operation } from './operation';
+import { hasIdleCallback } from '../helpers/has-idle-callback';
+import type { BaseField } from '../slice/field';
+import type { DebugLogger } from '../logger';
+import type { Operation } from './operation';
+import type { Slice } from '../slice/slice';
+import type { Store } from '../store';
+import type { Transaction } from '../transaction';
 
 const DEFAULT_MAX_WAIT = 15;
 
@@ -51,6 +51,7 @@ export class EffectStore extends BaseStore {
 
 export type EffectScheduler = (
   cb: () => void,
+  // eslint-disable-next-line @typescript-eslint/ban-types
   opts: Omit<EffectOpts, 'scheduler'> & {},
 ) => void;
 

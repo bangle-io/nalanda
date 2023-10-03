@@ -11,6 +11,10 @@ import { Transaction } from '../transaction';
 import type { FieldId, NoInfer } from '../types';
 import { Slice } from './slice';
 
+/**
+ * @param name - The name of the slice.
+ * @param dependencies - An array of slices that this slice depends on.
+ */
 export function createKey(name: string, dependencies: Slice[] = []) {
   return new Key(name, dependencies);
 }
@@ -54,8 +58,15 @@ export class Key {
     return field;
   }
 
-  field<TVal>(val: TVal, options: BaseFieldOptions<NoInfer<TVal>> = {}) {
-    return this.registerField(new StateField(val, this, options));
+  /**
+   * @param initialValue - The initial value of the field.
+   * @param options
+   */
+  field<TVal>(
+    initialValue: TVal,
+    options: BaseFieldOptions<NoInfer<TVal>> = {},
+  ) {
+    return this.registerField(new StateField(initialValue, this, options));
   }
 
   slice<TFieldsSpec extends Record<string, BaseField<any>>>({
@@ -76,6 +87,9 @@ export class Key {
     return this._slice;
   }
 
+  /**
+   * Creates a new transaction object which is used to update the slice state.
+   */
   transaction() {
     return new Transaction();
   }
@@ -84,10 +98,15 @@ export class Key {
     this._effectCallbacks.push([callback, opts]);
   }
 
+  /**
+   *
+   * @param compute - A function that computes the derived value.
+   * @param options
+   */
   derive<TVal>(
-    cb: (storeState: StoreState) => TVal,
+    compute: (storeState: StoreState) => TVal,
     options: BaseFieldOptions<NoInfer<TVal>> = {},
   ) {
-    return this.registerField(new DerivedField(cb, this, options));
+    return this.registerField(new DerivedField(compute, this, options));
   }
 }

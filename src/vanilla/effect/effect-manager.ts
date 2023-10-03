@@ -1,6 +1,6 @@
 import { calcReverseDependencies } from '../helpers/dependency-helpers';
 import type { DebugLogger } from '../logger';
-import { Slice } from '../slice/slice';
+import type { Slice } from '../slice/slice';
 import type { SliceId } from '../types';
 import type { Effect } from './effect';
 

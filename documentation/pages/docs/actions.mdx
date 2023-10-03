@@ -37,7 +37,7 @@ const isLoading = key.field(false);
 function setUserData(data) {
   const txn = key.transaction();
 
-  return txn.update((state) => {
+  return txn.step((state) => {
     state = state.apply(userData.update(data));
     state = state.apply(isLoading.update(false));
     return state;
@@ -71,7 +71,7 @@ const loggedIn = key.field(false);
 function loginUser(data) {
   const txn = key.transaction();
 
-  return txn.update((state) => {
+  return txn.step((state) => {
     // get the transaction from the external action
     const userDataTxn = userDataSlice.setUserData(data);
 

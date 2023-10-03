@@ -64,7 +64,7 @@ describe('StoreState Slice and Transaction Operations', () => {
 
     // Apply multiple transactions to the store and verify state updates
     storeState = storeState.apply(
-      firstTransaction.update((state) => {
+      firstTransaction.step((state) => {
         return state.apply(secondTransaction);
       }),
     );
@@ -114,7 +114,7 @@ describe('StoreState Slice and Transaction Operations', () => {
     expect(newStoreStateAfterActionOne).toBe(storeState);
 
     let newStoreStateAfterActionTwo = newStoreStateAfterActionOne.apply(
-      updateKeyOneSliceOne('updatedValueOne').update((state) => {
+      updateKeyOneSliceOne('updatedValueOne').step((state) => {
         return state.apply(nonMutatingAction(3));
       }),
     );
@@ -144,7 +144,7 @@ describe('StoreState Slice and Transaction Operations', () => {
     function mutatingAction(inputNumber: number) {
       const transaction = mySliceKey.transaction();
 
-      return transaction.update((state) => {
+      return transaction.step((state) => {
         storeStateInstances.push(state);
         return state.apply(myField.update({ fixed: 'new-state' }));
       });
@@ -155,7 +155,7 @@ describe('StoreState Slice and Transaction Operations', () => {
     });
 
     let newStoreStateAfterMutatingAction = store.apply(
-      nonMutatingAction(3).update((state) => state.apply(mutatingAction(53))),
+      nonMutatingAction(3).step((state) => state.apply(mutatingAction(53))),
     );
 
     expect(storeStateInstances.length).toBe(1);
@@ -189,7 +189,7 @@ describe('StoreState Slice and Transaction Operations', () => {
 
     function actionIncrementCounterB() {
       const txn = sliceBKey.transaction();
-      return txn.update((state) => {
+      return txn.step((state) => {
         return state.apply(
           counterB.update(
             () => sliceA.get(state).counter + sliceB.get(store).counter + 1,
@@ -203,7 +203,7 @@ describe('StoreState Slice and Transaction Operations', () => {
     });
 
     let newStore = store.apply(
-      actionIncrementCounterA().update((state) =>
+      actionIncrementCounterA().step((state) =>
         state.apply(actionIncrementCounterB()),
       ),
     );

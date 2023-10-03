@@ -1,0 +1,162 @@
+
+## createKey
+
+Signature
+
+```ts
+createKey(name:string, dependencies?: Slice[])
+```
+
+Function arguments:
+
+- `name` - Name of the slice.
+- `dependencies` - An optional array of slices that this slice depends on.
+
+Returns:
+- `key` - A [key](#key) object.
+
+Example
+```ts
+import { createKey } from 'nalanda'
+
+const key = createKey('mySlice', [someSlice, someOtherSlice]);
+```
+
+## Key
+
+The following methods are available on the `key` object.
+
+
+### `.derive()`
+
+Creates a new derived field object.
+
+Signature:
+
+```ts
+key.derive<T>(compute: (storeState: StoreState) => T, options?: DeriveOptions);
+```
+
+Function arguments:
+
+- `compute` - A function that computes the derived value.
+
+- `options?` - An optional object containing the following options.
+
+    - `equal` - `(a: T, b: T) => boolean` A comparator function that compares the previous and current value of the derived field. If the comparator returns true, the derived field is not updated. Defaults to `Object.is`.
+
+
+### `.effect()`
+
+Creates a new effect object.
+
+Signature:
+
+```ts
+key.effect(effect: (store: Store) => void | Promise<void>)
+```
+
+Function arguments:
+
+- `effect` - The callback to run as a side effect.
+
+Returns:
+
+- `effect` - An [effect](./effect) object.
+
+
+Example:
+
+```ts
+
+const counter = key.field(0);
+
+key.effect((store) => {
+    // This will run whenever the counter value changes
+    const counterValue = counter.track(store);
+    console.log(`The counter value is ${counterValue}`);
+});
+```
+
+### `.field()`
+
+Creates a new field object.
+
+Signature:
+
+```ts
+key.field(initialValue: any)
+```
+
+Function arguments:
+
+- `initialValue` - Initial value of the field.
+
+Returns:
+
+- `field` - A field object.
+
+
+
+### `.slice()`
+
+Creates a new [slice](./slice) object.
+
+Signature:
+
+```ts
+key.slice({fields: { Fields }, actions: { Actions }})
+```
+
+Function arguments:
+
+- `fields` - An object containing the fields you to expose externally.
+
+- `actions` - An object containing the actions you to expose externally.
+
+Returns:
+
+- `slice` - A [slice](./slice) object.
+
+
+Example:
+
+```ts
+export const countSlice = key.slice({
+    fields: {
+        count,
+    },
+    actions: {
+        increment
+    }
+})
+```
+
+> Note: Only the slice should be exported from your file. 
+
+### `.transaction()`
+
+Creates a new [transaction](./transaction) object which is used to update the slice state.
+
+Signature:
+
+```ts
+key.transaction()
+```
+
+Returns:
+
+- `txn` - A [transaction](./transaction) object.
+
+Example:
+
+```ts
+function increment() {
+    const txn = key.transaction();
+    return txn.step((state:StoreState) => {
+        return state.apply(count.update(c => c+1))
+    });
+}
+```
+
+
