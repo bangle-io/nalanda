@@ -1,4 +1,4 @@
-import type { CleanupCallback } from '../cleanup';
+import type { CleanupCallback } from './cleanup';
 import type { BaseField } from '../slice/field';
 import type { Store } from '../store';
 

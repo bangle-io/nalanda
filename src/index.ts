@@ -1,1 +1,1 @@
-export { createStore, createKey } from './vanilla/index';
+export { createStore, createKey, ref, cleanup } from './vanilla/index';

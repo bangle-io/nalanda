@@ -27,10 +27,7 @@ export type EffectOpts = {
 
 export class EffectStore extends BaseStore {
   constructor(
-    /**
-     * @internal
-     */
-    private _rootStore: Store,
+    public _rootStore: Store,
     public readonly name: string,
     /**
      * @internal
