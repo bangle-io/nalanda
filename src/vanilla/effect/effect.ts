@@ -51,6 +51,7 @@ export class EffectStore extends BaseStore {
 
 export type EffectScheduler = (
   cb: () => void,
+  // eslint-disable-next-line @typescript-eslint/ban-types
   opts: Omit<EffectOpts, 'scheduler'> & {},
 ) => void;
 
