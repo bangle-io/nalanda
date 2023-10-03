@@ -1,4 +1,7 @@
-// eslint-disable-next-line no-undef
+const { resolve } = require('node:path');
+
+const project = resolve(process.cwd(), 'tsconfig.json');
+
 module.exports = {
   extends: [
     'eslint:recommended',
@@ -7,12 +10,16 @@ module.exports = {
   ],
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint'],
-  root: true,
   parserOptions: {
-    project: ['./tsconfig.json'],
-    tsconfigRootDir: __dirname,
+    project,
   },
-
+  settings: {
+    'import/resolver': {
+      typescript: {
+        project,
+      },
+    },
+  },
   rules: {
     '@typescript-eslint/no-unsafe-assignment': 'off',
     'prefer-const': 'off',

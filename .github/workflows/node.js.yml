@@ -31,8 +31,8 @@ jobs:
         run: pnpm lint
       - name: test
         run: pnpm test
-      - run: pnpx semantic-release
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/alpha'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - run: pnpx semantic-release
+      #   if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/alpha'
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

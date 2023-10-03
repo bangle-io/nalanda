@@ -5,6 +5,12 @@ const withNextra = require('nextra')({
 
 module.exports = {
   ...withNextra({
+    trailingSlash: true,
+    images: {
+      unoptimized: true,
+    },
+    distDir: 'dist',
+    swcMinify: true,
     webpack: (config) => {
       // console.log(config.module?.rules);
       config.module?.rules?.unshift({
@@ -15,12 +21,6 @@ module.exports = {
       return config;
     },
   }),
-  reactStrictMode: true,
-  swcMinify: true,
-  trailingSlash: true,
-  images: {
-    unoptimized: true,
-  },
 
   async redirects() {
     return [
