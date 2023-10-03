@@ -51,6 +51,8 @@ export function createStore(config: StoreOptions) {
 
 export class Store extends BaseStore {
   private _state: StoreState;
+
+  _rootStore: Store;
   public readonly initialState: StoreState;
 
   private effectsManager: EffectManager;
@@ -77,6 +79,7 @@ export class Store extends BaseStore {
 
   constructor(public readonly options: StoreOptions) {
     super();
+
     this._state = StoreState.create({
       slices: options.slices,
     });
@@ -89,6 +92,8 @@ export class Store extends BaseStore {
     this.effectsManager = new EffectManager(this.options.slices, {
       debug: this.options.debug,
     });
+
+    this._rootStore = this;
 
     // do it a bit later so that all effects are registered
     queueMicrotask(() => {

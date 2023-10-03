@@ -1,5 +1,5 @@
 import { BaseStore } from '../base-store';
-import type { CleanupCallback } from '../cleanup';
+import type { CleanupCallback } from './cleanup';
 import { Store } from '../store';
 import type { Transaction } from '../transaction';
 
@@ -14,12 +14,14 @@ export class OperationStore extends BaseStore {
   private cleanupRan = false;
   private readonly _cleanupCallbacks: Set<CleanupCallback> = new Set();
 
+  _rootStore: Store;
   constructor(
     private rootStore: Store,
     public readonly name: string,
     private readonly opts: OperationOpts,
   ) {
     super();
+    this._rootStore = rootStore;
   }
 
   get state() {

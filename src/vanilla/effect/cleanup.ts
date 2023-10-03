@@ -1,6 +1,6 @@
-import { EffectStore } from './effect/effect';
-import { OperationStore } from './effect/operation';
-import { throwValidationError } from './helpers/throw-error';
+import { EffectStore } from './effect';
+import { OperationStore } from './operation';
+import { throwValidationError } from '../helpers/throw-error';
 
 export type CleanupCallback = () => void | Promise<void>;
 
