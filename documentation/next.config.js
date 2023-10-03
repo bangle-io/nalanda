@@ -9,7 +9,6 @@ module.exports = {
     images: {
       unoptimized: true,
     },
-    distDir: 'dist',
     swcMinify: true,
     webpack: (config) => {
       // console.log(config.module?.rules);

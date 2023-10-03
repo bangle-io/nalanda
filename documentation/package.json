@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "next build && next export -o dist",
     "preview": "next dev",
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch"
