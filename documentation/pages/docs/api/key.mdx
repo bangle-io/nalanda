@@ -1,4 +1,3 @@
-
 ## createKey
 
 Signature
@@ -13,11 +12,13 @@ Arguments:
 - `dependencies` - An optional array of slices that this slice depends on.
 
 Returns:
+
 - `key` - A [key](#key) object.
 
 Example
+
 ```ts
-import { createKey } from 'nalanda'
+import { createKey } from 'nalanda';
 
 const key = createKey('mySlice', [someSlice, someOtherSlice]);
 ```
@@ -25,7 +26,6 @@ const key = createKey('mySlice', [someSlice, someOtherSlice]);
 ## Key
 
 The following methods are available on the `key` object.
-
 
 ### `.derive()`
 
@@ -43,8 +43,7 @@ Arguments:
 
 - `options?` - An optional object containing the following options.
 
-    - `equal` - `(a: T, b: T) => boolean` A comparator function that compares the previous and current value of the derived field. If the comparator returns true, the derived field is not updated. Defaults to `Object.is`.
-
+  - `equal` - `(a: T, b: T) => boolean` A comparator function that compares the previous and current value of the derived field. If the comparator returns true, the derived field is not updated. Defaults to `Object.is`.
 
 ### `.effect()`
 
@@ -64,17 +63,15 @@ Returns:
 
 - `effect` - An [effect](./effect) object.
 
-
 Example:
 
 ```ts
-
 const counter = key.field(0);
 
 key.effect((store) => {
-    // This will run whenever the counter value changes
-    const counterValue = counter.track(store);
-    console.log(`The counter value is ${counterValue}`);
+  // This will run whenever the counter value changes
+  const counterValue = counter.track(store);
+  console.log(`The counter value is ${counterValue}`);
 });
 ```
 
@@ -96,8 +93,6 @@ Returns:
 
 - `field` - A field object.
 
-
-
 ### `.slice()`
 
 Creates a new [slice](./slice) object.
@@ -105,7 +100,7 @@ Creates a new [slice](./slice) object.
 Signature:
 
 ```ts
-key.slice({fields: { Fields }, actions: { Actions }})
+key.slice({ fields: { Fields }, actions: { Actions } });
 ```
 
 Arguments:
@@ -118,21 +113,20 @@ Returns:
 
 - `slice` - A [slice](./slice) object.
 
-
 Example:
 
 ```ts
 export const countSlice = key.slice({
-    fields: {
-        count,
-    },
-    actions: {
-        increment
-    }
-})
+  fields: {
+    count,
+  },
+  actions: {
+    increment,
+  },
+});
 ```
 
-> Note: Only the slice should be exported from your file. 
+> Note: Only the slice should be exported from your file.
 
 ### `.transaction()`
 
@@ -141,7 +135,7 @@ Creates a new [transaction](./transaction) object which is used to update the sl
 Signature:
 
 ```ts
-key.transaction()
+key.transaction();
 ```
 
 Returns:
@@ -152,11 +146,9 @@ Example:
 
 ```ts
 function increment() {
-    const txn = key.transaction();
-    return txn.step((state:StoreState) => {
-        return state.apply(count.update(c => c+1))
-    });
+  const txn = key.transaction();
+  return txn.step((state: StoreState) => {
+    return state.apply(count.update((c) => c + 1));
+  });
 }
 ```
-
-
