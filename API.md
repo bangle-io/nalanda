@@ -21,7 +21,7 @@ const key = sliceKey([sliceA], {
   },
 });
 
-const sel0 = key.selector(
+const sel0 = key.derive(
   // will have sliceA
   (state) => {
     return key.get(state).z;
@@ -31,7 +31,7 @@ const sel0 = key.selector(
   },
 );
 
-const sel1 = key.selector(
+const sel1 = key.derive(
   // will have sliceA
   (state) => {
     const otherSel = sel0(state);

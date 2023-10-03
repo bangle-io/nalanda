@@ -1,55 +1,37 @@
-import type { ActionId, SliceId } from '../types';
-import { createSliceId } from './create-ids';
+import type { FieldId, SliceId } from '../types';
 
-type InternalIdGenerators = {
-  txCounter: number;
-  actionIdCounters: Record<SliceId, number>;
-  sliceIdCounters: Record<string, number>;
-};
+const resetSymbol = Symbol('reset');
 
-const internalInitState: () => InternalIdGenerators = () => ({
-  txCounter: 0,
-  actionIdCounters: Object.create(null),
-  sliceIdCounters: Object.create(null),
-});
+function createIdGenerator<T>(prefix: string) {
+  let counterMap: Record<string, number> = Object.create(null);
 
-let idGenerators = internalInitState();
-
-/**
- * Should only be used in tests, to avoid side effects between tests
- */
-export const testOnlyResetIdGeneration = () => {
-  idGenerators = internalInitState();
-};
-
-class IdGeneration {
-  createActionId(sliceId: SliceId, hint = ''): ActionId {
-    let prefix = `a_${hint}[${sliceId}]`;
-
-    if (sliceId in idGenerators.actionIdCounters) {
-      return `${prefix}${idGenerators.actionIdCounters[sliceId]++}` as ActionId;
-    } else {
-      idGenerators.actionIdCounters[sliceId] = 0;
-
-      return prefix as ActionId;
-    }
-  }
-
-  createSliceId(name: string): SliceId {
-    if (name in idGenerators.sliceIdCounters) {
-      return createSliceId(
-        `sl_${name}$${++idGenerators.sliceIdCounters[name]}`,
-      );
-    }
-
-    idGenerators.sliceIdCounters[name] = 0;
-
-    return createSliceId(`sl_${name}$`);
-  }
-
-  createTransactionId(): string {
-    return `tx_${idGenerators.txCounter++}`;
-  }
+  return {
+    // only for testing
+    [resetSymbol]: () => {
+      counterMap = Object.create(null);
+    },
+    generate: (name: string): T => {
+      if (name in counterMap) {
+        return `${prefix}_${name}$${++counterMap[name]}` as T;
+      } else {
+        counterMap[name] = 0;
+        return `${prefix}_${name}$` as T;
+      }
+    },
+  };
 }
 
-export const idGeneration = new IdGeneration();
+let txCounter = 0;
+
+export const fieldIdCounters = createIdGenerator<FieldId>('f');
+export const sliceIdCounters = createIdGenerator<SliceId>('sl');
+export const genTransactionID = () => `tx_${txCounter++}`;
+
+/**
+ * WARNING Should only be used in tests, to avoid side effects between tests
+ */
+export const testOnlyResetIdGeneration = () => {
+  fieldIdCounters[resetSymbol]();
+  sliceIdCounters[resetSymbol]();
+  txCounter = 0;
+};

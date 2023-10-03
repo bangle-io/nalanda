@@ -14,7 +14,7 @@ const key = createKey(
   [loginSlice, userSlice],
 );
 
-const nameField = key.selector((state) => {
+const nameField = key.derive((state) => {
   const { isLoggedIn } = loginSlice.get(state);
   const { userName } = userSlice.get(state);
 
@@ -33,12 +33,12 @@ Selectors can be composed with other selectors.
 ```ts
 const counterField = key.field(0);
 
-const doubleField = key.selector((state) => {
+const doubleField = key.derive((state) => {
   const counter = counterField.get(state);
   return counter * 2;
 });
 
-const timesSixField = key.selector((state) => {
+const timesSixField = key.derive((state) => {
   const counter = doubleField.get(state);
   return counter * 3;
 });

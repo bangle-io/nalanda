@@ -7,7 +7,7 @@ import {
 } from './effect/effect';
 import type { DebugLogger } from './logger';
 import type { Operation } from './effect/operation';
-import type { Slice } from './slice';
+import type { Slice } from './slice/slice';
 import { StoreState } from './store-state';
 import { Transaction } from './transaction';
 import type { SliceId } from './types';
@@ -51,6 +51,8 @@ export function createStore(config: StoreOptions) {
 
 export class Store extends BaseStore {
   private _state: StoreState;
+  public readonly initialState: StoreState;
+
   private effectsManager: EffectManager;
   private destroyed = false;
   private registeredSlicesEffect = false;
@@ -78,6 +80,7 @@ export class Store extends BaseStore {
     this._state = StoreState.create({
       slices: options.slices,
     });
+    this.initialState = this._state;
 
     this._dispatchTxn =
       options.overrides?.dispatchTransactionOverride ||

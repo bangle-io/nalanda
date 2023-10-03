@@ -1,6 +1,6 @@
 import { testCleanup } from '../helpers/test-cleanup';
 import waitForExpect from 'wait-for-expect';
-import { createKey } from '../slice';
+import { createKey } from '../slice/key';
 import { createStore } from '../store';
 import { EffectScheduler, effect } from '../effect/effect';
 import { cleanup } from '../cleanup';
@@ -43,9 +43,20 @@ const sliceB = sliceBKey.slice({
 
 const sliceCDepBKey = createKey('sliceCDepB', [sliceB]);
 const sliceCDepBField = sliceCDepBKey.field('value:sliceCDepBField');
+
+const sliceCDepBSelector1 = sliceCDepBKey.derive((state) => {
+  return sliceCDepBField.get(state) + ':' + sliceB.get(state).sliceBField1;
+});
+
+const sliceCDepBSelector2 = sliceCDepBKey.derive((state) => {
+  return sliceCDepBField.get(state) + ':selector2';
+});
+
 const sliceCDepB = sliceCDepBKey.slice({
   fields: {
     sliceCDepBField,
+    sliceCDepBSelector1,
+    sliceCDepBSelector2,
   },
 });
 
@@ -191,7 +202,7 @@ describe('effect with store', () => {
     expect(effectCalled).toHaveBeenLastCalledWith('new-value');
   });
 
-  test.skip('should run effect for dependent slice', async () => {
+  test('should run effect for dependent slice', async () => {
     const { store, sliceB, updateSliceBField1, sliceCDepB } = setup();
 
     let effect1Called = jest.fn();
@@ -200,6 +211,11 @@ describe('effect with store', () => {
 
     const selector2InitValue = 'value:sliceCDepBField:selector2';
 
+    expect({ ...sliceCDepB.get(store.state) }).toEqual({
+      sliceCDepBField: 'value:sliceCDepBField',
+      sliceCDepBSelector1: 'value:sliceCDepBField:value:sliceBField1',
+      sliceCDepBSelector2: 'value:sliceCDepBField:selector2',
+    });
     expect(sliceCDepB.get(store.state).sliceCDepBSelector2).toBe(
       selector2InitValue,
     );
@@ -355,7 +371,7 @@ describe('effect with store', () => {
     });
   });
 
-  describe.skip('effects tracking', () => {
+  describe('effects tracking', () => {
     const setup2 = () => {
       const {
         store,

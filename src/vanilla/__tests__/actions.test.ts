@@ -1,5 +1,5 @@
 import { testCleanup } from '../helpers/test-cleanup';
-import { createKey } from '../slice';
+import { createKey } from '../slice/key';
 import { createStore } from '../store';
 
 afterEach(() => {

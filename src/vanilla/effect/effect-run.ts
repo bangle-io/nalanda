@@ -1,19 +1,16 @@
 import type { CleanupCallback } from '../cleanup';
-import { loggerWarn } from '../helpers/logger-warn';
-import type { FieldState, Slice } from '../slice';
+import { BaseField } from '../slice/field';
+import type { Slice } from '../slice/slice';
 import type { Store } from '../store';
 
-type Dependencies = Map<Slice, Array<{ field: FieldState; value: unknown }>>;
-type ConvertToReadonlyMap<T> = T extends Map<infer K, infer V>
-  ? ReadonlyMap<K, V>
-  : T;
+type TrackedFieldObj = { field: BaseField<unknown>; value: unknown };
 
 /**
  * @internal
  */
 export class EffectRun {
-  private _cleanups: Set<CleanupCallback> = new Set();
-  private readonly _dependencies: Dependencies = new Map();
+  private cleanups: Set<CleanupCallback> = new Set();
+  private readonly trackedFields: TrackedFieldObj[] = [];
   private isDestroyed = false;
 
   /**
@@ -37,8 +34,8 @@ export class EffectRun {
     public readonly name: string,
   ) {}
 
-  get dependencies(): ConvertToReadonlyMap<Dependencies> {
-    return this._dependencies;
+  getTrackedFields(): ReadonlyArray<TrackedFieldObj> {
+    return this.trackedFields;
   }
 
   addCleanup(cleanup: CleanupCallback): void {
@@ -49,35 +46,20 @@ export class EffectRun {
       void cleanup();
       return;
     }
-    this._cleanups.add(cleanup);
+    this.cleanups.add(cleanup);
   }
 
-  addTrackedField(slice: Slice, field: FieldState, val: unknown): void {
+  addTrackedField(field: BaseField<any>, val: unknown): void {
     this.addTrackedCount++;
-
-    const existing = this._dependencies.get(slice);
-
-    if (existing === undefined) {
-      this._dependencies.set(slice, [{ field, value: val }]);
-
-      return;
-    }
-
-    existing.push({ field, value: val });
-
+    this.trackedFields.push({ field, value: val });
     return;
   }
 
-  whatDependenciesStateChange(): undefined | FieldState {
-    for (const [slice, fields] of this._dependencies) {
-      const currentSliceState = slice.get(this.store.state);
-
-      for (const { field, value } of fields) {
-        const oldVal = field._getFromSliceState(currentSliceState);
-
-        if (!field.isEqual(oldVal, value)) {
-          return field;
-        }
+  whatDependenciesStateChange(): undefined | BaseField<any> {
+    for (const { field, value } of this.trackedFields) {
+      const curVal = field.get(this.store.state);
+      if (!field.isEqual(curVal, value)) {
+        return field;
       }
     }
 
@@ -89,9 +71,9 @@ export class EffectRun {
       return;
     }
     this.isDestroyed = true;
-    this._cleanups.forEach((cleanup) => {
+    this.cleanups.forEach((cleanup) => {
       void cleanup();
     });
-    this._cleanups.clear();
+    this.cleanups.clear();
   }
 }

@@ -1,7 +1,8 @@
 import { BaseStore } from '../base-store';
+import type { BaseField } from '../slice/field';
 import { hasIdleCallback } from '../helpers/has-idle-callback';
 import type { DebugLogger } from '../logger';
-import { FieldState, Slice } from '../slice';
+import { Slice } from '../slice/slice';
 import type { Store } from '../store';
 import { Transaction } from '../transaction';
 import { EffectRun } from './effect-run';
@@ -121,11 +122,11 @@ export class Effect {
     this.pendingRun = true;
     this.scheduler(() => {
       queueMicrotask(() => {
-        this._run();
-      });
-      // queue it so that if run throws error, it doesn't block the next run
-      queueMicrotask(() => {
-        this.pendingRun = false;
+        try {
+          this._run();
+        } finally {
+          this.pendingRun = false;
+        }
       });
     }, this.opts);
 
@@ -141,8 +142,9 @@ export class Effect {
       return true;
     }
 
-    for (const slice of this.runInstance.dependencies.keys()) {
-      if (slicesChanged.has(slice)) {
+    for (const { field } of this.runInstance.getTrackedFields()) {
+      const parentSlice = field._getSlice();
+      if (slicesChanged.has(parentSlice)) {
         return true;
       }
     }
@@ -159,7 +161,7 @@ export class Effect {
       return;
     }
 
-    let fieldChanged: FieldState | undefined;
+    let fieldChanged: BaseField<unknown> | undefined;
 
     // if runCount == 0, always run, to ensure the effect runs at least once
     if (this.runCount != 0) {
@@ -178,14 +180,14 @@ export class Effect {
 
     this.runInstance = new EffectRun(this.rootStore, this.name);
 
+    this.runCount++;
     void this.effectCallback(this.effectStore);
 
     this.debug?.({
       type: this.opts.deferred ? 'UPDATE_EFFECT' : 'SYNC_UPDATE_EFFECT',
       name: this.name,
-      changed: fieldChanged?._fieldId || '<first-run-OR-forced>',
+      changed: fieldChanged?.id || '<first-run-OR-forced>',
     });
-    this.runCount++;
   }
 }
 

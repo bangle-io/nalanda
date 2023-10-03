@@ -1,8 +1,9 @@
-import type { FieldState, Slice } from './slice';
+import type { Slice } from './slice/slice';
 import { FieldId, SliceId } from './types';
 import { throwValidationError } from './helpers/throw-error';
 import { Transaction } from './transaction';
 import { calcReverseDependencies } from './helpers/dependency-helpers';
+import { StateField } from './slice/field';
 
 type SliceStateMap = Record<SliceId, SliceStateManager>;
 
@@ -64,6 +65,7 @@ export class StoreState {
       computed,
     });
   }
+
   constructor(private config: StoreStateConfig) {}
 
   apply(transaction: Transaction): StoreState {
@@ -116,10 +118,10 @@ export class StoreState {
 
     Object.values(this.config.sliceStateMap).forEach((sliceStateManager) => {
       const slice = sliceStateManager.slice;
-      const sliceState = sliceStateManager.sliceState;
+      const sliceState = sliceStateManager.rawState;
 
       const otherSliceState =
-        otherStoreState.config.sliceStateMap[slice.sliceId]?.sliceState;
+        otherStoreState.config.sliceStateMap[slice.sliceId]?.rawState;
 
       if (sliceState !== otherSliceState) {
         diff.push(sliceStateManager.slice);
@@ -130,29 +132,48 @@ export class StoreState {
   }
 }
 
-class SliceStateManager {
+export class SliceStateManager {
   static new(slice: Slice, sliceStateOverride?: Record<string, unknown>) {
     if (sliceStateOverride) {
       slice._verifyInitialValueOverride(sliceStateOverride);
     }
-    return new SliceStateManager(
-      slice,
-      sliceStateOverride ?? slice.initialValue,
-    );
+
+    let override = slice._key._initialStateFieldValue;
+
+    if (sliceStateOverride) {
+      const normalizedOverride = Object.fromEntries(
+        Object.entries(sliceStateOverride).map(([fieldName, val]) => [
+          slice._getFieldByName(fieldName).id,
+          val,
+        ]),
+      );
+
+      override = {
+        ...override,
+        ...normalizedOverride,
+      };
+    }
+    return new SliceStateManager(slice, override);
   }
 
   constructor(
     public readonly slice: Slice,
-    public readonly sliceState: Record<FieldId, unknown>,
+    private readonly sliceState: Record<FieldId, unknown>,
   ) {}
 
-  _getFieldState(field: FieldState): unknown {
-    const fieldState = this.sliceState[field._fieldId!];
-    return fieldState;
+  /**
+   * Raw state includes the state of all fields (internal and external) with fieldIds as keys.
+   */
+  get rawState(): Record<FieldId, unknown> {
+    return this.sliceState;
   }
 
-  _updateFieldState(field: FieldState, updater: any): SliceStateManager {
-    const oldValue = this._getFieldState(field);
+  _getFieldStateVal(field: StateField): unknown {
+    return this.sliceState[field.id];
+  }
+
+  _updateFieldState(field: StateField, updater: any): SliceStateManager {
+    const oldValue = this._getFieldStateVal(field);
     const newValue =
       typeof updater === 'function' ? updater(oldValue) : updater;
 
@@ -162,7 +183,7 @@ class SliceStateManager {
 
     return new SliceStateManager(this.slice, {
       ...this.sliceState,
-      [field._fieldId!]: newValue,
+      [field.id]: newValue,
     });
   }
 }

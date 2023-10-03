@@ -1,5 +1,5 @@
 import { testCleanup } from '../helpers/test-cleanup';
-import { createKey } from '../slice';
+import { createKey } from '../index';
 import { StoreState } from '../store-state';
 
 const sliceOneKey = createKey('sliceOne', []);

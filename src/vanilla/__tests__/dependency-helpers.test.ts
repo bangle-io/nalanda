@@ -1,5 +1,5 @@
 import { calcReverseDependencies as _calcReverseDependencies } from '../helpers/dependency-helpers';
-import { Slice } from '../slice';
+import { Slice } from '../slice/slice';
 
 const createSlice = (id: string) =>
   ({ sliceId: id, dependencies: [] }) as unknown as Slice;

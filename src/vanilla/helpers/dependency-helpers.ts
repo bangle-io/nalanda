@@ -1,4 +1,4 @@
-import type { Slice } from '../slice';
+import type { Slice } from '../slice/slice';
 import type { SliceId } from '../types';
 
 export function allDependencies(slices: Slice[]): Set<Slice> {
