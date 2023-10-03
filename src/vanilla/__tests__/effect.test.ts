@@ -3,7 +3,7 @@ import waitForExpect from 'wait-for-expect';
 import { createKey } from '../slice/key';
 import { createStore } from '../store';
 import { EffectScheduler, effect } from '../effect/effect';
-import { cleanup } from '../cleanup';
+import { cleanup } from '../effect/cleanup';
 
 beforeEach(() => {
   testCleanup();
