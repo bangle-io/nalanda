@@ -79,7 +79,7 @@ export class StoreState {
     transaction._destroy();
 
     return steps.reduce((storeState, step) => {
-      return step.cb(storeState);
+      return step.stepper(storeState);
     }, this as StoreState);
   }
 

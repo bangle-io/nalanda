@@ -7,7 +7,7 @@ Signature
 createKey(name:string, dependencies?: Slice[])
 ```
 
-Function arguments:
+Arguments:
 
 - `name` - Name of the slice.
 - `dependencies` - An optional array of slices that this slice depends on.
@@ -37,7 +37,7 @@ Signature:
 key.derive<T>(compute: (storeState: StoreState) => T, options?: DeriveOptions);
 ```
 
-Function arguments:
+Arguments:
 
 - `compute` - A function that computes the derived value.
 
@@ -56,7 +56,7 @@ Signature:
 key.effect(effect: (store: Store) => void | Promise<void>)
 ```
 
-Function arguments:
+Arguments:
 
 - `effect` - The callback to run as a side effect.
 
@@ -88,7 +88,7 @@ Signature:
 key.field(initialValue: any)
 ```
 
-Function arguments:
+Arguments:
 
 - `initialValue` - Initial value of the field.
 
@@ -108,7 +108,7 @@ Signature:
 key.slice({fields: { Fields }, actions: { Actions }})
 ```
 
-Function arguments:
+Arguments:
 
 - `fields` - An object containing the fields you to expose externally.
 

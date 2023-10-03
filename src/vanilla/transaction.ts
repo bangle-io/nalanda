@@ -1,7 +1,7 @@
 import { genTransactionID } from './helpers/id-generation';
 import type { StoreState } from './store-state';
 
-type Step = { cb: (storeState: StoreState) => StoreState };
+type Step = { stepper: (storeState: StoreState) => StoreState };
 
 export const META_DISPATCHER = 'DEBUG__DISPATCHER';
 export const TX_META_STORE_NAME = 'store-name';
@@ -23,9 +23,11 @@ export class Transaction {
     return this.steps;
   }
 
-  step(cb: Step['cb']): Transaction {
-    this.steps.push({ cb });
-
+  /**
+   *
+   */
+  step(stepper: Step['stepper']): Transaction {
+    this.steps.push({ stepper });
     return this;
   }
 
