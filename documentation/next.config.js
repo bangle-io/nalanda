@@ -4,13 +4,24 @@ const withNextra = require('nextra')({
 });
 
 module.exports = {
-  ...withNextra(),
-  reactStrictMode: true,
-  swcMinify: true,
-  trailingSlash: true,
-  images: {
-    unoptimized: true,
-  },
+  ...withNextra({
+    trailingSlash: true,
+    images: {
+      unoptimized: true,
+    },
+    distDir: 'dist',
+    swcMinify: true,
+    webpack: (config) => {
+      // console.log(config.module?.rules);
+      config.module?.rules?.unshift({
+        resourceQuery: /raw/,
+        type: 'asset/source',
+      });
+
+      return config;
+    },
+  }),
+
   async redirects() {
     return [
       {

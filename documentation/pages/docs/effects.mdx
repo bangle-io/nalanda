@@ -1,0 +1,61 @@
+import { CodeBlockVanilla } from '../../components/CodeBlock';
+
+# Effects
+
+Effects help you perform side effects in your application. They are used to perform tasks such as fetching data from a server, logging to the console, or interacting with the browser.
+
+```typescript
+import { effect } from 'nalanda';
+
+effect((store) => {
+  // effect will rerun whenever userSlice changes
+  const { userName } = userSlice.track(store);
+  const { isLoggedIn } = loginSlice.track(store);
+
+  if (isLoggedIn) {
+    console.log(`The user ${userName} is logged in`);
+  } else {
+    console.log(`Please login ${userName}`);
+  }
+});
+```
+
+> Note: All effects will run atleast **once** after the store is initialized.
+
+## Tracking
+
+The tracking methods tracks any changes to the slice fields and re-runs the effect whenever it changes.
+There are two ways to track changes in a slice.
+
+```typescript
+// destructured form
+const { userName, userAddress } = userSlice.track(store);
+
+// direct access
+const userName = userSlice.track.userName(store);
+const userAddress = userSlice.track.userAddress(store);
+```
+
+## Async Effects
+
+Effect callback can also be async.
+If the effect has to run again before the previous effect run is completed, the `cleanup` function can be used to run any cleanups.
+
+```typescript
+effect(async (store) => {
+  const { userName } = userSlice.track(store);
+  const controller = new AbortController();
+
+  const data = await fetchUserData(userName, {
+    signal: controller.signal,
+  });
+
+  store.dispatch(userSlice.updateGithubData(data));
+
+  cleanup(store, () => {
+    // if userName changes, abort the fetch request
+    // so that we don't update the state with stale data.
+    controller.abort();
+  });
+});
+```

@@ -1,0 +1,58 @@
+# Selectors
+
+Selectors help you to create state that is derived from other fields or other slices.
+
+In the following example we are using the `loginSlice` and `userSlice` in a selector.
+
+```ts
+import { loginSlice } from './loginSlice';
+import { userSlice } from './userSlice';
+
+const key = createKey(
+  'myAppSlice',
+  // declare the dependencies
+  [loginSlice, userSlice],
+);
+
+const nameField = key.derive((state) => {
+  const { isLoggedIn } = loginSlice.get(state);
+  const { userName } = userSlice.get(state);
+
+  if (isLoggedIn) {
+    return userName;
+  }
+
+  return 'Guest';
+});
+```
+
+## Composing selectors
+
+Selectors can be composed with other selectors.
+
+```ts
+const counterField = key.field(0);
+
+const doubleField = key.derive((state) => {
+  const counter = counterField.get(state);
+  return counter * 2;
+});
+
+const timesSixField = key.derive((state) => {
+  const counter = doubleField.get(state);
+  return counter * 3;
+});
+
+export const mySlice = key.slice({
+  fields: {
+    counter: counterField,
+    double: doubleField,
+    timesSix: timesSixField,
+  },
+});
+
+key.effect((store) => {
+  const { counter, double, timesSix } = mySlice.track(store);
+  console.log({ counter, double, timesSix });
+});
+```

@@ -1,0 +1,77 @@
+import { Callout } from 'nextra/components';
+
+# Transaction
+
+A Transaction is an object when applied to a store state can produce a new store state.
+
+## Usage
+
+A transaction is created in Actions (a function that returns a transaction).
+
+In the example below the action `incrementCounter` returns a transaction that increments the counter.
+
+```ts {5}
+const counterField = key.field(0);
+
+// An action is a function that returns a transaction
+function incrementCounter(): Transaction {
+  const transaction = counterField.update((n) => n + 1);
+  return transaction;
+}
+```
+
+### Updating the store state
+
+You can create transaction by calling `incrementCounter(){:ts}` and dispatching it to update the store state.
+
+```ts {3}
+key.effect((store) => {
+  const oldValue = counterField.get(store.state);
+  store.dispatch(incrementCounter());
+  const newValue = counterField.get(store.state);
+  console.log(`counter changed from ${oldValue} to ${newValue}`);
+});
+```
+
+> See [Effect](./effect) for more information on effects.
+
+## Methods
+
+### `.step()`
+
+Adds a step to that modifies the store state.
+
+Signature:
+
+```ts
+transaction.step(stepper: (StoreState) => StoreState)
+```
+
+Arguments:
+
+- `stepper` - A function that takes a store state and returns a new modified store state.
+
+Returns:
+
+- The same transaction object.
+
+Example:
+
+```ts /step/
+function incrementCounter(): Transaction {
+  const txn = key.transaction();
+
+  return txn.step((storeState) => {
+    const counterValue = counterField.get(storeState);
+
+    // field.update returns a transaction
+    const newTxn = counterField.update(counterValue + 1);
+
+    // apply the transaction to the store state to return
+    // a new store state.
+    return storeState.apply(newTxn);
+  });
+}
+```
+
+> See [StoreState.apply()](./store-state/#apply) for more information on how to updating the store state.
