@@ -11,7 +11,7 @@
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.8.0",
     "@codesandbox/sandpack-themes": "^2.0.21",
-    "nalanda": "workspace:*",
+    "@nalanda-test/core": "workspace:*",
     "next": "^13.5.3",
     "next-themes": "^0.2.1",
     "nextra": "^2.13.1",
