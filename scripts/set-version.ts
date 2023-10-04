@@ -42,8 +42,15 @@ if (filesChanged) {
     execSync(`git push origin v${version}`);
     execSync(`git push origin HEAD --tags`);
     console.log(`Committed and tagged version ${version}.`);
+    console.log(
+      `Visit https://github.com/bangle-io/nalanda/releases/new?tag=v${version} to add release notes.`,
+    );
   } catch (error) {
-    console.error('Error committing or tagging the version:', error.message);
+    if (error instanceof Error) {
+      console.error('Error committing or tagging the version:', error.message);
+    } else {
+      throw error;
+    }
     process.exit(1);
   }
 }
