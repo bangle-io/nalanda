@@ -1,0 +1,17 @@
+{
+  "name": "scripts",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "set-version": "tsx ./set-version.ts"
+  },
+  "devDependencies": {
+    "tsx": "^3.13.0",
+    "tsconfig": "workspace:*",
+    "@types/node": "20.8.2"
+  }
+}
