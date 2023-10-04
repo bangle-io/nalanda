@@ -1,5 +1,5 @@
 {
-  "name": "@nalanda-test/react",
+  "name": "@nalanda/react",
   "sideEffects": false,
   "version": "0.0.7-alpha.0",
   "license": "MIT",

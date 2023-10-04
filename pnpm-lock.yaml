@@ -72,7 +72,7 @@ importers:
       '@codesandbox/sandpack-themes':
         specifier: ^2.0.21
         version: 2.0.21
-      '@nalanda-test/core':
+      '@nalanda/core':
         specifier: workspace:*
         version: link:../packages/core
       next:
