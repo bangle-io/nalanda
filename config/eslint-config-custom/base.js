@@ -35,4 +35,10 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unused-vars': 'off',
   },
+  ignorePatterns: [
+    '**/dist/*.js',
+    '**/dist/*.d.mts',
+    '**/dist/*.d.ts',
+    '**/node_modules/*.js',
+  ],
 };

@@ -1,0 +1,10 @@
+'change/feat':
+  - '/^(feat|perf)/'
+'change/fix':
+  - '/^(fix)/'
+'change/breaking':
+  - '/^breaking-change/'
+'change/docs':
+  - '/^docs/'
+'change/internal':
+  - '/^(build|ci|refactor)/'

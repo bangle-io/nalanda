@@ -1,0 +1,14 @@
+{
+  "name": "tsup-config",
+  "version": "0.0.0",
+  "main": "index.mjs",
+  "types": "index.d.mts",
+  "private": true,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "tsup": "^7.2.0"
+  }
+}
