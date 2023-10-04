@@ -18,6 +18,7 @@ build/
 docs/api
 docs/.vuepress/dist
 
+dist
 # Development
 .DS_Store
 .env.local

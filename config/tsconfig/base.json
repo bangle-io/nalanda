@@ -26,7 +26,7 @@
     "strictNullChecks": true,
     "preserveWatchOutput": true,
     "stripInternal": true,
-    "target": "esnext"
+    "target": "ES2020"
   },
   "exclude": ["node_modules", "dist"]
 }
