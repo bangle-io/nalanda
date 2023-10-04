@@ -23,8 +23,8 @@
     "test": "pnpm -r run test",
     "build-docs": "pnpm -r --filter documentation build",
     "build-packages": "pnpm -r --filter \"./packages/**\"  build",
-    "publish-alpha": "pnpm -r --filter \"./packages/**\" publish --tag alpha --otp ${npm_config_otp} --access=public",
-    "publish-latest": "pnpm -r --filter \"./packages/**\" publish --tag latest --otp ${npm_config_otp} --access=public"
+    "publish-alpha": "pnpm -r --filter \"./packages/**\"  publish --tag alpha --otp ${npm_config_otp} --access public",
+    "publish-latest": "pnpm -r --filter \"./packages/**\" publish --tag latest --otp ${npm_config_otp} --access public"
   },
   "keywords": [],
   "license": "MIT",
