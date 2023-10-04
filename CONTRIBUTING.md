@@ -58,7 +58,17 @@ Before submitting a PR, make sure to test your changes locally. Here's how:
 
 For everything about Nalanda's documentation, head over to the `documentation` directory.
 
-## 📝 Submitting Changes
+## Releasing
+
+1. Make sure your PRs titles are prefixed with right convention (`feat`, `docs`, `fix`, `refactor`, `test`, `perf`, `style`, `ci`, `build`).
+
+1. ensure you are in `dev` branch and do `git pull origin dev`
+
+1. Run `pnpm -r --filter scripts set-version x.y.z` to bump the version.
+
+1. Go to github and create a new release with the tag that was created in the previous step.
+
+1. Run `pnpm publish-alpha --otp=123456` or `publish-latest` to publish the packages to npm.
 
 ## ❓ Questions or Need Help?
 
