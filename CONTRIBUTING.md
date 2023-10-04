@@ -60,30 +60,6 @@ For everything about Nalanda's documentation, head over to the `documentation` d
 
 ## 📝 Submitting Changes
 
-### Commit conventions
-
-We use the [Angular Commit Message Conventions](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit). Make sure to prefix your PR title (e.g., `fix`, `feat`, `docs`, `ci`, `refactor`, `build`). It helps us (and you) in understanding the gist of changes at a glance and generating changelogs.
-
-## 🚢 Releasing to the World
-
-> Note: this is only for maintainers.
-
-We use [Semantic release](https://semantic-release.gitbook.io). Releasing a new version is just two steps away:
-
-1. Push dev to the main branch:
-
-```sh
-git push origin dev:main
-```
-
-1. GitHub Actions will take over from here and publish the new version to npm.
-
-1. For an alpha release:
-
-```sh
-git push origin dev:alpha
-```
-
 ## ❓ Questions or Need Help?
 
 - **Report Issues**: [Open an issue](https://github.com/bangle-io/nalanda/issues/new) for bugs or feature requests.
