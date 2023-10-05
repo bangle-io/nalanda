@@ -21,12 +21,14 @@
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch",
     "test": "jest",
+    "test:watch": "jest --watch",
     "lint": "npm-run-all -l --aggregate-output --parallel lint:*",
     "lint:eslint": "eslint .",
     "lint:tsc": "tsc --noEmit",
     "lint:prettier": "prettier src --check",
     "format": "prettier src --write",
     "build": "tsup --config tsup.config.ts",
+    "build:watch": "tsup --config tsup.config.ts --watch",
     "prepack": "pnpm run build"
   },
   "files": [

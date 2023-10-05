@@ -21,8 +21,10 @@
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
+    "test:watch": "pnpm -r run test:watch",
     "build-docs": "pnpm -r --filter documentation build",
     "build-packages": "pnpm -r --filter \"./packages/**\"  build",
+    "build-packages:watch": "pnpm -r --filter \"./packages/**\"  build:watch",
     "publish-alpha": "pnpm -r --filter \"./packages/**\"  publish --tag alpha --otp ${npm_config_otp} --access public",
     "publish-latest": "pnpm -r --filter \"./packages/**\" publish --tag latest --otp ${npm_config_otp} --access public"
   },
