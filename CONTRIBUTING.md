@@ -18,23 +18,32 @@ Having trouble? We'd love to help you out!
 
 1. **Get the Code**: New to Github? Here's a [guide](https://docs.github.com/en/get-started/quickstart/fork-a-repo) to help you fork the repository.
 
-1. **Go Local**: Clone your fork and jump into the directory:
+2. **Go Local**: Clone your fork and jump into the the project:
 
 ```sh
+git clone git@github.com:bangle-io/nalanda.git
 cd nalanda
 ```
 
-1. **Dependencies**: Make sure you've got `pnpm` set up. If not, check the instructions [here](https://pnpm.io/installation#using-corepack).
+3. **Dependencies**: Make sure you've got `pnpm` set up. If not, check the instructions [here](https://pnpm.io/installation#using-corepack).
 
 ```sh
 pnpm install
 ```
 
-1. **Build**:
+4. **Build**:
 
 ```sh
 pnpm run build
 ```
+
+## Project Structure
+
+Nalanda project is broken into the following directory structure:
+
+- **packages**: contains the Nalanda library packages. If you are **not** sure, more than likely, you'll be making changes here.
+- **documentation**: contains the documentation website built with Next.js and MDX.
+- **config**: Holds shared configurations for the entire project, including files like tsconfig.json, .eslintrc, and .prettierrc.
 
 ## 🔍 Testing Your Changes
 
@@ -54,21 +63,51 @@ Before submitting a PR, make sure to test your changes locally. Here's how:
 
 - Add tests for new features or changes. We love tests! ❤️
 
-## 📚 Documentation
+## Submitting PR
 
-For everything about Nalanda's documentation, head over to the `documentation` directory.
+1. Make sure you PR titles are prefixed with one of the following:
 
-## Releasing
+   - `breaking-change`: for breaking changes
+   - `feat`: for new features
+   - `docs`: for documentation changes
+   - `fix`: for bug fixes
+   - `refactor`: for code refactoring
+   - `test`: for adding tests
+   - `perf`: for performance improvements
+   - `ci`: for CI/CD related changes
+   - `build`: for build related changes
 
-1. Make sure your PRs titles are prefixed with right convention (`feat`, `docs`, `fix`, `refactor`, `test`, `perf`, `style`, `ci`, `build`).
+> The above convention helps us produce a changelog automatically.
 
-1. ensure you are in `dev` branch and do `git pull origin dev`
+1. Make sure your PRs are rebased on top of the `dev` branch.
+
+1. When merging a PR to `dev`, make sure to squash all commits into one.
+
+## Releasing a new version
+
+1. ensure you are in `dev` branch and upto date with dev (`git pull origin dev`).
 
 1. Run `pnpm -r --filter scripts set-version x.y.z` to bump the version.
 
 1. Go to github and create a new release with the tag that was created in the previous step.
 
 1. Run `pnpm publish-alpha --otp=123456` or `publish-latest` to publish the packages to npm.
+
+## Updating documentation site
+
+1. After doing a release, you need to update the documentation site.
+
+1. If you did an alpha release, you don't need to do anything else as the documentation site will automatically update.
+
+1. If you did a latest release, you need to update the documentation site manually.
+
+1. Ensure you are in `dev` branch and upto date with dev (`git pull origin dev`).
+
+1. Make sure the documentation site builds locally with `pnpm run build-docs`.
+
+1. Push changes to `main` branch.
+
+1. This will trigger a build on netlify and the documentation site will be updated at https://nalanda.bangle.io .
 
 ## ❓ Questions or Need Help?
 
@@ -78,4 +117,4 @@ For everything about Nalanda's documentation, head over to the `documentation` d
 
 ---
 
-Thank you for contributing to Nalanda! Together, we roar. 🚀
+Thank you for contributing to Nalanda!. 🚀

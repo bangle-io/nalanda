@@ -7,4 +7,4 @@
 'change/docs':
   - '/^docs/'
 'change/internal':
-  - '/^(build|ci|refactor)/'
+  - '/^(build|ci|refactor|test)/'
