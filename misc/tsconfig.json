@@ -1,14 +1,8 @@
 {
   "extends": "tsconfig/base.json",
   "compilerOptions": {
-    "types": [
-      "node",
-    ],
+    "types": ["node"]
   },
-  "include": [
-    "."
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["."],
+  "exclude": ["node_modules"]
 }

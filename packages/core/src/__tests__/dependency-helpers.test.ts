@@ -1,4 +1,11 @@
-import { expect, jest, test, describe, beforeEach, afterEach } from '@jest/globals';
+import {
+  expect,
+  jest,
+  test,
+  describe,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { calcReverseDependencies as _calcReverseDependencies } from '../helpers/dependency-helpers';
 import { Slice } from '../slice/slice';
 

@@ -1,4 +1,11 @@
-import { expect, jest, test, describe, beforeEach, afterEach } from '@jest/globals';
+import {
+  expect,
+  jest,
+  test,
+  describe,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { Store, createStore } from '../store';
 import waitForExpect from 'wait-for-expect';
 import { testCleanup } from '../helpers/test-cleanup';
