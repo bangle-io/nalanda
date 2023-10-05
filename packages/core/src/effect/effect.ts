@@ -17,16 +17,15 @@ export type EffectOpts = {
    * a store state change. If set to true, the effect will run anytime before maxWait.
    */
   deferred: boolean;
-  /**
-   *
-   */
   maxWait: number;
   scheduler: EffectScheduler;
   name?: string;
 };
 
 export class EffectStore extends BaseStore {
+  // @internal
   constructor(
+    // @internal
     public _rootStore: Store,
     public readonly name: string,
     /**
@@ -69,21 +68,31 @@ const DEFAULT_SCHEDULER: EffectScheduler = (cb, opts) => {
 
 export class Effect {
   public readonly name: string;
-  public readonly debug: DebugLogger | undefined;
+  // @internal
+  private readonly debugLogger: DebugLogger | undefined;
+  // @internal
   private destroyed = false;
+  // @internal
   private pendingRun = false;
+  // @internal
   private readonly effectStore: EffectStore;
+  // @internal
   private readonly scheduler: EffectScheduler;
+  // @internal
   private runCount = 0;
+  // @internal
   private runInstance: EffectRun;
 
+  // @internal
   constructor(
+    // @internal
     private readonly effectCallback: EffectCallback,
+    // @internal
     private readonly rootStore: Store,
     public readonly opts: EffectOpts,
   ) {
     this.name = opts.name || effectCallback.name || 'anonymous';
-    this.debug = rootStore.options.debug;
+    this.debugLogger = rootStore.options.debug;
     this.scheduler =
       rootStore.options?.overrides?.effectSchedulerOverride || opts.scheduler;
 
@@ -108,7 +117,8 @@ export class Effect {
    * @param slicesChanged
    * @returns
    */
-  run(slicesChanged?: Set<Slice>): boolean {
+  // @internal
+  _run(slicesChanged?: Set<Slice>): boolean {
     if (this.pendingRun || this.destroyed) {
       return false;
     }
@@ -121,7 +131,7 @@ export class Effect {
     this.scheduler(() => {
       queueMicrotask(() => {
         try {
-          this._run();
+          this.runInternal();
         } finally {
           this.pendingRun = false;
         }
@@ -131,6 +141,7 @@ export class Effect {
     return true;
   }
 
+  // @internal
   private shouldQueueRun(slicesChanged?: Set<Slice>): boolean {
     if (this.destroyed) {
       return false;
@@ -154,7 +165,8 @@ export class Effect {
     return false;
   }
 
-  private _run(): void {
+  // @internal
+  private runInternal(): void {
     if (this.destroyed) {
       return;
     }
@@ -181,7 +193,7 @@ export class Effect {
     this.runCount++;
     void this.effectCallback(this.effectStore);
 
-    this.debug?.({
+    this.debugLogger?.({
       type: this.opts.deferred ? 'UPDATE_EFFECT' : 'SYNC_UPDATE_EFFECT',
       name: this.name,
       changed: fieldChanged?.id || '<first-run-OR-forced>',

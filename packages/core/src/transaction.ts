@@ -8,39 +8,41 @@ export const TX_META_STORE_NAME = 'store-name';
 
 export class Transaction {
   readonly id = genTransactionID();
-
-  private destroyed = false;
-
   readonly metadata = new Metadata();
 
+  // @internal
+  private destroyed = false;
+
+  // @internal
   private steps: Array<Step>;
 
   constructor() {
     this.steps = [];
   }
 
+  // @internal
   _getSteps(): ReadonlyArray<Step> {
     return this.steps;
   }
 
-  /**
-   *
-   */
   step(stepper: Step['stepper']): Transaction {
     this.steps.push({ stepper });
     return this;
   }
 
+  // @internal
   _destroy() {
     this.destroyed = true;
   }
 
+  // @internal
   _isDestroyed() {
     return this.destroyed;
   }
 }
 
 export class Metadata {
+  // @internal
   private _metadata: Record<string, string> = Object.create(null);
 
   appendMetadata(key: string, val: string) {

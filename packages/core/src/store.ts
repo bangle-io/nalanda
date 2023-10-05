@@ -50,14 +50,20 @@ export function createStore(config: StoreOptions) {
 }
 
 export class Store extends BaseStore {
-  private _state: StoreState;
-
-  _rootStore: Store;
   public readonly initialState: StoreState;
 
+  // @internal
+  private _state: StoreState;
+
+  // @internal
+  _rootStore: Store;
+  // @internal
   private effectsManager: EffectManager;
+  // @internal
   private destroyed = false;
+  // @internal
   private registeredSlicesEffect = false;
+  // @internal
   private _dispatchTxn: DispatchTransaction;
 
   get state() {
@@ -130,6 +136,7 @@ export class Store extends BaseStore {
     });
   }
 
+  // @internal
   private updateState = (newState: StoreState) => {
     const oldState = this._state;
     this._state = newState;

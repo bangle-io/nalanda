@@ -574,7 +574,7 @@ describe('effect only', () => {
     const { effect, callback } = setup();
     jest.spyOn(effect, 'shouldQueueRun' as any).mockReturnValue(false);
 
-    effect.run();
+    effect._run();
 
     await sleep(5);
 
@@ -585,7 +585,7 @@ describe('effect only', () => {
     const { effect, callback } = setup();
     effect['pendingRun'] = true;
 
-    effect.run();
+    effect._run();
 
     await sleep(5);
 
@@ -595,7 +595,7 @@ describe('effect only', () => {
   test('runs the effect if it has not run once', async () => {
     const { effect, callback } = setup();
 
-    effect.run();
+    effect._run();
 
     await sleep(5);
 
@@ -604,7 +604,7 @@ describe('effect only', () => {
 
   test('runs the effect if it has run once and dependencies have changed', async () => {
     const { effect, callback } = setup();
-    effect.run();
+    effect._run();
 
     await sleep(5);
 
@@ -612,7 +612,7 @@ describe('effect only', () => {
       .spyOn(effect['runInstance'], 'whatDependenciesStateChange')
       .mockReturnValue(sliceAKey.field('some field that changed'));
 
-    effect.run();
+    effect._run();
     await sleep(5);
 
     expect(callback).toHaveBeenCalledTimes(2);
@@ -620,7 +620,7 @@ describe('effect only', () => {
 
   test('does not run the effect if it has run once and dependencies have not changed', async () => {
     const { effect, callback } = setup();
-    effect.run();
+    effect._run();
 
     await sleep(5);
     expect(callback).toHaveBeenCalledTimes(1);
@@ -629,7 +629,7 @@ describe('effect only', () => {
       .spyOn(effect['runInstance'], 'whatDependenciesStateChange')
       .mockReturnValue(undefined);
 
-    effect.run();
+    effect._run();
 
     await sleep(5);
 

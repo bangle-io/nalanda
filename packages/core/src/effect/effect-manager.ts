@@ -63,14 +63,14 @@ export class EffectManager {
 
     this._effects.add(effect);
     queueMicrotask(() => {
-      effect.run();
+      effect._run();
     });
   }
 
   run(slicesChanged?: Slice[]) {
     const allSlicesChanged = this.getAllSlicesChanged(slicesChanged);
     for (const effect of this._effects) {
-      effect.run(allSlicesChanged);
+      effect._run(allSlicesChanged);
     }
   }
 

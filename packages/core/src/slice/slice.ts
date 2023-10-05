@@ -15,32 +15,20 @@ type MapSliceState<TFieldsSpec extends Record<string, BaseField<any>>> = {
 export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
   sliceId: SliceId;
 
+  // @internal
   private getCache = new WeakMap<StoreState, any>();
+  // @internal
   private fieldNameToField: Record<string, BaseField<any>> = {};
 
   get dependencies(): Slice[] {
     return this._key.dependencies;
   }
 
-  _getFieldByName(fieldName: string): BaseField<unknown> {
-    const field = this.fieldNameToField[fieldName];
-    if (field === undefined) {
-      throwValidationError(`Field "${fieldName.toString()}" does not exist.`);
-    }
-
-    return field;
-  }
-
-  /**
-   * Called when the user overrides the initial value of a slice in the store.
-   */
-  _verifyInitialValueOverride(val: Record<FieldId, unknown>): void {
-    // // TODO: when user provides an override, do more checks
-  }
-
+  // @internal
   constructor(
     public readonly name: string,
     externalFieldSpec: TFieldsSpec,
+    // @internal
     public readonly _key: Key,
   ) {
     this.sliceId = sliceIdCounters.generate(name);
@@ -51,26 +39,6 @@ export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
       field.name = fieldName;
       this.fieldNameToField[fieldName] = field;
     }
-  }
-
-  /**
-   * Get a field value from the slice state. Slightly faster than `get`.
-   */
-  getField<T extends keyof TFieldsSpec>(
-    storeState: StoreState,
-    fieldName: T,
-  ): MapSliceState<TFieldsSpec>[T] {
-    return this._getFieldByName(fieldName as string).get(storeState) as any;
-  }
-
-  /**
-   * Similar to `track`, but only tracks a single field.
-   */
-  trackField<T extends keyof TFieldsSpec>(
-    store: EffectStore,
-    fieldName: T,
-  ): MapSliceState<TFieldsSpec>[T] {
-    return this._getFieldByName(fieldName as string).track(store) as any;
   }
 
   get(storeState: StoreState): MapSliceState<TFieldsSpec> {
@@ -132,11 +100,49 @@ export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
     return lazyExternalState;
   }
 
+  /**
+   * Get a field value from the slice state. Slightly faster than `get`.
+   */
+  getField<T extends keyof TFieldsSpec>(
+    storeState: StoreState,
+    fieldName: T,
+  ): MapSliceState<TFieldsSpec>[T] {
+    return this._getFieldByName(fieldName as string).get(storeState) as any;
+  }
+
   track(store: EffectStore): MapSliceState<TFieldsSpec> {
     return new Proxy(this.get(store.state), {
       get: (target, prop: string, receiver) => {
         return this._getFieldByName(prop).track(store);
       },
     });
+  }
+
+  /**
+   * Similar to `track`, but only tracks a single field.
+   */
+  trackField<T extends keyof TFieldsSpec>(
+    store: EffectStore,
+    fieldName: T,
+  ): MapSliceState<TFieldsSpec>[T] {
+    return this._getFieldByName(fieldName as string).track(store) as any;
+  }
+
+  // @internal
+  _getFieldByName(fieldName: string): BaseField<unknown> {
+    const field = this.fieldNameToField[fieldName];
+    if (field === undefined) {
+      throwValidationError(`Field "${fieldName.toString()}" does not exist.`);
+    }
+
+    return field;
+  }
+
+  /**
+   * Called when the user overrides the initial value of a slice in the store.
+   */
+  // @internal
+  _verifyInitialValueOverride(val: Record<FieldId, unknown>): void {
+    // // TODO: when user provides an override, do more checks
   }
 }
