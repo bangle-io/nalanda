@@ -1,0 +1,177 @@
+--- packages/core/src/patch/original-types/index.d.ts	2023-10-05 00:14:06
++++ packages/core/src/patch/override.d.ts	2023-10-05 00:36:26
+@@ -26,15 +26,25 @@
+ type SliceId = Brand<string, 'SliceId'>;
+ type FieldId = Brand<string, 'FieldId'>;
+ 
++type InferSliceNameFromSlice<T> = T extends Slice<any, infer TSliceName, any>
++  ? TSliceName
++  : never;
++
+ /**
+  * @param name - The name of the slice.
+  * @param dependencies - An array of slices that this slice depends on.
+  */
+-declare function createKey(name: string, dependencies?: Slice[]): Key;
+-declare class Key {
++declare function createKey<
++  TName extends string,
++  TDepSlice extends Slice<any, any, any>,
++>(
++  name: TName,
++  dependencies: TDepSlice[],
++): Key<TName, InferSliceNameFromSlice<TDepSlice>>;
++declare class Key<TName extends string, TDep extends string> {
+   readonly name: string;
+-  readonly dependencies: Slice[];
+-  constructor(name: string, dependencies: Slice[]);
++  readonly dependencies: Slice<any, TDep, any>[];
++  constructor(name: string, dependencies: Slice<any, TDep, any>[]);
+   /**
+    *
+    * @param compute - A function that computes the derived value.
+@@ -43,7 +53,7 @@
+   derive<TVal>(
+     compute: (storeState: StoreState) => TVal,
+     options?: BaseFieldOptions<NoInfer<TVal>>,
+-  ): DerivedField<NoInfer<TVal>>;
++  ): DerivedField<NoInfer<TVal>, TName, TDep>;
+   effect(callback: EffectCallback, opts?: Partial<EffectOpts>): void;
+   /**
+    * @param initialValue - The initial value of the field.
+@@ -52,14 +62,14 @@
+   field<TVal>(
+     initialValue: TVal,
+     options?: BaseFieldOptions<NoInfer<TVal>>,
+-  ): StateField<NoInfer<TVal>>;
+-  slice<TFieldsSpec extends Record<string, BaseField<any>>>({
++  ): StateField<NoInfer<TVal>, TName, TDep>;
++  slice<TFieldsSpec extends Record<string, BaseField<any, any, any>>>({
+     fields,
+     actions,
+   }: {
+     fields: TFieldsSpec;
+     actions?: (...args: any) => Transaction;
+-  }): Slice<TFieldsSpec>;
++  }): Slice<TFieldsSpec, TName, TDep>;
+   /**
+    * Creates a new transaction object which is used to update the slice state.
+    */
+@@ -69,41 +79,63 @@
+ type BaseFieldOptions<TVal> = {
+   equal?: (a: TVal, b: TVal) => boolean;
+ };
+-declare abstract class BaseField<TVal> {
+-  readonly key: Key;
++declare abstract class BaseField<
++  TVal,
++  TName extends string,
++  TDep extends string,
++> {
++  readonly key: Key<TName, TDep>;
+   readonly options: BaseFieldOptions<TVal>;
+   readonly id: FieldId;
+   name: string | undefined;
+-  constructor(key: Key, options: BaseFieldOptions<TVal>);
++  constructor(key: Key<TName, TDep>, options: BaseFieldOptions<TVal>);
+   abstract get(storeState: StoreState): TVal;
+   isEqual(a: TVal, b: TVal): boolean;
+   track(store: EffectStore): TVal;
+ }
+-declare class DerivedField<TVal> extends BaseField<TVal> {
++declare class DerivedField<
++  TVal,
++  TName extends string,
++  TDep extends string,
++> extends BaseField<TVal, TName, TDep> {
+   readonly deriveCallback: (state: StoreState) => TVal;
+   constructor(
+     deriveCallback: (state: StoreState) => TVal,
+-    key: Key,
++    key: Key<TName, TDep>,
+     options: BaseFieldOptions<TVal>,
+   );
+   get(storeState: StoreState): TVal;
+ }
+-declare class StateField<TVal = any> extends BaseField<TVal> {
++declare class StateField<
++  TVal,
++  TName extends string,
++  TDep extends string,
++> extends BaseField<TVal, TName, TDep> {
+   readonly initialValue: TVal;
+-  constructor(initialValue: TVal, key: Key, options: BaseFieldOptions<TVal>);
++  constructor(
++    initialValue: TVal,
++    key: Key<TName, TDep>,
++    options: BaseFieldOptions<TVal>,
++  );
+   get(storeState: StoreState): TVal;
+   update(val: TVal | ((val: TVal) => TVal)): Transaction;
+ }
+ 
+-type MapSliceState<TFieldsSpec extends Record<string, BaseField<any>>> = {
+-  [K in keyof TFieldsSpec]: TFieldsSpec[K] extends BaseField<infer T>
++type MapSliceState<
++  TFieldsSpec extends Record<string, BaseField<any, any, any>>,
++> = {
++  [K in keyof TFieldsSpec]: TFieldsSpec[K] extends BaseField<infer T, any, any>
+     ? T
+     : never;
+ };
+-declare class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
+-  readonly name: string;
++declare class Slice<
++  TFieldsSpec extends Record<string, BaseField<any, any, any>>,
++  TName extends string,
++  TDep extends string,
++> {
++  readonly name: TName;
+   sliceId: SliceId;
+-  get dependencies(): Slice[];
++  get dependencies(): Array<Slice<any, TDep, any>>;
+   get(storeState: StoreState): MapSliceState<TFieldsSpec>;
+   /**
+    * Get a field value from the slice state. Slightly faster than `get`.
+@@ -124,24 +156,27 @@
+ 
+ type SliceStateMap = Record<SliceId, SliceStateManager>;
+ interface StoreStateConfig {
+-  slices: Slice[];
++  slices: Slice<any, any, any>[];
+   sliceStateMap: SliceStateMap;
+   computed: {
+-    slicesLookup: Record<SliceId, Slice>;
++    slicesLookup: Record<SliceId, Slice<any, any, any>>;
+     reverseSliceDependencies: Record<SliceId, Set<SliceId>>;
+   };
+ }
+ declare class StoreState {
+   static create(options: {
+-    slices: Slice[];
++    slices: Slice<any, any, any>[];
+     stateOverride?: Record<SliceId, Record<string, unknown>>;
+   }): StoreState;
+   constructor(config: StoreStateConfig);
+   apply(transaction: Transaction): StoreState;
+ }
+ declare class SliceStateManager {
+-  readonly slice: Slice;
+-  constructor(slice: Slice, sliceState: Record<FieldId, unknown>);
++  readonly slice: Slice<any, any, any>;
++  constructor(
++    slice: Slice<any, any, any>,
++    sliceState: Record<FieldId, unknown>,
++  );
+   /**
+    * Raw state includes the state of all fields (internal and external) with fieldIds as keys.
+    */
+@@ -172,7 +207,7 @@
+ 
+ interface StoreOptions {
+   name?: string;
+-  slices: Slice[];
++  slices: Slice<any, any, any>[];
+   debug?: DebugLogger;
+   overrides?: {
+     stateOverride?: Record<SliceId, Record<string, unknown>>;

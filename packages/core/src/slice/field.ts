@@ -22,10 +22,6 @@ export abstract class BaseField<TVal> {
     this.id = fieldIdCounters.generate(key.name);
   }
 
-  _getSlice() {
-    return this.key._assertedSlice();
-  }
-
   abstract get(storeState: StoreState): TVal;
 
   isEqual(a: TVal, b: TVal): boolean {
@@ -40,6 +36,11 @@ export abstract class BaseField<TVal> {
     store._getRunInstance().addTrackedField(this, value);
     return value;
   }
+
+  // @internal
+  _getSlice() {
+    return this.key._assertedSlice();
+  }
 }
 
 export class DerivedField<TVal> extends BaseField<TVal> {
@@ -51,6 +52,7 @@ export class DerivedField<TVal> extends BaseField<TVal> {
     super(key, options);
   }
 
+  // @internal
   private getCache = new WeakMap<StoreState, any>();
 
   get(storeState: StoreState): TVal {
@@ -61,7 +63,6 @@ export class DerivedField<TVal> extends BaseField<TVal> {
     }
 
     // TODO: return previously seen value based on isEqual and the lineage of store-state
-
     if (this.getCache.has(storeState)) {
       return this.getCache.get(storeState);
     }

@@ -3,4 +3,4 @@ packages:
   - 'examples/*'
   - 'config/*'
   - 'documentation'
-  - 'scripts'
+  - 'misc'

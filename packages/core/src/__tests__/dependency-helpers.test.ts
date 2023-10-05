@@ -1,3 +1,11 @@
+import {
+  expect,
+  jest,
+  test,
+  describe,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { calcReverseDependencies as _calcReverseDependencies } from '../helpers/dependency-helpers';
 import { Slice } from '../slice/slice';
 
@@ -38,14 +46,14 @@ const slX = createSlice('X');
 const slY = createSlice('Y');
 
 describe('calcReverseDependencies', () => {
-  it('should calculate reverse dependencies for case 1', () => {
+  test('should calculate reverse dependencies for case 1', () => {
     const slices = [setDeps(sl1, ['2', '3'])];
     const result = calcReverseDependencies(slices);
     expect(result['2']).toEqual(new Set(['1']));
     expect(result['3']).toEqual(new Set(['1']));
   });
 
-  it('should calculate reverse dependencies for case 2', () => {
+  test('should calculate reverse dependencies for case 2', () => {
     const slices = [
       setDeps(sl0, ['1']),
       setDeps(sl1, ['2', '3']),
@@ -58,7 +66,7 @@ describe('calcReverseDependencies', () => {
     expect(result['3']).toEqual(new Set(['0', '1', '2']));
   });
 
-  it('should calculate reverse dependencies for case 3', () => {
+  test('should calculate reverse dependencies for case 3', () => {
     const slices = [
       setDeps(sl0, ['1']),
       setDeps(sl1, ['2', '3']),
@@ -71,7 +79,7 @@ describe('calcReverseDependencies', () => {
     expect(result['3']).toEqual(new Set(['0', '1', '2']));
   });
 
-  it('should calculate reverse dependencies for case 4.a', () => {
+  test('should calculate reverse dependencies for case 4.a', () => {
     const slices = [
       setDeps(sl0, ['1']),
       setDeps(sl1, ['2']),
@@ -85,7 +93,7 @@ describe('calcReverseDependencies', () => {
     expect(result['4']).toEqual(new Set(['1', '0', '2', '3']));
   });
 
-  it('should calculate reverse dependencies for case 4.b', () => {
+  test('should calculate reverse dependencies for case 4.b', () => {
     const slices = [
       setDeps(sl1, ['2', '3']),
       setDeps(slA, ['2', '3']),
@@ -99,7 +107,7 @@ describe('calcReverseDependencies', () => {
     expect(result['B']).toEqual(new Set([]));
   });
 
-  it('should calculate reverse dependencies for case 5', () => {
+  test('should calculate reverse dependencies for case 5', () => {
     const slices = [
       setDeps(slD, ['A', 'B', 'C']),
       setDeps(slA, ['B']),
@@ -112,7 +120,7 @@ describe('calcReverseDependencies', () => {
     expect(result['C']).toEqual(new Set(['D']));
   });
 
-  it('should calculate reverse dependencies for case 6', () => {
+  test('should calculate reverse dependencies for case 6', () => {
     const slices = [
       setDeps(slX, ['C', 'A', 'B']),
       setDeps(slC, ['F', 'R']),
@@ -130,7 +138,7 @@ describe('calcReverseDependencies', () => {
     expect(result['X']).toEqual(new Set([]));
   });
 
-  it('should calculate reverse dependencies for case 7', () => {
+  test('should calculate reverse dependencies for case 7', () => {
     const slices = [
       setDeps(slE, ['F', 'G', 'H']),
       setDeps(slF, ['B', 'G']),

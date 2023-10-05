@@ -37,7 +37,7 @@ export class StoreState {
     const sliceStateMap: SliceStateMap = Object.fromEntries(
       options.slices.map((slice) => [
         slice.sliceId,
-        SliceStateManager.new(slice),
+        SliceStateManager._new(slice),
       ]),
     );
 
@@ -55,7 +55,7 @@ export class StoreState {
 
         const slice = computed.slicesLookup[id]!;
 
-        sliceStateMap[id] = SliceStateManager.new(slice, override);
+        sliceStateMap[id] = SliceStateManager._new(slice, override);
       }
     }
 
@@ -66,7 +66,10 @@ export class StoreState {
     });
   }
 
-  constructor(private config: StoreStateConfig) {}
+  constructor(
+    // @internal
+    private config: StoreStateConfig,
+  ) {}
 
   apply(transaction: Transaction): StoreState {
     if (transaction._isDestroyed()) {
@@ -83,6 +86,7 @@ export class StoreState {
     }, this as StoreState);
   }
 
+  // @internal
   _getSliceStateManager(slice: Slice): SliceStateManager {
     const stateMap = this.config.sliceStateMap[slice.sliceId];
 
@@ -94,6 +98,7 @@ export class StoreState {
     return stateMap;
   }
 
+  // @internal
   _updateSliceStateManager(
     slice: Slice,
     sliceStateManager: SliceStateManager,
@@ -113,6 +118,7 @@ export class StoreState {
    * does not take into account slices that were removed in the current store state and exist
    * in the provided store state.
    */
+  // @internal
   _getChangedSlices(otherStoreState: StoreState): Slice[] {
     const diff: Slice[] = [];
 
@@ -133,7 +139,8 @@ export class StoreState {
 }
 
 export class SliceStateManager {
-  static new(slice: Slice, sliceStateOverride?: Record<string, unknown>) {
+  // @internal
+  static _new(slice: Slice, sliceStateOverride?: Record<string, unknown>) {
     if (sliceStateOverride) {
       slice._verifyInitialValueOverride(sliceStateOverride);
     }
@@ -158,6 +165,7 @@ export class SliceStateManager {
 
   constructor(
     public readonly slice: Slice,
+    // @internal
     private readonly sliceState: Record<FieldId, unknown>,
   ) {}
 
@@ -168,10 +176,12 @@ export class SliceStateManager {
     return this.sliceState;
   }
 
+  // @internal
   _getFieldStateVal(field: StateField): unknown {
     return this.sliceState[field.id];
   }
 
+  // @internal
   _updateFieldState(field: StateField, updater: any): SliceStateManager {
     const oldValue = this._getFieldStateVal(field);
     const newValue =

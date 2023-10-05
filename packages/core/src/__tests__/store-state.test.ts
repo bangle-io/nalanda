@@ -1,3 +1,11 @@
+import {
+  expect,
+  jest,
+  test,
+  describe,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { testCleanup } from '../helpers/test-cleanup';
 import { createKey } from '../index';
 import { StoreState } from '../store-state';
