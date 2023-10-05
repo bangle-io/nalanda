@@ -1,3 +1,11 @@
+import {
+  expect,
+  jest,
+  test,
+  describe,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { testCleanup } from '../helpers/test-cleanup';
 import waitForExpect from 'wait-for-expect';
 import { createKey } from '../slice/key';
@@ -101,7 +109,7 @@ describe('effect with store', () => {
   test('runs effect on mount', async () => {
     const { store } = setup();
 
-    const called = jest.fn();
+    const called = jest.fn<any>();
 
     store.effect(called);
 
@@ -292,8 +300,8 @@ describe('effect with store', () => {
     test('should run cleanup when effect runs again', async () => {
       const { store, sliceA, updateSliceAField1 } = setup();
 
-      const cleanupCalled = jest.fn();
-      const effectCalled = jest.fn();
+      const cleanupCalled = jest.fn<any>();
+      const effectCalled = jest.fn<any>();
 
       store.effect((effectStore) => {
         const { sliceAField1 } = sliceA.track(effectStore);
@@ -324,8 +332,8 @@ describe('effect with store', () => {
     test('should run cleanup function when destroyed', async () => {
       const { store, sliceB } = setup();
 
-      const cleanupCalled = jest.fn();
-      const effectCalled = jest.fn();
+      const cleanupCalled = jest.fn<any>();
+      const effectCalled = jest.fn<any>();
 
       const eff = store.effect((effectStore) => {
         const { sliceBField1 } = sliceB.track(effectStore);
