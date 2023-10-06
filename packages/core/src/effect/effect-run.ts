@@ -26,7 +26,7 @@ export class EffectRun {
   }
 
   constructor(
-    public readonly store: Store,
+    private readonly store: Store<any>,
     public readonly name: string,
   ) {}
 

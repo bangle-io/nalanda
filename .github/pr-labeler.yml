@@ -1,7 +1,7 @@
 'change/feat':
   - '/^(feat|perf)/'
 'change/fix':
-  - '/^(fix)/'
+  - '/^(fix|types)/'
 'change/breaking':
   - '/^breaking-change/'
 'change/docs':

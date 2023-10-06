@@ -7,11 +7,12 @@ export type RefObject<T> = {
 
 export function ref<T>(
   init: () => T,
-): (store: Store | BaseStore) => RefObject<T> {
-  const cache = new WeakMap<Store, RefObject<T>>();
+): (store: Store<any> | BaseStore) => RefObject<T> {
+  const cache = new WeakMap<Store<any>, RefObject<T>>();
 
   return (store) => {
-    const rootStore: Store = store instanceof Store ? store : store._rootStore;
+    const rootStore: Store<any> =
+      store instanceof Store ? store : store._rootStore;
 
     let existing = cache.get(rootStore);
 

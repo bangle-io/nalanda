@@ -10,19 +10,22 @@ import type { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
 import type { FieldId, NoInfer } from '../types';
 import { Slice } from './slice';
-
+import type { AnySlice, InferSliceNameFromSlice } from './slice';
 /**
  * @param name - The name of the slice.
  * @param dependencies - An array of slices that this slice depends on.
  */
-export function createKey(name: string, dependencies: Slice[] = []) {
-  return new Key(name, dependencies);
+export function createKey<TName extends string, TDepSlice extends AnySlice>(
+  name: TName,
+  dependencies: TDepSlice[],
+) {
+  return new Key<TName, InferSliceNameFromSlice<TDepSlice>>(name, dependencies);
 }
 
-export class Key {
+export class Key<TName extends string, TDepName extends string> {
   constructor(
-    public readonly name: string,
-    public readonly dependencies: Slice[],
+    public readonly name: TName,
+    public readonly dependencies: Slice<any, TDepName, any>[],
   ) {}
 
   /**
@@ -31,7 +34,7 @@ export class Key {
    * @param options
    */
   derive<TVal>(
-    compute: (storeState: StoreState) => TVal,
+    compute: (storeState: StoreState<TName>) => TVal,
     options: BaseFieldOptions<NoInfer<TVal>> = {},
   ) {
     return this.registerField(new DerivedField(compute, this, options));
@@ -52,13 +55,13 @@ export class Key {
     return this.registerField(new StateField(initialValue, this, options));
   }
 
-  slice<TFieldsSpec extends Record<string, BaseField<any>>>({
+  slice<TFieldsSpec extends Record<string, BaseField<any, any, any>>>({
     fields,
     actions,
   }: {
     fields: TFieldsSpec;
     actions?: (...args: any) => Transaction;
-  }): Slice<TFieldsSpec> {
+  }): Slice<TFieldsSpec, TName, TDepName> {
     if (this._slice) {
       throwValidationError(
         `Slice "${this.name}" already exists. A key can only be used to create one slice.`,
@@ -82,13 +85,14 @@ export class Key {
   // @internal
   _effectCallbacks: [EffectCallback, Partial<EffectOpts>][] = [];
   // @internal
-  readonly _derivedFields: Record<FieldId, DerivedField<any>> = {};
+  readonly _derivedFields: Record<FieldId, DerivedField<any, any, any>> = {};
   // @internal
   readonly _initialStateFieldValue: Record<FieldId, any> = {};
   // @internal
-  readonly _fields = new Set<BaseField<any>>();
+  readonly _fields = new Set<BaseField<any, any, any>>();
   // @internal
-  readonly _fieldIdToFieldLookup: Record<FieldId, BaseField<any>> = {};
+  readonly _fieldIdToFieldLookup: Record<FieldId, BaseField<any, any, any>> =
+    {};
 
   // @internal
   _assertedSlice(): Slice {
@@ -101,7 +105,7 @@ export class Key {
   }
 
   // @internal
-  private registerField<T extends BaseField<any>>(field: T): T {
+  private registerField<T extends BaseField<any, any, any>>(field: T): T {
     this._fields.add(field);
     this._fieldIdToFieldLookup[field.id] = field;
 

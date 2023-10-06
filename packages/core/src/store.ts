@@ -13,7 +13,7 @@ import type { Slice } from './slice/slice';
 import type { SliceId } from './types';
 import { Transaction } from './transaction';
 
-interface StoreOptions {
+interface StoreOptions<TSliceName extends string> {
   name?: string;
   slices: Slice[];
   debug?: DebugLogger;
@@ -23,12 +23,12 @@ interface StoreOptions {
      * Overrides all effects schedulers for all effects in the store.
      */
     effectSchedulerOverride?: EffectScheduler;
-    dispatchTransactionOverride?: DispatchTransaction;
+    dispatchTransactionOverride?: DispatchTransaction<TSliceName>;
   };
   manualEffectsTrigger?: boolean;
 }
 
-export const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction = (
+export const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction<any> = (
   store,
   updateState,
   tx,
@@ -37,26 +37,26 @@ export const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction = (
   updateState(newState);
 };
 
-// type DispatchOperation = (store: Store, operation: Operation) => void;
-
-type DispatchTransaction = (
-  store: Store,
-  updateState: (state: StoreState) => void,
+type DispatchTransaction<TSliceName extends string> = (
+  store: Store<TSliceName>,
+  updateState: (state: StoreState<TSliceName>) => void,
   tx: Transaction,
 ) => void;
 
-export function createStore(config: StoreOptions) {
-  return new Store({ ...config, name: 'anonymous' });
+export function createStore<TSliceName extends string>(
+  config: StoreOptions<TSliceName>,
+) {
+  return new Store<TSliceName>({ ...config, name: 'anonymous' });
 }
 
-export class Store extends BaseStore {
-  public readonly initialState: StoreState;
+export class Store<TSliceName extends string> extends BaseStore {
+  public readonly initialState: StoreState<TSliceName>;
 
   // @internal
-  private _state: StoreState;
+  private _state: StoreState<TSliceName>;
 
   // @internal
-  _rootStore: Store;
+  _rootStore: Store<TSliceName>;
   // @internal
   private effectsManager: EffectManager;
   // @internal
@@ -64,7 +64,7 @@ export class Store extends BaseStore {
   // @internal
   private registeredSlicesEffect = false;
   // @internal
-  private _dispatchTxn: DispatchTransaction;
+  private _dispatchTxn: DispatchTransaction<TSliceName>;
 
   get state() {
     return this._state;
@@ -83,7 +83,7 @@ export class Store extends BaseStore {
     return this.destroyed;
   }
 
-  constructor(public readonly options: StoreOptions) {
+  constructor(public readonly options: StoreOptions<TSliceName>) {
     super();
 
     this._state = StoreState.create({
@@ -137,7 +137,7 @@ export class Store extends BaseStore {
   }
 
   // @internal
-  private updateState = (newState: StoreState) => {
+  private updateState = (newState: StoreState<TSliceName>) => {
     const oldState = this._state;
     this._state = newState;
 

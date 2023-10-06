@@ -1,7 +1,7 @@
 import { genTransactionID } from './helpers/id-generation';
 import type { StoreState } from './store-state';
 
-type Step = { stepper: (storeState: StoreState) => StoreState };
+type Step = { stepper: (storeState: StoreState<any>) => StoreState<any> };
 
 export const META_DISPATCHER = 'DEBUG__DISPATCHER';
 export const TX_META_STORE_NAME = 'store-name';

@@ -76,6 +76,7 @@ Before submitting a PR, make sure to test your changes locally. Here's how:
    - `perf`: for performance improvements
    - `ci`: for CI/CD related changes
    - `build`: for build related changes
+   - `types`: for type related changes
 
 > The above convention helps us produce a changelog automatically.
 
