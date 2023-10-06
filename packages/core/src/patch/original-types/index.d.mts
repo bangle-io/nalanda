@@ -25,6 +25,7 @@ type Brand<T, K> = T & {
 type NoInfer<T> = [T][T extends any ? 0 : never];
 type SliceId = Brand<string, 'SliceId'>;
 type FieldId = Brand<string, 'FieldId'>;
+type IfSubset<T, U, Y, N = never> = [T] extends [U] ? Y : N;
 
 /**
  * @param name - The name of the slice.
@@ -260,4 +261,4 @@ declare function ref<T>(
   init: () => T,
 ): (store: Store | BaseStore) => RefObject<T>;
 
-export { cleanup, createKey, createStore, ref };
+export { IfSubset, cleanup, createKey, createStore, ref };
