@@ -171,7 +171,7 @@ export class Effect {
       return;
     }
 
-    let fieldChanged: BaseField<unknown> | undefined;
+    let fieldChanged: BaseField | undefined;
 
     // if runCount == 0, always run, to ensure the effect runs at least once
     if (this.runCount != 0) {

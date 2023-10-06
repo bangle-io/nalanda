@@ -3,3 +3,8 @@ export { createKey } from './slice/key';
 export { createStore } from './store';
 export { ref } from './effect/ref';
 export type { IfSubset } from './types';
+export type { Slice } from './slice/slice';
+export type { Key } from './slice/key';
+export type { StoreState } from './store-state';
+export type { Store } from './store';
+export type { Effect } from './effect/effect';

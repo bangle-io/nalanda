@@ -12,7 +12,21 @@ type MapSliceState<TFieldsSpec extends Record<string, BaseField<any>>> = {
     : never;
 };
 
-export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
+export type AnySlice = Slice<any>;
+
+export type InferSliceNameFromSlice<T> = T extends Slice<
+  any,
+  infer TSliceName,
+  any
+>
+  ? TSliceName
+  : never;
+
+export class Slice<
+  TFieldsSpec extends Record<string, BaseField<any>> = any,
+  TSliceName extends string = any,
+  TDepName extends string = any,
+> {
   sliceId: SliceId;
 
   // @internal
@@ -26,10 +40,10 @@ export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
 
   // @internal
   constructor(
-    public readonly name: string,
+    public readonly name: TSliceName,
     externalFieldSpec: TFieldsSpec,
     // @internal
-    public readonly _key: Key,
+    public readonly _key: Key<TSliceName, TDepName>,
   ) {
     this.sliceId = sliceIdCounters.generate(name);
     for (const [fieldName, field] of Object.entries(externalFieldSpec)) {

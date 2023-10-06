@@ -10,13 +10,17 @@ export type BaseFieldOptions<TVal> = {
   equal?: (a: TVal, b: TVal) => boolean;
 };
 
-export abstract class BaseField<TVal> {
+export abstract class BaseField<
+  TVal = any,
+  TName extends string = any,
+  TDep extends string = any,
+> {
   readonly id: FieldId;
 
   name: string | undefined;
 
   constructor(
-    public readonly key: Key,
+    public readonly key: Key<TName, TDep>,
     public readonly options: BaseFieldOptions<TVal>,
   ) {
     this.id = fieldIdCounters.generate(key.name);
@@ -43,10 +47,14 @@ export abstract class BaseField<TVal> {
   }
 }
 
-export class DerivedField<TVal> extends BaseField<TVal> {
+export class DerivedField<
+  TVal,
+  TName extends string,
+  TDep extends string,
+> extends BaseField<TVal, TName, TDep> {
   constructor(
     public readonly deriveCallback: (state: StoreState<any>) => TVal,
-    key: Key,
+    key: Key<TName, TDep>,
     options: BaseFieldOptions<TVal>,
   ) {
     super(key, options);
@@ -75,10 +83,14 @@ export class DerivedField<TVal> extends BaseField<TVal> {
   }
 }
 
-export class StateField<TVal = any> extends BaseField<TVal> {
+export class StateField<
+  TVal = any,
+  TName extends string = any,
+  TDep extends string = any,
+> extends BaseField<TVal, TName, TDep> {
   constructor(
     public readonly initialValue: TVal,
-    key: Key,
+    key: Key<TName, TDep>,
     options: BaseFieldOptions<TVal>,
   ) {
     super(key, options);

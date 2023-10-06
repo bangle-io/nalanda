@@ -9,7 +9,7 @@ import {
 import { createKey, createStore } from '../index';
 import { testCleanup } from '../helpers/test-cleanup';
 
-const key = createKey('mySliceName');
+const key = createKey('mySliceName', []);
 
 const counter = key.field(0);
 const counterNegative = key.field(-1);

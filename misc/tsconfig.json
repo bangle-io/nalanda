@@ -1,7 +1,8 @@
 {
   "extends": "tsconfig/base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node"],
+    "skipLibCheck": false
   },
   "include": ["."],
   "exclude": ["node_modules"]
