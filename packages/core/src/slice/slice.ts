@@ -3,7 +3,13 @@ import { type BaseField, DerivedField } from './field';
 import { sliceIdCounters } from '../helpers/id-generation';
 import { throwValidationError } from '../helpers/throw-error';
 import type { StoreState } from '../store-state';
-import type { SliceId, FieldId, NoInfer } from '../types';
+import type {
+  SliceId,
+  FieldId,
+  NoInfer,
+  IfSubsetOfState,
+  IfSubsetEffectStore,
+} from '../types';
 import type { Key } from './key';
 
 type MapSliceState<TFieldsSpec extends Record<string, BaseField<any>>> = {
@@ -24,8 +30,8 @@ export type InferSliceNameFromSlice<T> = T extends Slice<
 
 export class Slice<
   TFieldsSpec extends Record<string, BaseField<any>> = any,
-  TSliceName extends string = any,
-  TDepName extends string = any,
+  TName extends string = any,
+  TDep extends string = any,
 > {
   sliceId: SliceId;
 
@@ -40,10 +46,10 @@ export class Slice<
 
   // @internal
   constructor(
-    public readonly name: TSliceName,
+    public readonly name: TName,
     externalFieldSpec: TFieldsSpec,
     // @internal
-    public readonly _key: Key<TSliceName, TDepName>,
+    public readonly _key: Key<TName, TDep>,
   ) {
     this.sliceId = sliceIdCounters.generate(name);
     for (const [fieldName, field] of Object.entries(externalFieldSpec)) {
@@ -55,7 +61,9 @@ export class Slice<
     }
   }
 
-  get(storeState: StoreState<any>): MapSliceState<TFieldsSpec> {
+  get<TState extends StoreState<any>>(
+    storeState: IfSubsetOfState<TName | TDep, TState>,
+  ): MapSliceState<TFieldsSpec> {
     const existing = this.getCache.get(storeState);
 
     if (existing) {
@@ -117,14 +125,16 @@ export class Slice<
   /**
    * Get a field value from the slice state. Slightly faster than `get`.
    */
-  getField<T extends keyof TFieldsSpec>(
-    storeState: StoreState<any>,
+  getField<T extends keyof TFieldsSpec, TState extends StoreState<any>>(
+    storeState: IfSubsetOfState<TName | TDep, TState>,
     fieldName: T,
   ): MapSliceState<TFieldsSpec>[T] {
     return this._getFieldByName(fieldName as string).get(storeState) as any;
   }
 
-  track(store: EffectStore): MapSliceState<TFieldsSpec> {
+  track<TEStore extends EffectStore>(
+    store: IfSubsetEffectStore<TName | TDep, TEStore>,
+  ): MapSliceState<TFieldsSpec> {
     return new Proxy(this.get(store.state), {
       get: (target, prop: string, receiver) => {
         return this._getFieldByName(prop).track(store);
@@ -135,8 +145,8 @@ export class Slice<
   /**
    * Similar to `track`, but only tracks a single field.
    */
-  trackField<T extends keyof TFieldsSpec>(
-    store: EffectStore,
+  trackField<T extends keyof TFieldsSpec, TEStore extends EffectStore>(
+    store: IfSubsetEffectStore<TName | TDep, TEStore>,
     fieldName: T,
   ): MapSliceState<TFieldsSpec>[T] {
     return this._getFieldByName(fieldName as string).track(store) as any;

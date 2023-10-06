@@ -7,6 +7,7 @@ import type { Operation } from './operation';
 import type { Slice } from '../slice/slice';
 import type { Store } from '../store';
 import type { Transaction } from '../transaction';
+import { StoreState } from '../store-state';
 
 const DEFAULT_MAX_WAIT = 15;
 
@@ -22,7 +23,7 @@ export type EffectOpts = {
   name?: string;
 };
 
-export class EffectStore extends BaseStore {
+export class EffectStore<TSliceName extends string = any> extends BaseStore {
   // @internal
   constructor(
     // @internal
@@ -36,7 +37,7 @@ export class EffectStore extends BaseStore {
     super();
   }
 
-  get state() {
+  get state(): StoreState<TSliceName> {
     return this._rootStore.state;
   }
 
@@ -51,7 +52,9 @@ export type EffectScheduler = (
   opts: Omit<EffectOpts, 'scheduler'> & {},
 ) => void;
 
-export type EffectCallback = (store: EffectStore) => void | Promise<void>;
+export type EffectCallback<TSliceName extends string = any> = (
+  store: EffectStore<TSliceName>,
+) => void | Promise<void>;
 export type EffectCreator = (store: Store<any>) => Effect;
 
 const DEFAULT_SCHEDULER: EffectScheduler = (cb, opts) => {

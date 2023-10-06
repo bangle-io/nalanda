@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { createKey, Key, Slice } from '@nalanda/core';
+import { createKey, createStore, Key, Slice } from '@nalanda/core';
 import {
   InferSliceDepNames,
   InferSliceName,
@@ -23,6 +23,10 @@ const field1 = key.field(1);
 
 const mySlice = key.slice({
   fields: {},
+});
+
+const store = createStore({
+  slices: [dep1Slice, dep2Slice, mySlice],
 });
 
 test('slice', () => {

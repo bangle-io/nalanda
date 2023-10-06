@@ -4,7 +4,7 @@ import { throwValidationError } from '../helpers/throw-error';
 import type { Key } from './key';
 import { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
-import type { FieldId } from '../types';
+import type { FieldId, IfSubsetOfState, IfSubsetEffectStore } from '../types';
 
 export type BaseFieldOptions<TVal> = {
   equal?: (a: TVal, b: TVal) => boolean;
@@ -26,7 +26,9 @@ export abstract class BaseField<
     this.id = fieldIdCounters.generate(key.name);
   }
 
-  abstract get(storeState: StoreState<any>): TVal;
+  abstract get<TState extends StoreState<any>>(
+    storeState: IfSubsetOfState<TName | TDep, TState>,
+  ): TVal;
 
   isEqual(a: TVal, b: TVal): boolean {
     if (this.options.equal) {
@@ -35,8 +37,11 @@ export abstract class BaseField<
     return Object.is(a, b);
   }
 
-  track(store: EffectStore) {
-    const value = this.get(store.state);
+  track<TEStore extends EffectStore>(
+    store: IfSubsetEffectStore<TName | TDep, TEStore>,
+  ) {
+    const state: any = store.state satisfies StoreState<any>;
+    const value = this.get(state);
     store._getRunInstance().addTrackedField(this, value);
     return value;
   }
@@ -53,7 +58,7 @@ export class DerivedField<
   TDep extends string,
 > extends BaseField<TVal, TName, TDep> {
   constructor(
-    public readonly deriveCallback: (state: StoreState<any>) => TVal,
+    public readonly deriveCallback: (state: StoreState<TName | TDep>) => TVal,
     key: Key<TName, TDep>,
     options: BaseFieldOptions<TVal>,
   ) {
@@ -63,7 +68,9 @@ export class DerivedField<
   // @internal
   private getCache = new WeakMap<StoreState<any>, any>();
 
-  get(storeState: StoreState<any>): TVal {
+  get<TState extends StoreState<any>>(
+    storeState: IfSubsetOfState<TName | TDep, TState>,
+  ): TVal {
     if (!this.id) {
       throwValidationError(
         `Cannot access state before Slice "${this.key.name}" has been created.`,
@@ -96,7 +103,9 @@ export class StateField<
     super(key, options);
   }
 
-  get(storeState: StoreState<any>): TVal {
+  get<TState extends StoreState<any>>(
+    storeState: IfSubsetOfState<TName | TDep, TState>,
+  ): TVal {
     if (!this.id) {
       throwValidationError(
         `Cannot access state before Slice "${this.key.name}" has been created.`,

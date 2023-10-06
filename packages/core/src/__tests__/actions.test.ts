@@ -9,6 +9,7 @@ import {
 import { testCleanup } from '../helpers/test-cleanup';
 import { createKey } from '../slice/key';
 import { createStore } from '../store';
+import { IfSubset } from '../types';
 
 afterEach(() => {
   testCleanup();
@@ -89,6 +90,8 @@ describe('actions', () => {
 
       store.dispatch(increment());
       store.dispatch(increment());
+
+      const state = store.state;
 
       expect(counter.get(store.state)).toBe(2);
       expect(counterNegative.get(store.state)).toBe(-1);

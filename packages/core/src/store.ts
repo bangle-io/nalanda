@@ -15,7 +15,7 @@ import { Transaction } from './transaction';
 
 interface StoreOptions<TSliceName extends string> {
   name?: string;
-  slices: Slice[];
+  slices: Slice<any, TSliceName, any>[];
   debug?: DebugLogger;
   overrides?: {
     stateOverride?: Record<SliceId, Record<string, unknown>>;
@@ -123,7 +123,7 @@ export class Store<TSliceName extends string> extends BaseStore {
     // TODO - dispatch operation
   }
 
-  effect(callback: EffectCallback, opts: Partial<EffectOpts> = {}) {
+  effect(callback: EffectCallback<TSliceName>, opts: Partial<EffectOpts> = {}) {
     const effectInstance = effect(callback, opts)(this);
     this.effectsManager.registerEffect(effectInstance);
 
