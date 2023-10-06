@@ -22,7 +22,7 @@ export abstract class BaseField<TVal> {
     this.id = fieldIdCounters.generate(key.name);
   }
 
-  abstract get(storeState: StoreState): TVal;
+  abstract get(storeState: StoreState<any>): TVal;
 
   isEqual(a: TVal, b: TVal): boolean {
     if (this.options.equal) {
@@ -45,7 +45,7 @@ export abstract class BaseField<TVal> {
 
 export class DerivedField<TVal> extends BaseField<TVal> {
   constructor(
-    public readonly deriveCallback: (state: StoreState) => TVal,
+    public readonly deriveCallback: (state: StoreState<any>) => TVal,
     key: Key,
     options: BaseFieldOptions<TVal>,
   ) {
@@ -53,9 +53,9 @@ export class DerivedField<TVal> extends BaseField<TVal> {
   }
 
   // @internal
-  private getCache = new WeakMap<StoreState, any>();
+  private getCache = new WeakMap<StoreState<any>, any>();
 
-  get(storeState: StoreState): TVal {
+  get(storeState: StoreState<any>): TVal {
     if (!this.id) {
       throwValidationError(
         `Cannot access state before Slice "${this.key.name}" has been created.`,
@@ -84,7 +84,7 @@ export class StateField<TVal = any> extends BaseField<TVal> {
     super(key, options);
   }
 
-  get(storeState: StoreState): TVal {
+  get(storeState: StoreState<any>): TVal {
     if (!this.id) {
       throwValidationError(
         `Cannot access state before Slice "${this.key.name}" has been created.`,
@@ -99,7 +99,7 @@ export class StateField<TVal = any> extends BaseField<TVal> {
   update(val: TVal | ((val: TVal) => TVal)): Transaction {
     const txn = this.key.transaction();
 
-    return txn.step((state: StoreState) => {
+    return txn.step((state: StoreState<any>) => {
       const slice = this.key._assertedSlice();
       const manager = state._getSliceStateManager(slice);
 

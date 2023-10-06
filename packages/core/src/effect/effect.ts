@@ -26,7 +26,7 @@ export class EffectStore extends BaseStore {
   // @internal
   constructor(
     // @internal
-    public _rootStore: Store,
+    public _rootStore: Store<any>,
     public readonly name: string,
     /**
      * @internal
@@ -52,7 +52,7 @@ export type EffectScheduler = (
 ) => void;
 
 export type EffectCallback = (store: EffectStore) => void | Promise<void>;
-export type EffectCreator = (store: Store) => Effect;
+export type EffectCreator = (store: Store<any>) => Effect;
 
 const DEFAULT_SCHEDULER: EffectScheduler = (cb, opts) => {
   if (opts.deferred) {
@@ -88,7 +88,7 @@ export class Effect {
     // @internal
     private readonly effectCallback: EffectCallback,
     // @internal
-    private readonly rootStore: Store,
+    private readonly rootStore: Store<any>,
     public readonly opts: EffectOpts,
   ) {
     this.name = opts.name || effectCallback.name || 'anonymous';
@@ -201,7 +201,7 @@ export class Effect {
   }
 }
 
-export function effect(
+export function effect<TSliceName extends string>(
   callback: EffectCallback,
   {
     deferred = true,
@@ -209,7 +209,7 @@ export function effect(
     scheduler = DEFAULT_SCHEDULER,
   }: Partial<EffectOpts> = {},
 ): EffectCreator {
-  return (store: Store) => {
+  return (store: Store<TSliceName>) => {
     const newEffect = new Effect(callback, store, {
       deferred,
       maxWait,

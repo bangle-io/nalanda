@@ -11,10 +11,10 @@ export type Dispatch = (
 ) => void;
 
 export abstract class BaseStore {
-  abstract readonly state: StoreState;
+  abstract readonly state: StoreState<any>;
 
   // @internal
-  abstract _rootStore: Store;
+  abstract _rootStore: Store<any>;
 
   abstract dispatch(txn: Transaction | Operation): void;
 }

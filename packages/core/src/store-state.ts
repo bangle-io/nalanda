@@ -29,7 +29,7 @@ function slicesComputedInfo(options: {
   };
 }
 
-export class StoreState {
+export class StoreState<TSliceName extends string> {
   static create(options: {
     slices: Slice[];
     stateOverride?: Record<SliceId, Record<string, unknown>>;
@@ -71,7 +71,7 @@ export class StoreState {
     private config: StoreStateConfig,
   ) {}
 
-  apply(transaction: Transaction): StoreState {
+  apply(transaction: Transaction): StoreState<TSliceName> {
     if (transaction._isDestroyed()) {
       throwValidationError(
         `Transaction "${transaction.id}" has already been applied.`,
@@ -83,7 +83,7 @@ export class StoreState {
 
     return steps.reduce((storeState, step) => {
       return step.stepper(storeState);
-    }, this as StoreState);
+    }, this as StoreState<TSliceName>);
   }
 
   // @internal
@@ -102,7 +102,7 @@ export class StoreState {
   _updateSliceStateManager(
     slice: Slice,
     sliceStateManager: SliceStateManager,
-  ): StoreState {
+  ): StoreState<any> {
     const sliceStateMap = {
       ...this.config.sliceStateMap,
       [slice.sliceId]: sliceStateManager,
@@ -119,7 +119,7 @@ export class StoreState {
    * in the provided store state.
    */
   // @internal
-  _getChangedSlices(otherStoreState: StoreState): Slice[] {
+  _getChangedSlices(otherStoreState: StoreState<any>): Slice[] {
     const diff: Slice[] = [];
 
     Object.values(this.config.sliceStateMap).forEach((sliceStateManager) => {

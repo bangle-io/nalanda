@@ -147,7 +147,7 @@ describe('StoreState Slice and Transaction Operations', () => {
       return myField.update(fixedState);
     }
 
-    let storeStateInstances: StoreState[] = [];
+    let storeStateInstances: StoreState<any>[] = [];
 
     function mutatingAction(inputNumber: number) {
       const transaction = mySliceKey.transaction();

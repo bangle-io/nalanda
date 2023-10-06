@@ -31,7 +31,7 @@ export class Key {
    * @param options
    */
   derive<TVal>(
-    compute: (storeState: StoreState) => TVal,
+    compute: (storeState: StoreState<any>) => TVal,
     options: BaseFieldOptions<NoInfer<TVal>> = {},
   ) {
     return this.registerField(new DerivedField(compute, this, options));

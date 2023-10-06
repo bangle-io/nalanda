@@ -16,7 +16,7 @@ export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
   sliceId: SliceId;
 
   // @internal
-  private getCache = new WeakMap<StoreState, any>();
+  private getCache = new WeakMap<StoreState<any>, any>();
   // @internal
   private fieldNameToField: Record<string, BaseField<any>> = {};
 
@@ -41,7 +41,7 @@ export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
     }
   }
 
-  get(storeState: StoreState): MapSliceState<TFieldsSpec> {
+  get(storeState: StoreState<any>): MapSliceState<TFieldsSpec> {
     const existing = this.getCache.get(storeState);
 
     if (existing) {
@@ -104,7 +104,7 @@ export class Slice<TFieldsSpec extends Record<string, BaseField<any>> = any> {
    * Get a field value from the slice state. Slightly faster than `get`.
    */
   getField<T extends keyof TFieldsSpec>(
-    storeState: StoreState,
+    storeState: StoreState<any>,
     fieldName: T,
   ): MapSliceState<TFieldsSpec>[T] {
     return this._getFieldByName(fieldName as string).get(storeState) as any;

@@ -14,9 +14,9 @@ export class OperationStore extends BaseStore {
   private cleanupRan = false;
   private readonly _cleanupCallbacks: Set<CleanupCallback> = new Set();
 
-  _rootStore: Store;
+  _rootStore: Store<any>;
   constructor(
-    private rootStore: Store,
+    private rootStore: Store<any>,
     public readonly name: string,
     private readonly opts: OperationOpts,
   ) {
