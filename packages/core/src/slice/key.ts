@@ -34,13 +34,16 @@ export class Key<TName extends string, TDepName extends string> {
    * @param options
    */
   derive<TVal>(
-    compute: (storeState: StoreState<TName>) => TVal,
+    compute: (storeState: StoreState<TName | TDepName>) => TVal,
     options: BaseFieldOptions<NoInfer<TVal>> = {},
   ) {
     return this.registerField(new DerivedField(compute, this, options));
   }
 
-  effect(callback: EffectCallback, opts: Partial<EffectOpts> = {}) {
+  effect(
+    callback: EffectCallback<TName | TDepName>,
+    opts: Partial<EffectOpts> = {},
+  ) {
     this._effectCallbacks.push([callback, opts]);
   }
 
