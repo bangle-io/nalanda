@@ -207,6 +207,10 @@ importers:
         version: 3.0.2
 
   packages/nalanda:
+    dependencies:
+      '@nalanda/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@jest/globals':
         specifier: ^29.7.0

@@ -30,7 +30,9 @@
     "build:watch": "tsup --config tsup.config.ts --watch",
     "prepack": "pnpm run build"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@nalanda/core": "workspace:*"
+  },
   "files": [
     "dist",
     "src"
