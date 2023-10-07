@@ -1,7 +1,7 @@
 {
   "name": "@nalanda/core",
   "sideEffects": false,
-  "version": "0.0.1-alpha.4",
+  "version": "0.0.1-alpha.5",
   "license": "MIT",
   "authors": [
     {
@@ -29,9 +29,8 @@
     "format": "prettier src --write",
     "build": "tsup --config tsup.config.ts",
     "build:watch": "tsup --config tsup.config.ts --watch",
-    "prepack": "pnpm run build",
-    "patch-core-types": "tsx ./src/patch/patch-types.ts",
-    "generate-original-types": "tsup --config tsup.config.ts --dts-only --out-dir ./src/patch/original-types && pnpm prettier ./src/patch/original-types --write"
+    "prepublishOnly": "pnpm run build && tsx ../../misc/prepublish-package-run.ts",
+    "postpublish": "tsx ../../misc/postpublish-package-cleanup.ts"
   },
   "files": [
     "dist",

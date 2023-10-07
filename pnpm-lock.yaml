@@ -45,6 +45,9 @@ importers:
       tsup:
         specifier: ^7.2.0
         version: 7.2.0(@swc/core@1.3.90)(typescript@5.2.2)
+      tsx:
+        specifier: ^3.13.0
+        version: 3.13.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -57,6 +60,9 @@ importers:
       tsup:
         specifier: ^7.2.0
         version: 7.2.0(@swc/core@1.3.90)(typescript@5.2.2)
+      tsx:
+        specifier: ^3.13.0
+        version: 3.13.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -66,6 +72,9 @@ importers:
       tsup:
         specifier: ^7.2.0
         version: 7.2.0(@swc/core@1.3.90)(typescript@5.2.2)
+      tsx:
+        specifier: ^3.13.0
+        version: 3.13.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -130,6 +139,9 @@ importers:
       tsup:
         specifier: ^7.2.0
         version: 7.2.0(postcss@8.4.31)(typescript@5.2.2)
+      tsx:
+        specifier: ^3.13.0
+        version: 3.13.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -148,15 +160,30 @@ importers:
       '@swc/jest':
         specifier: ^0.2.29
         version: 0.2.29(@swc/core@1.3.90)
+      '@types/fs-extra':
+        specifier: ^11.0.2
+        version: 11.0.2
       '@types/node':
         specifier: 20.8.2
         version: 20.8.2
+      fs-extra:
+        specifier: ^11.1.1
+        version: 11.1.1
+      globby:
+        specifier: ^13.2.2
+        version: 13.2.2
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@20.8.2)
       tsconfig:
         specifier: workspace:*
         version: link:../config/tsconfig
+      tsup:
+        specifier: ^7.2.0
+        version: 7.2.0(@swc/core@1.3.90)(typescript@5.2.2)
+      tsup-config:
+        specifier: workspace:*
+        version: link:../config/tsup-config
       tsx:
         specifier: ^3.13.0
         version: 3.13.0
@@ -221,12 +248,6 @@ importers:
       '@swc/jest':
         specifier: ^0.2.29
         version: 0.2.29(@swc/core@1.3.90)
-      '@types/react':
-        specifier: ^18.2.24
-        version: 18.2.24
-      '@types/react-dom':
-        specifier: ^18.2.8
-        version: 18.2.8
       eslint-config-custom:
         specifier: workspace:*
         version: link:../../config/eslint-config-custom
@@ -239,12 +260,6 @@ importers:
       prettier:
         specifier: ^3.0.3
         version: 3.0.3
-      react:
-        specifier: ^18.2.0
-        version: 18.2.0
-      react-dom:
-        specifier: ^18.2.0
-        version: 18.2.0(react@18.2.0)
       tsconfig:
         specifier: workspace:*
         version: link:../../config/tsconfig
@@ -254,6 +269,9 @@ importers:
       tsup-config:
         specifier: workspace:*
         version: link:../../config/tsup-config
+      tsx:
+        specifier: ^3.13.0
+        version: 3.13.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -262,10 +280,6 @@ importers:
         version: 3.0.2
 
   packages/react:
-    dependencies:
-      use-sync-external-store:
-        specifier: ^1.2.0
-        version: 1.2.0(react@18.2.0)
     devDependencies:
       '@jest/globals':
         specifier: ^29.7.0
@@ -309,6 +323,9 @@ importers:
       tsup-config:
         specifier: workspace:*
         version: link:../../config/tsup-config
+      tsx:
+        specifier: ^3.13.0
+        version: 3.13.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -1928,6 +1945,13 @@ packages:
     resolution: {integrity: sha512-VeiPZ9MMwXjO32/Xu7+OwflfmeoRwkE/qzndw42gGtgJwZopBnzy2gD//NN1+go1mADzkDcqf/KnFRSjTJ8xJA==}
     dev: false
 
+  /@types/fs-extra@11.0.2:
+    resolution: {integrity: sha512-c0hrgAOVYr21EX8J0jBMXGLMgJqVf/v6yxi0dLaJboW9aQPh16Id+z6w2Tx1hm+piJOLv8xPfVKZCLfjPw/IMQ==}
+    dependencies:
+      '@types/jsonfile': 6.1.2
+      '@types/node': 20.8.2
+    dev: true
+
   /@types/graceful-fs@4.1.7:
     resolution: {integrity: sha512-MhzcwU8aUygZroVwL2jeYk6JisJrPl/oov/gsgGCue9mkgl9wjGbzReYQClxiUgFDnib9FuHqTndccKeZKxTRw==}
     dependencies:
@@ -1972,6 +1996,12 @@ packages:
 
   /@types/json5@0.0.29:
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
+    dev: true
+
+  /@types/jsonfile@6.1.2:
+    resolution: {integrity: sha512-8t92P+oeW4d/CRQfJaSqEwXujrhH4OEeHRjGU3v1Q8mUS8GPF3yiX26sw4svv6faL2HfBtGTe2xWIoVgN3dy9w==}
+    dependencies:
+      '@types/node': 20.8.2
     dev: true
 
   /@types/katex@0.16.3:
@@ -3911,6 +3941,15 @@ packages:
     dependencies:
       is-callable: 1.2.7
 
+  /fs-extra@11.1.1:
+    resolution: {integrity: sha512-MGIE4HOvQCeUCzmlHs0vXpih4ysz4wg9qiSAu6cd42lVwPbTM1TjV7RusoyQqMmk/95gdQZX72u+YW+c3eEpFQ==}
+    engines: {node: '>=14.14'}
+    dependencies:
+      graceful-fs: 4.2.11
+      jsonfile: 6.1.0
+      universalify: 2.0.0
+    dev: true
+
   /fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
@@ -4075,6 +4114,17 @@ packages:
       ignore: 5.2.4
       merge2: 1.4.1
       slash: 3.0.0
+
+  /globby@13.2.2:
+    resolution: {integrity: sha512-Y1zNGV+pzQdh7H39l9zgB4PJqjRNqydvdYCDG4HFXM4XuvSaQQlEc91IU1yALL8gUTDomgBAfz3XJdmUS+oo0w==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dependencies:
+      dir-glob: 3.0.1
+      fast-glob: 3.3.1
+      ignore: 5.2.4
+      merge2: 1.4.1
+      slash: 4.0.0
+    dev: true
 
   /gopd@1.0.1:
     resolution: {integrity: sha512-d65bNlIadxvpb/A2abVdlqKqV563juRnZ1Wtk6s1sIR8uNsXR70xqIzVqxVf1eTqDunwT2MkczEeaezCKTZhwA==}
@@ -5134,6 +5184,14 @@ packages:
 
   /jsonc-parser@3.2.0:
     resolution: {integrity: sha512-gfFQZrcTc8CnKXp6Y4/CBT3fTc0OVuDofpre4aEeEpSBPV5X5v4+Vmx+8snU7RLPrNHPKSgLxGo9YuQzz20o+w==}
+
+  /jsonfile@6.1.0:
+    resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
+    dependencies:
+      universalify: 2.0.0
+    optionalDependencies:
+      graceful-fs: 4.2.11
+    dev: true
 
   /jsx-ast-utils@3.3.5:
     resolution: {integrity: sha512-ZZow9HBI5O6EPgSJLUb8n2NKgmVWTwCvHGwFuJlMjvLFqlGG6pjirPhtdsseaLZjSibD8eegzmYpUZwoIlj2cQ==}
@@ -7179,6 +7237,11 @@ packages:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
 
+  /slash@4.0.0:
+    resolution: {integrity: sha512-3dOsAHXXUkQTpOYcoAxLIorMTp4gIQr5IW3iVb7A7lFIp0VHhnynm9izx6TssdrIcVIESAlVjtnO2K8bg+Coew==}
+    engines: {node: '>=12'}
+    dev: true
+
   /sort-keys@5.0.0:
     resolution: {integrity: sha512-Pdz01AvCAottHTPQGzndktFNdbRA75BgOfeT1hH+AMnJFv8lynkPi42rfeEhpx1saTEI3YNMWxfqu0sFD1G8pw==}
     engines: {node: '>=12'}
@@ -7903,6 +7966,11 @@ packages:
       unist-util-visit-parents: 6.0.1
     dev: false
 
+  /universalify@2.0.0:
+    resolution: {integrity: sha512-hAZsKq7Yy11Zu1DE0OzWjw7nnLZmJZYTDZZyEFHZdUhV8FkH5MCfoU1XMaxXovpyW5nq5scPqq0ZDP9Zyl04oQ==}
+    engines: {node: '>= 10.0.0'}
+    dev: true
+
   /update-browserslist-db@1.0.13(browserslist@4.22.1):
     resolution: {integrity: sha512-xebP81SNcPuNpPP3uzeW1NYXxI3rxyJzF3pD6sH4jE7o/IX+WtSpwnVU+qIsDPyk0d3hmFQ7mjqc6AtV604hbg==}
     hasBin: true
@@ -7918,14 +7986,6 @@ packages:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
     dependencies:
       punycode: 2.3.0
-
-  /use-sync-external-store@1.2.0(react@18.2.0):
-    resolution: {integrity: sha512-eEgnFxGQ1Ife9bzYs6VLi8/4X6CObHMw9Qr9tPY43iKwsPw8xE8+EFsf/2cFZ5S3esXgpWgtSCtLNS41F+sKPA==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0
-    dependencies:
-      react: 18.2.0
-    dev: false
 
   /util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}

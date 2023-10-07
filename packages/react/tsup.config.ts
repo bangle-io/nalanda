@@ -1,5 +1,8 @@
 import { defineConfig } from 'tsup';
 import { baseConfig } from 'tsup-config';
+import path from 'node:path';
+const packagePath = path.join(__dirname);
+const rootPath = path.join(packagePath, '..', '..');
 
 export default defineConfig({
   ...baseConfig,
