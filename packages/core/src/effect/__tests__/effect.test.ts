@@ -6,12 +6,12 @@ import {
   beforeEach,
   afterEach,
 } from '@jest/globals';
-import { testCleanup } from '../helpers/test-cleanup';
+import { testCleanup } from '../../helpers/test-cleanup';
 import waitForExpect from 'wait-for-expect';
-import { createKey } from '../slice/key';
-import { createStore } from '../store';
-import { EffectScheduler, effect } from '../effect/effect';
-import { cleanup } from '../effect/cleanup';
+import { createKey } from '../../slice/key';
+import { createStore } from '../../store';
+import { EffectScheduler, effect } from '../effect';
+import { cleanup } from '../cleanup';
 
 beforeEach(() => {
   testCleanup();
