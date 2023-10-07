@@ -4,6 +4,7 @@ import { throwValidationError } from './helpers/throw-error';
 import { Transaction } from './transaction';
 import { calcReverseDependencies } from './helpers/dependency-helpers';
 import { StateField } from './slice/field';
+import { validateSlices } from './helpers/validations';
 
 type SliceStateMap = Record<SliceId, SliceStateManager>;
 
@@ -40,6 +41,8 @@ export class StoreState<TSliceName extends string> {
     slices: Slice<any, TSliceName, any>[];
     stateOverride?: Record<SliceId, Record<string, unknown>>;
   }): StoreState<TSliceName> {
+    validateSlices(options.slices);
+
     const sliceStateMap: SliceStateMap = Object.fromEntries(
       options.slices.map((slice) => [
         slice.sliceId,
