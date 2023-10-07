@@ -6,8 +6,8 @@ import {
   beforeEach,
   afterEach,
 } from '@jest/globals';
-import { calcReverseDependencies as _calcReverseDependencies } from '../helpers/dependency-helpers';
-import { Slice } from '../slice/slice';
+import { calcReverseDependencies as _calcReverseDependencies } from '../dependency-helpers';
+import { Slice } from '../../slice/slice';
 
 const createSlice = (id: string) =>
   ({ sliceId: id, dependencies: [] }) as unknown as Slice;

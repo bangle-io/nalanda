@@ -1,8 +1,8 @@
 import { expect, jest, test, describe, beforeEach } from '@jest/globals';
-import { testCleanup } from '../helpers/test-cleanup';
-import { createKey } from '../slice/key';
-import { EffectRun } from '../effect/effect-run';
-import { createStore } from '../store';
+import { testCleanup } from '../../helpers/test-cleanup';
+import { createKey } from '../../slice/key';
+import { EffectRun } from '../effect-run';
+import { createStore } from '../../store';
 
 const setup = () => {
   const sliceAKey = createKey('slice1', []);
@@ -40,7 +40,6 @@ const setup = () => {
 
 beforeEach(() => {
   testCleanup();
-  // Initialize your slices here. The actual initialization depends on your implementation
 });
 
 describe('EffectRun', () => {
