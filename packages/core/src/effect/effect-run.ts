@@ -51,7 +51,7 @@ export class EffectRun {
     return;
   }
 
-  whatDependenciesStateChange(): undefined | BaseField<any> {
+  getFieldsThatChanged(): undefined | BaseField<any> {
     for (const { field, value } of this.trackedFields) {
       const curVal = field.get(this.store.state);
       if (!field.isEqual(curVal, value)) {
