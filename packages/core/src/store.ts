@@ -40,7 +40,7 @@ export const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction<any> = (
 type DispatchTransaction<TSliceName extends string> = (
   store: Store<TSliceName>,
   updateState: (state: StoreState<TSliceName>) => void,
-  tx: Transaction,
+  tx: Transaction<any, any>,
 ) => void;
 
 export function createStore<TSliceName extends string>(
@@ -112,7 +112,7 @@ export class Store<TSliceName extends string> extends BaseStore {
     });
   }
 
-  dispatch(transaction: Transaction | Operation): void {
+  dispatch(transaction: Transaction<any, any> | Operation): void {
     if (this.destroyed) {
       return;
     }

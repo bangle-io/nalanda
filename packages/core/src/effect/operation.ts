@@ -28,7 +28,7 @@ export class OperationStore extends BaseStore {
     return this.rootStore.state;
   }
 
-  dispatch(txn: Transaction | Operation) {
+  dispatch(txn: Transaction<any, any> | Operation) {
     this.rootStore.dispatch(txn);
   }
 

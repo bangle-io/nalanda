@@ -1,12 +1,14 @@
 import { genTransactionID } from './helpers/id-generation';
 import type { StoreState } from './store-state';
 
-type Step = { stepper: (storeState: StoreState<any>) => StoreState<any> };
+type Step<TName extends string = any> = {
+  stepper: (storeState: StoreState<TName>) => StoreState<TName>;
+};
 
 export const META_DISPATCHER = 'DEBUG__DISPATCHER';
 export const TX_META_STORE_NAME = 'store-name';
 
-export class Transaction {
+export class Transaction<TName extends string, TDepName extends string> {
   readonly id = genTransactionID();
   readonly metadata = new Metadata();
 
@@ -25,7 +27,11 @@ export class Transaction {
     return this.steps;
   }
 
-  step(stepper: Step['stepper']): Transaction {
+  step(
+    // merge both TName and TDepName into one type, so its easier to use
+    // with StoreState
+    stepper: Step<TName | TDepName>['stepper'],
+  ): Transaction<TName, TDepName> {
     this.steps.push({ stepper });
     return this;
   }

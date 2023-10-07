@@ -71,7 +71,8 @@ export class StoreState<TSliceName extends string> {
     private config: StoreStateConfig,
   ) {}
 
-  apply(transaction: Transaction): StoreState<TSliceName> {
+  // TODO: add strict type checking to Txn.
+  apply(transaction: Transaction<any, any>): StoreState<TSliceName> {
     if (transaction._isDestroyed()) {
       throwValidationError(
         `Transaction "${transaction.id}" has already been applied.`,
