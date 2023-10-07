@@ -1,0 +1,68 @@
+# key
+
+To refactor key to new api:
+
+old
+```ts
+const mySliceKeyA = sliceKey([], {
+    name: 'mySliceA',
+    state: {
+        a: 1,
+    },
+});
+
+```
+
+new
+
+```ts
+const mySliceKeyA = createKey('mySliceA', []);
+
+const aField = mySliceKeyA.field(1);
+
+const mySliceA = mySliceKeyA.slice({
+    fields: {
+        a: aField,
+    },
+});
+```
+
+# selector
+
+If there is a selector 
+
+old
+```ts
+    const selectorA = mySliceKeyA.selector(
+      (storeState) => {
+        return { a: mySliceA.get(storeState).a };
+      },
+      {
+        equal: (a, b) => {
+          return a.a === b.a;
+        },
+      },
+    );
+    const mySliceA = mySliceKeyA.slice({ derivedState: { selectorA } });
+
+```
+
+new
+
+```ts
+
+const aDerived = mySliceKeyA.derive(storeState => {
+    return { a: mySliceA.get(storeState).a };
+},
+{
+    equal: (a, b) => {
+    return a.a === b.a;
+    },
+},
+)
+    const mySliceA= mySliceKeyA.slice({
+        fields: {
+          a: aDerived,
+        },
+      });
+```
