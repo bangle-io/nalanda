@@ -45,7 +45,7 @@ type DispatchTransaction<TSliceName extends string> = (
 
 export function createStore<TSliceName extends string>(
   config: StoreOptions<TSliceName>,
-) {
+): Store<TSliceName> {
   return new Store<TSliceName>({ ...config, name: 'anonymous' });
 }
 

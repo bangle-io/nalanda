@@ -14,6 +14,12 @@ interface StoreStateConfig {
     slicesLookup: Record<SliceId, Slice>;
     reverseSliceDependencies: Record<SliceId, Set<SliceId>>;
   };
+  /**
+   * A store state when updated will share the same ref object as the older one.
+   * Use to store values that should persist between store state updates, but without
+   * needed to couple with Store.
+   */
+  lineageRef: { current: null };
 }
 
 function slicesComputedInfo(options: {
@@ -30,10 +36,10 @@ function slicesComputedInfo(options: {
 }
 
 export class StoreState<TSliceName extends string> {
-  static create(options: {
-    slices: Slice[];
+  static create<TSliceName extends string>(options: {
+    slices: Slice<any, TSliceName, any>[];
     stateOverride?: Record<SliceId, Record<string, unknown>>;
-  }) {
+  }): StoreState<TSliceName> {
     const sliceStateMap: SliceStateMap = Object.fromEntries(
       options.slices.map((slice) => [
         slice.sliceId,
@@ -59,14 +65,17 @@ export class StoreState<TSliceName extends string> {
       }
     }
 
+    const ref = { current: null };
+
     return new StoreState({
       slices: options.slices,
       sliceStateMap,
       computed,
+      lineageRef: ref,
     });
   }
 
-  constructor(
+  protected constructor(
     // @internal
     private config: StoreStateConfig,
   ) {}
@@ -136,6 +145,11 @@ export class StoreState<TSliceName extends string> {
     });
 
     return diff;
+  }
+
+  // @internal
+  get _ref() {
+    return this.config.lineageRef;
   }
 }
 

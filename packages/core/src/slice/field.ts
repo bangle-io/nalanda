@@ -67,6 +67,7 @@ export class DerivedField<
 
   // @internal
   private getCache = new WeakMap<StoreState<any>, any>();
+  private prevValCache = new WeakMap<StoreState<any>['_ref'], TVal>();
 
   get<TState extends StoreState<any>>(
     storeState: IfSubsetOfState<TName | TDep, TState>,
@@ -84,8 +85,31 @@ export class DerivedField<
 
     const newValue = this.deriveCallback(storeState);
 
-    this.getCache.set(storeState, newValue);
+    const finalVal = this._isEqualCheck(storeState, newValue);
 
+    this.getCache.set(storeState, finalVal);
+
+    return finalVal;
+  }
+
+  // @internal
+  _isEqualCheck(storeState: StoreState<any>, newValue: TVal) {
+    const ref = storeState._ref;
+
+    const hasPrevValue = this.prevValCache.has(ref);
+
+    if (!hasPrevValue) {
+      this.prevValCache.set(ref, newValue);
+      return newValue;
+    }
+
+    const prevValue = this.prevValCache.get(ref)!;
+
+    if (this.isEqual(prevValue, newValue)) {
+      return prevValue;
+    }
+
+    this.prevValCache.set(ref, newValue);
     return newValue;
   }
 }
