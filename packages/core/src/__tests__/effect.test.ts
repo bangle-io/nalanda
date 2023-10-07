@@ -89,7 +89,7 @@ describe('effect with store', () => {
     const store = createStore({
       name: 'test',
       overrides: {
-        effectSchedulerOverride: zeroTimeoutScheduler,
+        effectScheduler: zeroTimeoutScheduler,
       },
       slices: [sliceA, sliceB, sliceCDepB],
     });
@@ -617,7 +617,7 @@ describe('effect only', () => {
     await sleep(5);
 
     jest
-      .spyOn(effect['runInstance'], 'whatDependenciesStateChange')
+      .spyOn(effect['runInstance'], 'getFieldsThatChanged')
       .mockReturnValue(sliceAKey.field('some field that changed'));
 
     effect._run();
@@ -634,7 +634,7 @@ describe('effect only', () => {
     expect(callback).toHaveBeenCalledTimes(1);
 
     jest
-      .spyOn(effect['runInstance'], 'whatDependenciesStateChange')
+      .spyOn(effect['runInstance'], 'getFieldsThatChanged')
       .mockReturnValue(undefined);
 
     effect._run();

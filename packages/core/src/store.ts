@@ -22,7 +22,7 @@ interface StoreOptions<TSliceName extends string> {
     /**
      * Overrides all effects schedulers for all effects in the store.
      */
-    effectSchedulerOverride?: EffectScheduler;
+    effectScheduler?: EffectScheduler;
     dispatchTransactionOverride?: DispatchTransaction<TSliceName>;
   };
   manualEffectsTrigger?: boolean;

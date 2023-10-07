@@ -97,7 +97,7 @@ export class Effect {
     this.name = opts.name || effectCallback.name || 'anonymous';
     this.debugLogger = rootStore.options.debug;
     this.scheduler =
-      rootStore.options?.overrides?.effectSchedulerOverride || opts.scheduler;
+      rootStore.options?.overrides?.effectScheduler || opts.scheduler;
 
     this.runInstance = new EffectRun(rootStore, this.name);
     this.effectStore = new EffectStore(rootStore, this.name, () => {
@@ -178,7 +178,7 @@ export class Effect {
 
     // if runCount == 0, always run, to ensure the effect runs at least once
     if (this.runCount != 0) {
-      const depChanged = this.runInstance.whatDependenciesStateChange();
+      const depChanged = this.runInstance.getFieldsThatChanged();
 
       fieldChanged = depChanged;
 

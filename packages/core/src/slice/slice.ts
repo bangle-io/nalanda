@@ -6,7 +6,6 @@ import type { StoreState } from '../store-state';
 import type {
   SliceId,
   FieldId,
-  NoInfer,
   IfSubsetOfState,
   IfSubsetEffectStore,
 } from '../types';
