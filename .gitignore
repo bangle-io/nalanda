@@ -5,6 +5,7 @@
 /gh-pages
 documentation/dist
 documentation/.next
+coverage
 
 # Node.js
 node_modules/

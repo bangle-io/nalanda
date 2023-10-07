@@ -28,6 +28,10 @@ export type InferSliceNameFromSlice<T> = T extends Slice<
   ? TSliceName
   : never;
 
+export type InferDepNameFromSlice<T> = T extends Slice<any, any, infer TDepName>
+  ? TDepName
+  : never;
+
 export class Slice<
   TFieldsSpec extends Record<string, BaseField<any>> = any,
   TName extends string = any,
