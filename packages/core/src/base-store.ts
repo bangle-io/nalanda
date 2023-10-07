@@ -4,7 +4,7 @@ import type { StoreState } from './store-state';
 import type { Transaction } from './transaction';
 
 export type Dispatch = (
-  txn: Transaction | Operation,
+  txn: Transaction<any, any> | Operation,
   opts?: {
     debugInfo?: string;
   },
@@ -16,5 +16,5 @@ export abstract class BaseStore {
   // @internal
   abstract _rootStore: Store<any>;
 
-  abstract dispatch(txn: Transaction | Operation): void;
+  abstract dispatch(txn: Transaction<any, any> | Operation): void;
 }

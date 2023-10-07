@@ -41,7 +41,7 @@ export class EffectStore<TSliceName extends string = any> extends BaseStore {
     return this._rootStore.state;
   }
 
-  dispatch(txn: Transaction | Operation) {
+  dispatch(txn: Transaction<any, any> | Operation) {
     this._rootStore.dispatch(txn);
   }
 }

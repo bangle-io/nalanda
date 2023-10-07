@@ -63,7 +63,7 @@ export class Key<TName extends string, TDepName extends string> {
     actions,
   }: {
     fields: TFieldsSpec;
-    actions?: (...args: any) => Transaction;
+    actions?: (...args: any) => Transaction<TName, TDepName>;
   }): Slice<TFieldsSpec, TName, TDepName> {
     if (this._slice) {
       throwValidationError(
@@ -80,7 +80,7 @@ export class Key<TName extends string, TDepName extends string> {
    * Creates a new transaction object which is used to update the slice state.
    */
   transaction() {
-    return new Transaction();
+    return new Transaction<TName, TDepName>();
   }
 
   // @internal

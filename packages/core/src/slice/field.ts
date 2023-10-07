@@ -117,7 +117,7 @@ export class StateField<
       ._getFieldStateVal(this) as TVal;
   }
 
-  update(val: TVal | ((val: TVal) => TVal)): Transaction {
+  update(val: TVal | ((val: TVal) => TVal)): Transaction<TName, TDep> {
     const txn = this.key.transaction();
 
     return txn.step((state: StoreState<any>) => {
