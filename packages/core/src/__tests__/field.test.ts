@@ -9,10 +9,22 @@ import {
 import { testCleanup } from '../helpers/test-cleanup';
 import { createKey } from '../slice/key';
 import { createStore } from '../store';
+import { AnySlice, Slice } from '../slice/slice';
+import { StoreState } from '../store-state';
+import { Transaction } from '../transaction';
+import { expectType } from '../types';
 
 beforeEach(() => {
   testCleanup();
 });
+
+type GetStoreStateFromSliceName<TSlice extends AnySlice> = TSlice extends Slice<
+  any,
+  infer TSliceName,
+  any
+>
+  ? StoreState<TSliceName>
+  : never;
 
 describe('internal fields', () => {
   test('internal field should be updated', () => {
@@ -151,5 +163,54 @@ describe('internal fields', () => {
 
       expect(counterSlice.get(store.state)).toBe(result);
     });
+  });
+
+  test('update', () => {
+    const mySliceKey = createKey('mySlice', []);
+    const aField = mySliceKey.field(1);
+    const mySlice = mySliceKey.slice({
+      fields: {
+        a: aField,
+      },
+    });
+
+    const mySlice2Key = createKey('mySlice2', [mySlice]);
+    const aField2 = mySlice2Key.field(1);
+    const mySlice2 = mySlice2Key.slice({
+      fields: {
+        a: aField2,
+      },
+    });
+
+    // type checks
+    () => {
+      let storeState: GetStoreStateFromSliceName<typeof mySlice> = {} as any;
+      let result = aField.update(2);
+
+      expectType<Transaction<'mySlice', never>, typeof result>(result);
+    };
+
+    () => {
+      let storeState: GetStoreStateFromSliceName<typeof mySlice2> = {} as any;
+      let result = aField.update(3);
+      // TODO make this fail as mySlice is not in store
+      storeState.apply(result);
+    };
+
+    () => {
+      let storeState: GetStoreStateFromSliceName<typeof mySlice> = {} as any;
+      //   @ts-expect-error invalid type
+      let result = aField.update(false);
+    };
+
+    () => {
+      let storeState: GetStoreStateFromSliceName<typeof mySlice> = {} as any;
+
+      let result = aField.update((existing) => {
+        expectType<number, typeof existing>(existing);
+
+        return 2;
+      });
+    };
   });
 });
