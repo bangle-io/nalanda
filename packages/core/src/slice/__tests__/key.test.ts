@@ -1,12 +1,12 @@
-import { IfEquals, expectType } from '../types';
-import { StoreState } from '../store-state';
-import { testCleanup } from '../helpers/test-cleanup';
-import { Transaction } from '../transaction';
-import { InferStateSliceName } from '../types';
+import { IfEquals, expectType } from '../../types';
+import { StoreState } from '../../store-state';
+import { testCleanup } from '../../helpers/test-cleanup';
+import { Transaction } from '../../transaction';
+import { InferStateSliceName } from '../../types';
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
-import { createKey } from '../slice/key';
-import { shallowEqual } from '../helpers/shallow-equal';
+import { createKey } from '../key';
+import { shallowEqual } from '../../helpers/shallow-equal';
 
 beforeEach(() => {
   testCleanup();

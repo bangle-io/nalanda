@@ -6,13 +6,13 @@ import {
   beforeEach,
   afterEach,
 } from '@jest/globals';
-import { testCleanup } from '../helpers/test-cleanup';
-import { createKey } from '../slice/key';
-import { createStore } from '../store';
-import { AnySlice, Slice } from '../slice/slice';
-import { StoreState } from '../store-state';
-import { Transaction } from '../transaction';
-import { expectType } from '../types';
+import { testCleanup } from '../../helpers/test-cleanup';
+import { createKey } from '../key';
+import { createStore } from '../../store';
+import { AnySlice, Slice } from '../slice';
+import { StoreState } from '../../store-state';
+import { Transaction } from '../../transaction';
+import { expectType } from '../../types';
 
 beforeEach(() => {
   testCleanup();
