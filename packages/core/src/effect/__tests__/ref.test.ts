@@ -6,12 +6,12 @@ import {
   beforeEach,
   afterEach,
 } from '@jest/globals';
-import { Store, createStore } from '../store';
+import { Store, createStore } from '../../store';
 import waitForExpect from 'wait-for-expect';
-import { testCleanup } from '../helpers/test-cleanup';
-import { createKey } from '../slice/key';
-import { ref } from '../effect/ref';
-import { EffectStore } from '../effect/effect';
+import { testCleanup } from '../../helpers/test-cleanup';
+import { createKey } from '../../slice/key';
+import { ref } from '../ref';
+import { EffectStore } from '../effect';
 
 const sliceAKey = createKey('sliceA', []);
 const sliceAField1 = sliceAKey.field('value:sliceAField1');

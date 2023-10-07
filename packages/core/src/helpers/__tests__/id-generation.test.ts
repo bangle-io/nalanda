@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
-import { testCleanup } from '../helpers/test-cleanup';
-import { genTransactionID, sliceIdCounters } from '../helpers/id-generation';
+import { testCleanup } from '../test-cleanup';
+import { genTransactionID, sliceIdCounters } from '../id-generation';
 
 beforeEach(() => {
   testCleanup();

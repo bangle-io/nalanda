@@ -1,15 +1,15 @@
 import { beforeEach, describe, it, test } from '@jest/globals';
-import { createKey } from '../slice/key';
-import { IfEquals, expectType } from '../types';
+import { createKey } from '../key';
+import { IfEquals, expectType } from '../../types';
 import {
   AnySlice,
   InferDepNameFromSlice,
   InferSliceNameFromSlice,
   Slice,
-} from '../slice/slice';
-import { StateField } from '../slice/field';
-import { testCleanup } from '../helpers/test-cleanup';
-import { StoreState } from '../store-state';
+} from '../slice';
+import { StateField } from '../field';
+import { testCleanup } from '../../helpers/test-cleanup';
+import { StoreState } from '../../store-state';
 
 beforeEach(() => {
   testCleanup();
