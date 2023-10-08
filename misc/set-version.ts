@@ -37,6 +37,7 @@ dirs.forEach((dir) => {
 
 if (filesChanged) {
   try {
+    execSync(`git checkout dev && git pull origin dev`);
     execSync(`git add -A && git commit -m "Bump version to ${version}"`);
     execSync(`git tag -a v${version} -m "release v${version}"`);
     execSync(`git push origin v${version}`);
