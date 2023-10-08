@@ -14,9 +14,10 @@ const key = createKey('mySliceName', []);
 const counter = key.field(0);
 const counterNegative = key.field(-1);
 
-const counterSlice = key.slice({
-  fields: { counter, counterNegative },
-});
+const increment = () => {
+  return counter.update((val) => val + 1);
+};
+const counterSlice = key.slice({ counter, counterNegative, increment });
 
 afterEach(() => {
   testCleanup();

@@ -8,19 +8,15 @@ const setup = () => {
   const sliceAKey = createKey('slice1', []);
   const fooField = sliceAKey.field('bar');
   const sliceA = sliceAKey.slice({
-    fields: {
-      foo: fooField,
-    },
+    foo: fooField,
   });
 
   const sliceBKey = createKey('slice2', []);
   const sliceBField = sliceBKey.field('bar');
   const sliceBOtherField = sliceBKey.field('bizz');
   const sliceB = sliceBKey.slice({
-    fields: {
-      sliceBField: sliceBField,
-      sliceBOtherField: sliceBOtherField,
-    },
+    sliceBField: sliceBField,
+    sliceBOtherField: sliceBOtherField,
   });
 
   const store = createStore({

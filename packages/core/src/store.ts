@@ -50,7 +50,7 @@ export function createStore<TSliceName extends string>(
   return new Store<TSliceName>({ ...config, name: 'anonymous' });
 }
 
-export class Store<TSliceName extends string> extends BaseStore {
+export class Store<TSliceName extends string = any> extends BaseStore {
   public readonly initialState: StoreState<TSliceName>;
 
   // @internal

@@ -14,18 +14,14 @@ const sliceOneKey = createKey('sliceOne', []);
 const keyOne = sliceOneKey.field('valueOne');
 
 const sliceOne = sliceOneKey.slice({
-  fields: {
-    keyOne,
-  },
+  keyOne,
 });
 
 const sliceTwoKey = createKey('sliceTwo', []);
 const keyTwo = sliceTwoKey.field('valueTwo');
 
 const sliceTwo = sliceTwoKey.slice({
-  fields: {
-    keyTwo,
-  },
+  keyTwo,
 });
 
 const updateKeyOneSliceOne = (val: string) => {
@@ -104,9 +100,7 @@ describe('StoreState Slice and Transaction Operations', () => {
     const immutableField = immutableSliceKey.field(fixedState);
 
     const immutableSlice = immutableSliceKey.slice({
-      fields: {
-        immutableField: immutableField,
-      },
+      immutableField: immutableField,
     });
 
     function nonMutatingAction(inputNumber: number) {
@@ -138,9 +132,7 @@ describe('StoreState Slice and Transaction Operations', () => {
     const myField = mySliceKey.field(fixedState);
 
     const mySlice = mySliceKey.slice({
-      fields: {
-        myField: myField,
-      },
+      myField: myField,
     });
 
     function nonMutatingAction(inputNumber: number) {
@@ -177,18 +169,14 @@ describe('StoreState Slice and Transaction Operations', () => {
     const counterA = sliceAKey.field(1);
 
     const sliceA = sliceAKey.slice({
-      fields: {
-        counter: counterA,
-      },
+      counter: counterA,
     });
 
     const sliceBKey = createKey('sliceB', [sliceA]);
     const counterB = sliceBKey.field(1);
 
     const sliceB = sliceBKey.slice({
-      fields: {
-        counter: counterB,
-      },
+      counter: counterB,
     });
 
     function actionIncrementCounterA() {

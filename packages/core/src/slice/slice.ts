@@ -1,5 +1,5 @@
 import type { EffectStore } from '../effect/effect';
-import { type BaseField, DerivedField } from './field';
+import { BaseField, DerivedField } from './field';
 import { sliceIdCounters } from '../helpers/id-generation';
 import { throwValidationError } from '../helpers/throw-error';
 import type { StoreState } from '../store-state';
@@ -8,16 +8,26 @@ import type {
   FieldId,
   IfSubsetOfState,
   IfSubsetEffectStore,
+  Simplify,
 } from '../types';
-import type { Key } from './key';
+import type { AnyAction, AnyExternal, Key } from './key';
 
-type MapSliceState<TFieldsSpec extends Record<string, BaseField<any>>> = {
-  [K in keyof TFieldsSpec]: TFieldsSpec[K] extends BaseField<infer T>
-    ? T
-    : never;
+export type InferSliceFieldState<T extends AnyExternal> = {
+  // key mapping
+  [K in keyof T as T[K] extends BaseField<any>
+    ? K
+    : never]: T[K] extends BaseField<infer T> ? T : never;
+  //          ^^ value mapping
 };
 
-export type AnySlice = Slice<any>;
+export type InferSliceActions<T extends AnyExternal> = {
+  // key mapping
+  [K in keyof T as T[K] extends AnyAction ? K : never]: T[K];
+  //                                                    ^^ value mapping
+};
+
+export type ExposedSliceFieldNames<T extends AnyExternal> =
+  keyof InferSliceFieldState<T>;
 
 export type InferSliceNameFromSlice<T> = T extends Slice<
   any,
@@ -32,7 +42,7 @@ export type InferDepNameFromSlice<T> = T extends Slice<any, any, infer TDepName>
   : never;
 
 export class Slice<
-  TFieldsSpec extends Record<string, BaseField<any>> = any,
+  TExternal extends AnyExternal = any,
   TName extends string = any,
   TDep extends string = any,
 > {
@@ -43,30 +53,59 @@ export class Slice<
   // @internal
   private fieldNameToField: Record<string, BaseField<any>> = {};
 
+  public actions: InferSliceActions<TExternal>;
+
   get dependencies(): Slice[] {
     return this._key.dependencies;
   }
 
+  static create<
+    TExternal extends AnyExternal,
+    TName extends string,
+    TDep extends string,
+  >(
+    name: TName,
+    external: TExternal,
+    key: Key<TName, TDep>,
+  ): Slice<TExternal, TName, TDep> & InferSliceActions<TExternal> {
+    return new Slice(name, external, key) as any;
+  }
+
   // @internal
-  constructor(
+  protected constructor(
     public readonly name: TName,
-    externalFieldSpec: TFieldsSpec,
+    external: TExternal,
     // @internal
     public readonly _key: Key<TName, TDep>,
   ) {
     this.sliceId = sliceIdCounters.generate(name);
-    for (const [fieldName, field] of Object.entries(externalFieldSpec)) {
-      if (!_key._fields.has(field)) {
-        throwValidationError(`Field "${fieldName}" was not found.`);
+    this.actions = {} as any;
+    for (const [key, val] of Object.entries(external)) {
+      if (!(val instanceof BaseField)) {
+        if (key in this) {
+          throwValidationError(
+            `Invalid action name "${key}" as at it conflicts with a known property with the same name on the slice.`,
+          );
+        }
+
+        (this.actions as any)[key] = val;
+        continue;
       }
-      field.name = fieldName;
-      this.fieldNameToField[fieldName] = field;
+
+      const field = val;
+      if (!_key._fields.has(field)) {
+        throwValidationError(`Field "${key}" was not found.`);
+      }
+      field.name = key;
+      this.fieldNameToField[key] = field;
     }
+
+    Object.assign(this, this.actions);
   }
 
   get<TState extends StoreState<any>>(
     storeState: IfSubsetOfState<TName | TDep, TState>,
-  ): MapSliceState<TFieldsSpec> {
+  ): Simplify<InferSliceFieldState<TExternal>> {
     const existing = this.getCache.get(storeState);
 
     if (existing) {
@@ -128,30 +167,36 @@ export class Slice<
   /**
    * Get a field value from the slice state. Slightly faster than `get`.
    */
-  getField<T extends keyof TFieldsSpec, TState extends StoreState<any>>(
+  getField<
+    T extends keyof InferSliceFieldState<TExternal>,
+    TState extends StoreState<any>,
+  >(
     storeState: IfSubsetOfState<TName | TDep, TState>,
     fieldName: T,
-  ): MapSliceState<TFieldsSpec>[T] {
+  ): InferSliceFieldState<TExternal>[T] {
     return this._getFieldByName(fieldName as string).get(storeState) as any;
   }
 
   track<TEStore extends EffectStore>(
     store: IfSubsetEffectStore<TName | TDep, TEStore>,
-  ): MapSliceState<TFieldsSpec> {
+  ): Simplify<InferSliceFieldState<TExternal>> {
     return new Proxy(this.get(store.state), {
       get: (target, prop: string, receiver) => {
         return this._getFieldByName(prop).track(store);
       },
-    });
+    }) as any;
   }
 
   /**
    * Similar to `track`, but only tracks a single field.
    */
-  trackField<T extends keyof TFieldsSpec, TEStore extends EffectStore>(
+  trackField<
+    T extends ExposedSliceFieldNames<TExternal>,
+    TEStore extends EffectStore,
+  >(
     store: IfSubsetEffectStore<TName | TDep, TEStore>,
     fieldName: T,
-  ): MapSliceState<TFieldsSpec>[T] {
+  ): InferSliceFieldState<TExternal>[T] {
     return this._getFieldByName(fieldName as string).track(store) as any;
   }
 

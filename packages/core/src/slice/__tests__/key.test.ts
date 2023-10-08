@@ -18,9 +18,7 @@ describe('SliceKey Mechanism', () => {
     const fieldA = sliceKeyA.field(1);
 
     const sliceA = sliceKeyA.slice({
-      fields: {
-        valueA: fieldA,
-      },
+      valueA: fieldA,
     });
 
     const initialState = StoreState.create({
@@ -48,27 +46,21 @@ describe('SliceKey Mechanism', () => {
     const sliceKeyA = createKey('SliceA', []);
     const fieldA = sliceKeyA.field(1);
     const sliceA = sliceKeyA.slice({
-      fields: {
-        valueA: fieldA,
-      },
+      valueA: fieldA,
     });
 
     // SliceB
     const sliceKeyB = createKey('SliceB', []);
     const fieldB = sliceKeyB.field(1);
     const sliceB = sliceKeyB.slice({
-      fields: {
-        valueB: fieldB,
-      },
+      valueB: fieldB,
     });
 
     // SliceC with dependency on SliceA
     const sliceKeyC = createKey('SliceC', [sliceA]);
     const fieldC = sliceKeyC.field(15);
     const sliceC = sliceKeyC.slice({
-      fields: {
-        valueC: fieldC,
-      },
+      valueC: fieldC,
     });
 
     const storeState = StoreState.create({
@@ -137,14 +129,12 @@ describe('SliceKey Mechanism', () => {
         },
       );
 
-      const sliceA = sliceKeyA.slice({ fields: { derivedSelectorA } });
+      const sliceA = sliceKeyA.slice({ derivedSelectorA });
 
       const sliceKeyB = createKey('mySliceB', []);
       const fieldB = sliceKeyB.field(1);
       const sliceB = sliceKeyB.slice({
-        fields: {
-          fieldB: fieldB,
-        },
+        fieldB: fieldB,
       });
 
       function updateFieldB() {
@@ -173,7 +163,7 @@ describe('SliceKey Mechanism', () => {
     test('should create a new instance for separately created states', () => {
       const sliceKeyA = createKey('mySliceA', []);
       const fieldA = sliceKeyA.field(1);
-      const sliceA = sliceKeyA.slice({ fields: {} });
+      const sliceA = sliceKeyA.slice({});
       const initialState = StoreState.create({
         slices: [sliceA],
       });
@@ -208,7 +198,7 @@ describe('SliceKey Mechanism', () => {
     test('should recognize when equality check returns false', () => {
       const sliceKeyA = createKey('mySliceA', []);
       const fieldA = sliceKeyA.field(1);
-      const sliceA = sliceKeyA.slice({ fields: {} });
+      const sliceA = sliceKeyA.slice({});
       const initialState = StoreState.create({
         slices: [sliceA],
       });
@@ -247,9 +237,7 @@ describe('SliceKey Mechanism', () => {
     });
 
     const mySliceA = mySliceKeyA.slice({
-      fields: {
-        selectorA,
-      },
+      selectorA,
     });
 
     const storeState = StoreState.create({
@@ -280,10 +268,8 @@ describe('SliceKey Mechanism', () => {
     );
 
     const mySliceA = mySliceKeyA.slice({
-      fields: {
-        a: aField,
-        selectorA,
-      },
+      a: aField,
+      selectorA,
     });
 
     const mySliceKeyB = createKey('mySliceB', [mySliceA]);
@@ -295,10 +281,8 @@ describe('SliceKey Mechanism', () => {
       };
     });
     const mySliceB = mySliceKeyB.slice({
-      fields: {
-        b: bField,
-        selectorB,
-      },
+      b: bField,
+      selectorB,
     });
 
     const mySliceKeyC = createKey('mySliceC', [mySliceA, mySliceB]);
@@ -314,9 +298,7 @@ describe('SliceKey Mechanism', () => {
       };
     });
     const mySliceC = mySliceKeyC.slice({
-      fields: {
-        selectorC,
-      },
+      selectorC,
     });
 
     let incrementA: () => Transaction<'mySliceA', never>;

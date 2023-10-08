@@ -36,7 +36,8 @@ const setup = () => {
   const counterNegative = key.field(-1);
 
   const counterSlice = key.slice({
-    fields: { counter, counterNegative },
+    counter,
+    counterNegative,
   });
 
   function increment() {
@@ -52,13 +53,14 @@ const setup = () => {
   const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     const storeRef = useRef<Store<any>>();
     if (!storeRef.current) {
-      storeRef.current = createStore({
+      const store = createStore({
         slices: [counterSlice],
         name: 'test-store',
         overrides: {
           effectScheduler: zeroTimeoutScheduler,
         },
       });
+      storeRef.current = store;
     }
 
     return (

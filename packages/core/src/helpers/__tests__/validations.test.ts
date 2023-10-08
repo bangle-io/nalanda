@@ -1,16 +1,16 @@
 import { describe, expect, test } from '@jest/globals';
-import { AnySlice } from '../../slice/slice';
 import {
   circularCheck,
   findDuplications,
   validateSlices,
 } from '../validations';
+import { Slice } from '../../slice/slice';
 
-const createSlice = ({ sliceId, dependencies }: any): AnySlice => {
+const createSlice = ({ sliceId, dependencies }: any): Slice => {
   return {
     sliceId,
     dependencies,
-  } as AnySlice;
+  } as Slice;
 };
 
 describe('Slice validation', () => {

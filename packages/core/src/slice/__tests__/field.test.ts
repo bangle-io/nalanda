@@ -9,7 +9,7 @@ import {
 import { testCleanup } from '../../helpers/test-cleanup';
 import { createKey } from '../key';
 import { createStore } from '../../store';
-import { AnySlice, Slice } from '../slice';
+import { Slice } from '../slice';
 import { StoreState } from '../../store-state';
 import { Transaction } from '../../transaction';
 import { expectType } from '../../types';
@@ -18,7 +18,7 @@ beforeEach(() => {
   testCleanup();
 });
 
-type GetStoreStateFromSliceName<TSlice extends AnySlice> = TSlice extends Slice<
+type GetStoreStateFromSliceName<TSlice extends Slice> = TSlice extends Slice<
   any,
   infer TSliceName,
   any
@@ -30,9 +30,7 @@ describe('internal fields', () => {
   test('internal field should be updated', () => {
     const key = createKey('mySliceName', []);
     const counter = key.field(0);
-    const counterSlice = key.slice({
-      fields: {},
-    });
+    const counterSlice = key.slice({});
 
     function updateCounter(state: number) {
       return counter.update(state + 1);
@@ -67,10 +65,8 @@ describe('internal fields', () => {
       });
 
       const counterSlice = key.slice({
-        fields: {
-          myName,
-          externalDerivedOnCounter,
-        },
+        myName,
+        externalDerivedOnCounter,
       });
 
       function updateCounter() {
@@ -169,17 +165,13 @@ describe('internal fields', () => {
     const mySliceKey = createKey('mySlice', []);
     const aField = mySliceKey.field(1);
     const mySlice = mySliceKey.slice({
-      fields: {
-        a: aField,
-      },
+      a: aField,
     });
 
     const mySlice2Key = createKey('mySlice2', [mySlice]);
     const aField2 = mySlice2Key.field(1);
     const mySlice2 = mySlice2Key.slice({
-      fields: {
-        a: aField2,
-      },
+      a: aField2,
     });
 
     // type checks
