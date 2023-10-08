@@ -1,5 +1,5 @@
 import { BaseField, Slice, Store } from '@nalanda/core';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import useSyncExternalStoreExports from 'use-sync-external-store/shim';
 
 const { useSyncExternalStore } = useSyncExternalStoreExports;
