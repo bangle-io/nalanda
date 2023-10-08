@@ -10,17 +10,20 @@ import type { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
 import type { FieldId, NoInfer } from '../types';
 import { Slice } from './slice';
-import type { AnySlice, InferSliceNameFromSlice } from './slice';
+import type { InferSliceActions, InferSliceNameFromSlice } from './slice';
 /**
  * @param name - The name of the slice.
  * @param dependencies - An array of slices that this slice depends on.
  */
-export function createKey<TName extends string, TDepSlice extends AnySlice>(
+export function createKey<TName extends string, TDepSlice extends Slice>(
   name: TName,
   dependencies: TDepSlice[],
 ) {
   return new Key<TName, InferSliceNameFromSlice<TDepSlice>>(name, dependencies);
 }
+
+export type AnyAction = (...args: any) => Transaction<any, any>;
+export type AnyExternal = Record<string, AnyAction | BaseField<any, any, any>>;
 
 export class Key<TName extends string, TDepName extends string> {
   constructor(
@@ -58,22 +61,18 @@ export class Key<TName extends string, TDepName extends string> {
     return this.registerField(new StateField(initialValue, this, options));
   }
 
-  slice<TFieldsSpec extends Record<string, BaseField<any, any, any>>>({
-    fields,
-    actions,
-  }: {
-    fields: TFieldsSpec;
-    actions?: (...args: any) => Transaction<TName, TDepName>;
-  }): Slice<TFieldsSpec, TName, TDepName> {
+  slice<TExternal extends AnyExternal>(
+    external: TExternal,
+  ): Slice<TExternal, TName, TDepName> & InferSliceActions<TExternal> {
     if (this._slice) {
       throwValidationError(
         `Slice "${this.name}" already exists. A key can only be used to create one slice.`,
       );
     }
 
-    this._slice = new Slice(this.name, fields, this);
+    this._slice = Slice.create(this.name, external, this);
 
-    return this._slice;
+    return this._slice as any;
   }
 
   /**

@@ -44,11 +44,9 @@ const timesSixField = key.derive((state) => {
 });
 
 export const mySlice = key.slice({
-  fields: {
-    counter: counterField,
-    double: doubleField,
-    timesSix: timesSixField,
-  },
+  counter: counterField,
+  double: doubleField,
+  timesSix: timesSixField,
 });
 
 key.effect((store) => {

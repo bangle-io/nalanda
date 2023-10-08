@@ -24,12 +24,8 @@ function loginUser() {
 
 // Only export the slice
 export const loginSlice = key.slice({
-  fields: {
-    isLoggedIn,
-  },
-  actions: {
-    loginUser,
-  },
+  isLoggedIn,
+  loginUser,
 });
 ```
 
@@ -82,12 +78,8 @@ function setUserName(userName) {
 }
 
 export const userSlice = key.slice({
-  fields: {
-    userName: userNameField,
-  },
-  actions: {
-    setUserName,
-  },
+  userName: userNameField,
+  setUserName,
 });
 ```
 

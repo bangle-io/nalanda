@@ -47,3 +47,5 @@ export type InferStateSliceName<T extends StoreState<any>> =
 
 export type InferEffectStoreSliceName<T extends EffectStore<any>> =
   T extends EffectStore<infer Name> ? Name : never;
+
+export type Simplify<T> = { [KeyType in keyof T]: T[KeyType] } & {};

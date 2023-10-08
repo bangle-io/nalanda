@@ -1,13 +1,13 @@
-import { AnySlice } from '../slice/slice';
+import { Slice } from '../slice/slice';
 
-export function validateSlices(slices: AnySlice[]) {
+export function validateSlices(slices: Slice[]) {
   checkUniqDependency(slices);
   checkUniqueSliceId(slices);
   checkDependencyOrder(slices);
   circularCheck(slices);
 }
 
-function checkUniqDependency(slices: AnySlice[]) {
+function checkUniqDependency(slices: Slice[]) {
   for (const slice of slices) {
     const dependencies = slice.dependencies;
 
@@ -23,7 +23,7 @@ function checkUniqDependency(slices: AnySlice[]) {
   }
 }
 
-export function checkUniqueSliceId(slices: AnySlice[]) {
+export function checkUniqueSliceId(slices: Slice[]) {
   const dups = checkUnique(slices.map((s) => s.sliceId));
 
   if (dups) {
@@ -56,11 +56,11 @@ export function findDuplications<T>(arr: T[]): T[] {
   return [...dupes];
 }
 
-export function circularCheck(slices: AnySlice[]) {
+export function circularCheck(slices: Slice[]) {
   const stack = new Set<string>();
   const visited = new Set<string>();
 
-  const checkCycle = (slice: AnySlice): boolean => {
+  const checkCycle = (slice: Slice): boolean => {
     const sliceId = slice.sliceId;
 
     if (stack.has(sliceId)) {
@@ -100,7 +100,7 @@ export function circularCheck(slices: AnySlice[]) {
   }
 }
 
-function checkDependencyOrder(slices: AnySlice[]) {
+function checkDependencyOrder(slices: Slice[]) {
   let seenSliceIds = new Set<string>();
   for (const slice of slices) {
     const dependencies = slice.dependencies;

@@ -34,19 +34,15 @@ const sliceAField1 = sliceAKey.field('value:sliceAField1');
 const sliceAField2 = sliceAKey.field('value:sliceAField2');
 
 const sliceA = sliceAKey.slice({
-  fields: {
-    sliceAField1,
-    sliceAField2,
-  },
+  sliceAField1,
+  sliceAField2,
 });
 
 const sliceBKey = createKey('sliceB', []);
 const sliceBField1 = sliceBKey.field('value:sliceBField1');
 
 const sliceB = sliceBKey.slice({
-  fields: {
-    sliceBField1,
-  },
+  sliceBField1,
 });
 
 const sliceCDepBKey = createKey('sliceCDepB', [sliceB]);
@@ -61,11 +57,9 @@ const sliceCDepBSelector2 = sliceCDepBKey.derive((state) => {
 });
 
 const sliceCDepB = sliceCDepBKey.slice({
-  fields: {
-    sliceCDepBField,
-    sliceCDepBSelector1,
-    sliceCDepBSelector2,
-  },
+  sliceCDepBField,
+  sliceCDepBSelector1,
+  sliceCDepBSelector2,
 });
 
 describe('effect with store', () => {

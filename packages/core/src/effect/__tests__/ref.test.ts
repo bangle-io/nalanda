@@ -18,19 +18,15 @@ const sliceAField1 = sliceAKey.field('value:sliceAField1');
 const sliceAField2 = sliceAKey.field('value:sliceAField2');
 
 const sliceA = sliceAKey.slice({
-  fields: {
-    sliceAField1,
-    sliceAField2,
-  },
+  sliceAField1,
+  sliceAField2,
 });
 
 const sliceBKey = createKey('sliceB', []);
 const sliceBField1 = sliceBKey.field('value:sliceBField1');
 
 const sliceB = sliceBKey.slice({
-  fields: {
-    sliceBField1,
-  },
+  sliceBField1,
 });
 
 beforeEach(() => {

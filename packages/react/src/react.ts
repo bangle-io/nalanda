@@ -1,24 +1,26 @@
-import { BaseField, Slice, Store } from '@nalanda/core';
+import {
+  Slice,
+  Store,
+  _AnyExternal,
+  _InferSliceFieldState,
+  _ExposedSliceFieldNames,
+} from '@nalanda/core';
 import { useCallback, useRef } from 'react';
 import useSyncExternalStoreExports from 'use-sync-external-store/shim';
 
 const { useSyncExternalStore } = useSyncExternalStoreExports;
 
-type MapSliceState<TFieldsSpec extends Record<string, BaseField<any>>> = {
-  [K in keyof TFieldsSpec]: TFieldsSpec[K] extends BaseField<infer T>
-    ? T
-    : never;
-};
+type Simplify<T> = { [KeyType in keyof T]: T[KeyType] } & {};
 
 export function useTrack<
-  TFieldsSpec extends Record<string, BaseField<any>> = any,
+  TExternal extends _AnyExternal = any,
   TName extends string = any,
   TDep extends string = any,
 >(
-  slice: Slice<TFieldsSpec, TName, TDep>,
+  slice: Slice<TExternal, TName, TDep>,
   store: Store<any>,
-): MapSliceState<TFieldsSpec> {
-  const ref = useRef<MapSliceState<TFieldsSpec>>();
+): Simplify<_InferSliceFieldState<TExternal>> {
+  const ref = useRef<any>();
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
@@ -42,15 +44,15 @@ export function useTrack<
 }
 
 export function useTrackField<
-  TFieldsSpec extends Record<string, BaseField<any>> = any,
+  TExternal extends _AnyExternal = any,
   TName extends string = any,
   TDep extends string = any,
-  TFieldName extends keyof TFieldsSpec = any,
+  TFieldName extends _ExposedSliceFieldNames<TExternal> = any,
 >(
-  slice: Slice<TFieldsSpec, TName, TDep>,
+  slice: Slice<TExternal, TName, TDep>,
   fieldName: TFieldName,
   store: Store<any>,
-): MapSliceState<TFieldsSpec>[TFieldName] {
+): _InferSliceFieldState<TExternal>[TFieldName] {
   const ref = useRef<any>();
 
   const subscribe = useCallback(
