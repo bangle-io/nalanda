@@ -1,5 +1,6 @@
 import { BaseStore } from './base-store';
 import {
+  Effect,
   effect,
   type EffectCallback,
   type EffectOpts,
@@ -128,6 +129,10 @@ export class Store<TSliceName extends string> extends BaseStore {
     this.effectsManager.registerEffect(effectInstance);
 
     return effectInstance;
+  }
+
+  unregisterEffect(effect: Effect): void {
+    this.effectsManager.unregisterEffect(effect);
   }
 
   runEffects() {

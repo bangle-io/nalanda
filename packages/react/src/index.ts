@@ -1,1 +1,2 @@
-export { Foo } from './App';
+export * from '@nalanda/core';
+export * from './react';

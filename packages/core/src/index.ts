@@ -1,10 +1,12 @@
 export { cleanup } from './effect/cleanup';
 export { createKey } from './slice/key';
 export { createStore } from './store';
+export { DerivedField, StateField } from './slice/field';
 export { ref } from './effect/ref';
+export { Slice } from './slice/slice';
+export type { BaseField } from './slice/field';
+export type { Effect, EffectStore, EffectScheduler } from './effect/effect';
 export type { IfSubset } from './types';
-export type { Slice } from './slice/slice';
 export type { Key } from './slice/key';
-export type { StoreState } from './store-state';
 export type { Store } from './store';
-export type { Effect } from './effect/effect';
+export type { StoreState } from './store-state';
