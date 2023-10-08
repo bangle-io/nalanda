@@ -1,3 +1,2 @@
-export * from './core';
-export type * from './core';
+export * from '@nalanda/core';
 export * from './react';

@@ -63,8 +63,7 @@
     "jest-environment-jsdom": "^29.7.0"
   },
   "peerDependencies": {
-    "react": ">=17.0",
-    "@nalanda/core": "*"
+    "react": ">=17.0"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -77,9 +76,5 @@
     },
     "./package.json": "./package.json"
   },
-  "peerDependenciesMeta": {
-    "@nalanda/core": {
-      "optional": true
-    }
-  }
+  "peerDependenciesMeta": {}
 }
