@@ -37,7 +37,8 @@
     "src"
   ],
   "dependencies": {
-    "use-sync-external-store": "^1.2.0"
+    "use-sync-external-store": "^1.2.0",
+    "@nalanda/core": "workspace:*"
   },
   "devDependencies": {
     "@types/use-sync-external-store": "^0.0.4",
@@ -58,7 +59,6 @@
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",
     "wait-for-expect": "^3.0.2",
-    "@nalanda/core": "workspace:*",
     "@testing-library/react": "^14.0.0",
     "jest-environment-jsdom": "^29.7.0"
   },
@@ -76,5 +76,10 @@
       "require": "./dist/index.js"
     },
     "./package.json": "./package.json"
+  },
+  "peerDependenciesMeta": {
+    "@nalanda/core": {
+      "optional": true
+    }
   }
 }
