@@ -1,7 +1,8 @@
 import path from 'node:path';
 import fxExtra from 'fs-extra';
 import { globby } from 'globby';
-
+import type { PackageJson } from 'type-fest';
+import { cloneDeep, merge } from 'lodash';
 const ignores = [
   '!**/node_modules',
   '!**/dist',
@@ -10,7 +11,7 @@ const ignores = [
   '!**/.next',
 ];
 
-type PackageMapping = ReturnType<typeof computePackageMapping>;
+export type PackageMapping = Awaited<ReturnType<typeof computePackageMapping>>;
 
 const rootPath = path.join(__dirname, '..', '..');
 
@@ -34,5 +35,27 @@ export async function computePackageMapping() {
   return {
     packageNameToPath,
     pathToPackageName,
+
+    isValidPackageName: (packageName: string) =>
+      packageNameToPath.has(packageName),
+    updatePackageJson: async (
+      packageName: string,
+      update: (packageJson: PackageJson) => Record<string, any>,
+    ) => {
+      const packagePath = packageNameToPath.get(packageName)!;
+      const packageJsonPath = path.join(packagePath, 'package.json');
+
+      const packageJson = JSON.parse(
+        await fxExtra.readFile(packageJsonPath, 'utf8'),
+      );
+      const newJSON = update(packageJson);
+
+      const finalJSON = merge(cloneDeep(packageJson), newJSON);
+
+      await fxExtra.writeFile(
+        packageJsonPath,
+        JSON.stringify(finalJSON, null, 2).trimEnd() + '\n',
+      );
+    },
   };
 }

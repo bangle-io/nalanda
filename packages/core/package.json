@@ -36,6 +36,7 @@
     "dist",
     "src"
   ],
+  "dependencies": {},
   "devDependencies": {
     "tsx": "^3.13.0",
     "tsup-config": "workspace:*",

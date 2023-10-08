@@ -1,4 +1,8 @@
 {
   "index": "Introduction",
-  "guide": "Guide"
+  "getting-started": "Getting started",
+  "guide": "Guide",
+  "react": "React",
+  "advanced-topics": "Advanced topics",
+  "api": "API"
 }
