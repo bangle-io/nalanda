@@ -100,14 +100,12 @@ Creates a new [slice](./slice) object.
 Signature:
 
 ```ts
-key.slice({ fields: { Fields }, actions: { Actions } });
+key.slice({ ...fields, ...actions });
 ```
 
 Arguments:
 
-- `fields` - An object containing the fields you to expose externally.
-
-- `actions` - An object containing the actions you to expose externally.
+- `object`: An object containing the fields or actions you want to expose externally.
 
 Returns:
 
@@ -117,12 +115,10 @@ Example:
 
 ```ts
 export const countSlice = key.slice({
-  fields: {
+    // fields
     count,
-  },
-  actions: {
+    // actions
     increment,
-  },
 });
 ```
 
