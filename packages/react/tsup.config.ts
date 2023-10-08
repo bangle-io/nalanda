@@ -7,6 +7,11 @@ const rootPath = path.join(packagePath, '..', '..');
 export default defineConfig({
   ...baseConfig,
   external: Array.from(
-    new Set([...(baseConfig.external || []), 'react', 'react-dom']),
+    new Set([
+      ...(baseConfig.external || []),
+      'react',
+      'react-dom',
+      '@nalanda/core',
+    ]),
   ),
 });
