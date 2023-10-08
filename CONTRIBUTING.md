@@ -98,9 +98,9 @@ Before submitting a PR, make sure to test your changes locally. Here's how:
 
 ## Updating documentation site
 
-1. After doing a release, you need to update the documentation site.
+1. If you did an alpha/beta release, you don't need to do update docs.
 
-1. If you did an alpha release, you don't need to do anything else as the documentation site will automatically update.
+1. After doing a release, you need to update the documentation site.
 
 1. If you did a latest release, you need to update the documentation site manually.
 
