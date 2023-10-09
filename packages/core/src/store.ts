@@ -84,7 +84,6 @@ export class Store<TSliceName extends string = any> extends BaseStore {
       return;
     }
 
-    console.log('core:destroying store', this.uid);
     this.destroyed = true;
     this.destroyController.abort();
     this.effectsManager.destroy();
@@ -96,10 +95,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
 
   constructor(public readonly options: StoreOptions<TSliceName>) {
     super();
-
     this.uid = genStoreId.generate(options.name || 'unnamed-store');
-
-    console.log('core:creating store', this.uid);
 
     this._state = StoreState.create({
       slices: options.slices,

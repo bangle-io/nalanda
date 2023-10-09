@@ -1,5 +1,5 @@
-import { createStore, Slice, Store, StoreOptions } from '@nalanda/core';
-import React, { useEffect, useState } from 'react';
+import { Slice, Store } from '@nalanda/core';
+import React, { useEffect } from 'react';
 
 const StoreContextSliceSymbol = Symbol('StoreContextKey');
 
