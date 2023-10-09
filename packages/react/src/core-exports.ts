@@ -1,7 +1,6 @@
 export { cleanup } from '@nalanda/core';
 export { createKey } from '@nalanda/core';
-// NO STORE EXPORTS, as we want to use the React-specific store
-// export { createStore, _storeSlicesInspect } from '@nalanda/core';
+export { createStore } from '@nalanda/core';
 export { DerivedField, StateField } from '@nalanda/core';
 export { ref } from '@nalanda/core';
 export { Slice } from '@nalanda/core';

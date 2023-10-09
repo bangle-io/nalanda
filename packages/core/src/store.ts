@@ -13,6 +13,7 @@ import type { Operation } from './effect/operation';
 import type { Slice } from './slice/slice';
 import type { SliceId } from './types';
 import { Transaction } from './transaction';
+import { genStoreId } from './helpers/id-generation';
 
 export interface StoreOptions<TSliceName extends string> {
   name?: string;
@@ -47,11 +48,12 @@ type DispatchTransaction<TSliceName extends string> = (
 export function createStore<TSliceName extends string>(
   config: StoreOptions<TSliceName>,
 ): Store<TSliceName> {
-  return new Store<TSliceName>({ ...config, name: 'anonymous' });
+  return new Store<TSliceName>(config);
 }
 
 export class Store<TSliceName extends string = any> extends BaseStore {
   public readonly initialState: StoreState<TSliceName>;
+  private uid: string;
 
   // @internal
   private _state: StoreState<TSliceName>;
@@ -93,6 +95,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
 
   constructor(public readonly options: StoreOptions<TSliceName>) {
     super();
+    this.uid = genStoreId.generate(options.name || 'unnamed-store');
 
     this._state = StoreState.create({
       slices: options.slices,

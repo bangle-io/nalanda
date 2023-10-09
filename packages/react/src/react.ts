@@ -5,32 +5,32 @@ import {
   _InferSliceFieldState,
   _ExposedSliceFieldNames,
 } from '@nalanda/core';
-import React, { useCallback, useContext, useRef } from 'react';
+import { useCallback, useContext, useRef } from 'react';
 import useSyncExternalStoreExports from 'use-sync-external-store/shim';
-import { StoreContextSymbol } from './store';
+import { StoreDefaultContext, getContextFromSlice } from './store';
 
 const { useSyncExternalStore } = useSyncExternalStoreExports;
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 type Simplify<T> = { [KeyType in keyof T]: T[KeyType] } & {};
 
-const dummyContext = React.createContext(null);
-
 function useStoreFromContext(slice: Slice, store?: Store<any>): Store<any> {
   const ctxStore = useContext(
-    (slice as any)[StoreContextSymbol] || dummyContext,
+    getContextFromSlice(slice) ||
+      // default value to null so that we can later we can use arg store
+      StoreDefaultContext,
   );
 
-  // the passed store takes precedence over the context store
-  const result = store || ctxStore;
+  // the arg store takes precedence over the context store
+  const resultStore = store || ctxStore;
 
-  if (!result) {
+  if (!resultStore) {
     throw new Error(
-      `Could not find a store for slice ${slice.name}. Please use 'useCreateStore()' for creating the store or manually create the store and pass it directly to the hook.`,
+      `Could not find a store for slice ${slice.name}. Please ensure 'StoreProvider' is setup correctly or directly pass the store to the hook.`,
     );
   }
 
-  return result as any;
+  return resultStore;
 }
 
 export function useTrack<
