@@ -4,6 +4,7 @@ import {
   Store,
   StoreOptions,
 } from '@nalanda/core';
+import { useEffect, useState } from 'react';
 
 export interface ContextStoreOptions<TSliceName extends string>
   extends StoreOptions<TSliceName> {
@@ -44,17 +45,25 @@ export function createContextStore<TSliceName extends string = any>(
     setContextInSlice(slice, options.context);
   });
 
-  const store = createVanillaStore(options);
+  return createVanillaStore(options);
+}
 
-  store.destroySignal.addEventListener(
-    'abort',
-    () => {
-      options.slices.forEach((slice) => {
-        setContextInSlice(slice, undefined);
-      });
-    },
-    { once: true },
-  );
+/**
+ * A hook to create a store to be used in a react application.
+ * @param options
+ * @returns
+ */
+export function useCreateStore<TSliceName extends string = any>(
+  options: ContextStoreOptions<TSliceName>,
+): Store<TSliceName> {
+  const [store] = useState(() => createContextStore(options));
+
+  useEffect(() => {
+    return () => {
+      store.destroy();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return store;
 }
