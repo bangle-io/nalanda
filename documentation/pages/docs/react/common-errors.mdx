@@ -1,0 +1,11 @@
+# Common errors
+
+
+## Store Context
+
+#### `Cannot create a context store with a slice that is already associated with another store`
+
+This error occurs if you have multiple stores in your app and you are using the `createContextStore` method that uses React Context to share NSM store behind the scenes.
+
+- Solution1: If you want to use *multiple stores* then you will have to use the [createStore](/docs/api/store/#createstore) function to create store and share it on by your self to all components that need it.
+- Solution2: Use a single store for your entire app.

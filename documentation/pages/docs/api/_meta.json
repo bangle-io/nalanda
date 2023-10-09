@@ -1,0 +1,11 @@
+{
+  "derived-field": "DerivedField",
+  "effect": "Effect",
+  "key": "Key",
+  "ref": "Ref",
+  "slice": "Slice",
+  "state-field": "StateField",
+  "store-state": "StoreState",
+  "store": "Store",
+  "transaction": "Transaction"
+}
