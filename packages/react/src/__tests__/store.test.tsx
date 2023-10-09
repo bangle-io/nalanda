@@ -4,10 +4,10 @@
 import React, { useEffect } from 'react';
 import { expect, test, describe } from '@jest/globals';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { Store, createKey, EffectScheduler } from '@nalanda/core';
+import { Store, createKey, EffectScheduler, createStore } from '@nalanda/core';
 import { createContext, useContext, useRef } from 'react';
 import { useTrack, useTrackField } from '../react';
-import { createContextStore } from '../store';
+import { StoreProvider, useStore } from '../store';
 
 const zeroTimeoutScheduler: EffectScheduler = (cb, opts) => {
   setTimeout(() => {
@@ -36,47 +36,20 @@ const setup = () => {
     return counterNegative.update((c) => c - 1);
   }
 
-  const StoreContext = createContext<Store<any> | null>(null);
+  const store = createStore({
+    slices: [counterSlice],
+    name: 'test-store',
+    overrides: {
+      effectScheduler: zeroTimeoutScheduler,
+    },
+  });
 
-  const StoreProvider = ({ children }: { children: React.ReactNode }) => {
-    const storeRef = useRef<Store<any>>();
-
-    useEffect(() => {
-      return () => {
-        storeRef.current?.destroy();
-      };
-    }, []);
-
-    if (!storeRef.current) {
-      const store = createContextStore({
-        slices: [counterSlice],
-        name: 'test-store',
-        overrides: {
-          effectScheduler: zeroTimeoutScheduler,
-        },
-        context: StoreContext,
-      });
-      storeRef.current = store;
-    }
-
-    return (
-      <StoreContext.Provider value={storeRef.current}>
-        {children}
-      </StoreContext.Provider>
-    );
-  };
-
-  const useStore = () => {
-    const store = useContext(StoreContext);
-    if (!store) {
-      throw new Error('Missing StoreProvider');
-    }
-    return store;
+  const SetupStoreProvider = ({ children }: { children: React.ReactNode }) => {
+    return <StoreProvider store={store}>{children}</StoreProvider>;
   };
 
   return {
-    StoreProvider,
-    useStore,
+    StoreProvider: SetupStoreProvider,
     counterSlice,
     increment,
     incrementNegativeCounter,
@@ -84,7 +57,7 @@ const setup = () => {
 };
 
 test('gets value', () => {
-  const { StoreProvider, useStore, counterSlice } = setup();
+  const { StoreProvider, counterSlice } = setup();
 
   function MyComponent() {
     const store = useStore();
@@ -102,7 +75,7 @@ test('gets value', () => {
 
 describe('useTrack', () => {
   test('updates values', async () => {
-    const { StoreProvider, useStore, counterSlice, increment } = setup();
+    const { StoreProvider, counterSlice, increment } = setup();
 
     let _store: Store<any>;
     function MyComponent() {
@@ -132,13 +105,8 @@ describe('useTrack', () => {
   });
 
   test('does not update if component is not tracking a field', async () => {
-    const {
-      StoreProvider,
-      useStore,
-      counterSlice,
-      increment,
-      incrementNegativeCounter,
-    } = setup();
+    const { StoreProvider, counterSlice, increment, incrementNegativeCounter } =
+      setup();
 
     let _store: Store<any>;
     let renderCount = 0;
@@ -193,7 +161,7 @@ describe('useTrack', () => {
 
 describe('useTrackField', () => {
   test('updates values', async () => {
-    const { StoreProvider, useStore, counterSlice, increment } = setup();
+    const { StoreProvider, counterSlice, increment } = setup();
 
     let _store: Store<any>;
     function MyComponent() {
