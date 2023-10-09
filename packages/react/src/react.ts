@@ -26,7 +26,7 @@ function useStoreFromContext(slice: Slice, store?: Store<any>): Store<any> {
 
   if (!result) {
     throw new Error(
-      `Could not find a store for slice ${slice.name}. Please use 'createContextStore()' or pass store directly to the hook.`,
+      `Could not find a store for slice ${slice.name}. Please use 'createContextStore()' for creating the store or pass store directly to the hook.`,
     );
   }
 
