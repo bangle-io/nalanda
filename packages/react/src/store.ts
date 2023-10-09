@@ -1,5 +1,6 @@
 import {
   createStore as createVanillaStore,
+  Slice,
   Store,
   StoreOptions,
 } from '@nalanda/core';
@@ -14,18 +15,33 @@ export interface ContextStoreOptions<TSliceName extends string>
 
 export const StoreContextSymbol = Symbol('StoreContextKey');
 
+function getContextFromSlice(
+  slice: Slice,
+): React.Context<Store<any> | null> | undefined {
+  return (slice as any)[StoreContextSymbol];
+}
+
+function setContextInSlice(
+  slice: Slice,
+  context: React.Context<Store<any> | null> | undefined,
+): void {
+  (slice as any)[StoreContextSymbol] = context;
+}
+
 export function createContextStore<TSliceName extends string = any>(
   options: ContextStoreOptions<TSliceName>,
 ): Store<TSliceName> {
   options.slices.forEach((slice) => {
-    // @ts-expect-error - this is a private symbol
-    if (slice[StoreContextSymbol]) {
+    const existing = getContextFromSlice(slice);
+    if (existing === options.context) {
+      return;
+    }
+    if (existing) {
       throw new Error(
         `Cannot create a context store with a slice that is already associated with another store. Please see https://nalanda.bangle.io/docs/react/common-errors/#store-context`,
       );
     }
-    // @ts-expect-error - this is a private symbol
-    slice[StoreContextSymbol] = options.context;
+    setContextInSlice(slice, options.context);
   });
 
   const store = createVanillaStore(options);
@@ -34,8 +50,7 @@ export function createContextStore<TSliceName extends string = any>(
     'abort',
     () => {
       options.slices.forEach((slice) => {
-        // @ts-expect-error - this is a private symbol
-        delete slice[StoreContextSymbol];
+        setContextInSlice(slice, undefined);
       });
     },
     { once: true },
