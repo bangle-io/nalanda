@@ -48,4 +48,5 @@ export type InferStateSliceName<T extends StoreState<any>> =
 export type InferEffectStoreSliceName<T extends EffectStore<any>> =
   T extends EffectStore<infer Name> ? Name : never;
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 export type Simplify<T> = { [KeyType in keyof T]: T[KeyType] } & {};

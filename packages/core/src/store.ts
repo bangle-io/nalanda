@@ -14,7 +14,7 @@ import type { Slice } from './slice/slice';
 import type { SliceId } from './types';
 import { Transaction } from './transaction';
 
-interface StoreOptions<TSliceName extends string> {
+export interface StoreOptions<TSliceName extends string> {
   name?: string;
   slices: Slice<any, TSliceName, any>[];
   debug?: DebugLogger;
@@ -24,7 +24,7 @@ interface StoreOptions<TSliceName extends string> {
      * Overrides all effects schedulers for all effects in the store.
      */
     effectScheduler?: EffectScheduler;
-    dispatchTransactionOverride?: DispatchTransaction<TSliceName>;
+    dispatchTransaction?: DispatchTransaction<TSliceName>;
   };
   manualEffectsTrigger?: boolean;
 }
@@ -67,6 +67,12 @@ export class Store<TSliceName extends string = any> extends BaseStore {
   // @internal
   private _dispatchTxn: DispatchTransaction<TSliceName>;
 
+  private destroyController = new AbortController();
+
+  public get destroySignal() {
+    return this.destroyController.signal;
+  }
+
   get state() {
     return this._state;
   }
@@ -77,6 +83,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     }
 
     this.destroyed = true;
+    this.destroyController.abort();
     this.effectsManager.destroy();
   }
 
@@ -93,8 +100,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     this.initialState = this._state;
 
     this._dispatchTxn =
-      options.overrides?.dispatchTransactionOverride ||
-      DEFAULT_DISPATCH_TRANSACTION;
+      options.overrides?.dispatchTransaction || DEFAULT_DISPATCH_TRANSACTION;
 
     this.effectsManager = new EffectManager(this.options.slices, {
       debug: this.options.debug,

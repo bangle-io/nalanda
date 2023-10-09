@@ -1,25 +1,13 @@
 /**
  * @jest-environment jsdom
  */
-import React, { useState } from 'react';
-import {
-  expect,
-  jest,
-  test,
-  describe,
-  beforeEach,
-  afterEach,
-} from '@jest/globals';
+import React, { useEffect } from 'react';
+import { expect, test, describe } from '@jest/globals';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import {
-  Store,
-  StoreState,
-  createKey,
-  createStore,
-  EffectScheduler,
-} from '@nalanda/core';
+import { Store, createKey, EffectScheduler } from '@nalanda/core';
 import { createContext, useContext, useRef } from 'react';
 import { useTrack, useTrackField } from '../react';
+import { createContextStore } from '../store';
 
 const zeroTimeoutScheduler: EffectScheduler = (cb, opts) => {
   setTimeout(() => {
@@ -52,13 +40,21 @@ const setup = () => {
 
   const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     const storeRef = useRef<Store<any>>();
+
+    useEffect(() => {
+      return () => {
+        storeRef.current?.destroy();
+      };
+    }, []);
+
     if (!storeRef.current) {
-      const store = createStore({
+      const store = createContextStore({
         slices: [counterSlice],
         name: 'test-store',
         overrides: {
           effectScheduler: zeroTimeoutScheduler,
         },
+        context: StoreContext,
       });
       storeRef.current = store;
     }
@@ -149,7 +145,7 @@ describe('useTrack', () => {
     function MyComponent() {
       const store = useStore();
       _store = store;
-      const { counterNegative } = useTrack(counterSlice, store);
+      const { counterNegative } = useTrack(counterSlice);
       renderCount++;
 
       return <div>counterNegative={counterNegative}</div>;
@@ -204,7 +200,7 @@ describe('useTrackField', () => {
       const store = useStore();
       _store = store;
 
-      const counter = useTrackField(counterSlice, 'counter', store);
+      const counter = useTrackField(counterSlice, 'counter');
 
       return <div>counter={counter}</div>;
     }

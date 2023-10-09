@@ -4,5 +4,6 @@
   "guide": "Guide",
   "react": "React",
   "advanced-topics": "Advanced topics",
-  "api": "API"
+  "api": "API",
+  "react-api": "API (React)"
 }
