@@ -8,16 +8,11 @@ import type { Slice } from '../slice/slice';
 import type { Store } from '../store';
 import type { Transaction } from '../transaction';
 import { StoreState } from '../store-state';
+import { onAbortOnce } from './on-abort';
 
 const DEFAULT_MAX_WAIT = 15;
 
 export type EffectOpts = {
-  /**
-   * @internal - havent implemented it
-   * Effects are deferred by default. If set to false, the effect will run immediately after
-   * a store state change. If set to true, the effect will run anytime before maxWait.
-   */
-  deferred: boolean;
   maxWait: number;
   scheduler: EffectScheduler;
   name?: string;
@@ -47,25 +42,31 @@ export class EffectStore<TSliceName extends string = any> extends BaseStore {
 }
 
 export type EffectScheduler = (
-  cb: () => void,
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  run: () => void,
   opts: Omit<EffectOpts, 'scheduler'> & {},
-) => void;
+) => () => void;
 
 export type EffectCallback<TSliceName extends string = any> = (
   store: EffectStore<TSliceName>,
 ) => void | Promise<void>;
 export type EffectCreator = (store: Store<any>) => Effect;
 
+export type EffectCreatorObject = {
+  callback: EffectCallback<any>;
+  options: Partial<EffectOpts>;
+};
+
 const DEFAULT_SCHEDULER: EffectScheduler = (cb, opts) => {
-  if (opts.deferred) {
-    if (hasIdleCallback) {
-      window.requestIdleCallback(cb, { timeout: opts.maxWait });
-    } else {
-      setTimeout(cb, opts.maxWait);
-    }
+  if (hasIdleCallback) {
+    const ref = window.requestIdleCallback(cb, { timeout: opts.maxWait });
+    return () => {
+      window.cancelIdleCallback(ref);
+    };
   } else {
-    queueMicrotask(cb);
+    const ref = setTimeout(cb, opts.maxWait);
+    return () => {
+      clearTimeout(ref);
+    };
   }
 };
 
@@ -73,8 +74,6 @@ export class Effect {
   public readonly name: string;
   // @internal
   private readonly debugLogger: DebugLogger | undefined;
-  // @internal
-  private destroyed = false;
   // @internal
   private pendingRun = false;
   // @internal
@@ -85,6 +84,14 @@ export class Effect {
   private runCount = 0;
   // @internal
   private runInstance: EffectRun;
+  // @internal
+  private cleanup: (() => void) | undefined;
+  // @internal
+  private abortController = new AbortController();
+
+  get destroyed(): boolean {
+    return this.abortController.signal.aborted;
+  }
 
   // @internal
   constructor(
@@ -103,15 +110,16 @@ export class Effect {
     this.effectStore = new EffectStore(rootStore, this.name, () => {
       return this.runInstance;
     });
+
+    onAbortOnce(this.abortController.signal, () => {
+      this._clearPendingRun();
+      this.runInstance.destroy();
+    });
   }
 
-  destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
-
-    this.destroyed = true;
-    this.runInstance.destroy();
+  // @internal
+  _destroy(): void {
+    this.abortController.abort();
   }
 
   /**
@@ -131,11 +139,19 @@ export class Effect {
     }
 
     this.pendingRun = true;
-    this.scheduler(() => {
+    this.cleanup?.();
+    this.cleanup = this.scheduler(() => {
       this.runInternal();
     }, this.opts);
 
     return true;
+  }
+
+  // @internal
+  _clearPendingRun(): void {
+    this.pendingRun = false;
+    this.cleanup?.();
+    this.cleanup = undefined;
   }
 
   // @internal
@@ -195,7 +211,7 @@ export class Effect {
     }
 
     this.debugLogger?.({
-      type: this.opts.deferred ? 'UPDATE_EFFECT' : 'SYNC_UPDATE_EFFECT',
+      type: 'UPDATE_EFFECT',
       name: this.name,
       changed: fieldChanged?.id || '<first-run-OR-forced>',
     });
@@ -205,14 +221,12 @@ export class Effect {
 export function effect<TSliceName extends string>(
   callback: EffectCallback,
   {
-    deferred = true,
     maxWait = DEFAULT_MAX_WAIT,
     scheduler = DEFAULT_SCHEDULER,
   }: Partial<EffectOpts> = {},
 ): EffectCreator {
   return (store: Store<TSliceName>) => {
     const newEffect = new Effect(callback, store, {
-      deferred,
       maxWait,
       scheduler,
     });

@@ -60,15 +60,16 @@ export class Key<TName extends string, TDepName extends string> {
     callback: EffectCallback<TName | TDepName>,
     options: Partial<EffectOpts> = {},
   ) {
-    this._effectCallbacks.push([callback, options]);
+    const creator: EffectCreatorObject = {
+      callback,
+      options,
+    };
+    this._effectCreators.push(creator);
     // for any effect that was created post store creation,
     // we need to manually alert the store to register the effect.
     this._keyEvents.emit({
       type: 'new-effect',
-      payload: {
-        callback,
-        options,
-      },
+      payload: creator,
     });
   }
 
@@ -107,7 +108,7 @@ export class Key<TName extends string, TDepName extends string> {
   // @internal
   private _slice: Slice | undefined;
   // @internal
-  _effectCallbacks: [EffectCallback, Partial<EffectOpts>][] = [];
+  _effectCreators: EffectCreatorObject[] = [];
   // @internal
   readonly _derivedFields: Record<FieldId, DerivedField<any, any, any>> = {};
   // @internal

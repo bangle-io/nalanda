@@ -4,7 +4,6 @@ import { Store } from '../store';
 import type { Transaction } from '../transaction';
 
 export type OperationOpts = {
-  deferred?: boolean;
   maxWait?: number;
 };
 
