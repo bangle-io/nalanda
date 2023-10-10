@@ -250,56 +250,43 @@ describe('StoreState Slice and Transaction Operations', () => {
   });
 });
 
-describe('_getChangedSlices', () => {
-  test('returns an empty array when no transactions have been applied', () => {
-    let storeState = StoreState.create({
-      slices: [],
-    });
-
-    const changedSlices = storeState._getChangedSlices(
-      StoreState.create({
-        slices: [],
-      }),
-    );
-
-    expect(changedSlices).toEqual([]);
-  });
-
-  test('should return changed slices', () => {
+describe('_didSliceStateChange', () => {
+  test('should report changed slices', () => {
     let storeState1 = StoreState.create({
       slices: [sliceOne, sliceTwo],
     });
 
-    let storeState2 = StoreState.create({
-      slices: [sliceOne, sliceTwo],
-    });
+    expect(storeState1._didSliceStateChange(sliceOne, storeState1)).toBe(false);
+
+    let storeState2 = storeState1;
 
     // Apply transaction to the second store state
     const transaction = updateKeyTwoSliceTwo('updatedValueTwo');
     storeState2 = storeState2.apply(transaction);
 
-    const changedSlices = storeState1._getChangedSlices(storeState2);
+    let didOneChange = storeState1._didSliceStateChange(sliceOne, storeState2);
+    expect(didOneChange).toBe(false);
+
+    let didOneChangeReverse = storeState2._didSliceStateChange(
+      sliceOne,
+      storeState1,
+    );
+    expect(didOneChange).toBe(false);
 
     // Only sliceTwo should have changed
-    expect(changedSlices.length).toBe(1);
-    expect(changedSlices[0]!.sliceId).toBe('sl_sliceTwo$');
+
+    let didTwoChange = storeState1._didSliceStateChange(sliceTwo, storeState2);
+    expect(didTwoChange).toBe(true);
+
+    let didTwoChangeReverse = storeState2._didSliceStateChange(
+      sliceTwo,
+      storeState1,
+    );
+
+    expect(didTwoChangeReverse).toBe(true);
   });
 
-  test('should return empty array when no slices have changed', () => {
-    let storeState1 = StoreState.create({
-      slices: [sliceOne, sliceTwo],
-    });
-
-    let storeState2 = StoreState.create({
-      slices: [sliceOne, sliceTwo],
-    });
-
-    const changedSlices = storeState1._getChangedSlices(storeState2);
-
-    expect(changedSlices.length).toBe(0);
-  });
-
-  test('should return all slices when all slices have changed', () => {
+  test('should report changed slice with multiple transactions', () => {
     let initialStoreState = StoreState.create({
       slices: [sliceOne, sliceTwo],
     });
@@ -310,7 +297,11 @@ describe('_getChangedSlices', () => {
     let storeState = initialStoreState.apply(transactionOne);
     storeState = storeState.apply(transactionTwo);
 
-    expect(storeState._getChangedSlices(initialStoreState)).toHaveLength(2);
-    expect(initialStoreState._getChangedSlices(storeState)).toHaveLength(2);
+    expect(storeState._didSliceStateChange(sliceOne, initialStoreState)).toBe(
+      true,
+    );
+    expect(storeState._didSliceStateChange(sliceTwo, initialStoreState)).toBe(
+      true,
+    );
   });
 });

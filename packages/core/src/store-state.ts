@@ -126,28 +126,19 @@ export class StoreState<TSliceName extends string> {
     });
   }
 
-  /**
-   * Returns slices that have changed compared to the provided store state.
-   * does not take into account slices that were removed in the current store state and exist
-   * in the provided store state.
-   */
+  // Checks if the state of a slice has changed compared to the provided store state.
+  // ! Doesn't account for derived state changes.
+  // ! Doesn't account for any addition or removal of slices.
   // @internal
-  _getChangedSlices(otherStoreState: StoreState<any>): Slice[] {
-    const diff: Slice[] = [];
+  _didSliceStateChange(
+    slice: Slice,
+    otherStoreState: StoreState<any>,
+  ): boolean {
+    const sliceStateManager = this._getSliceStateManager(slice);
+    const otherSliceStateManager = otherStoreState._getSliceStateManager(slice);
 
-    Object.values(this.config.sliceStateMap).forEach((sliceStateManager) => {
-      const slice = sliceStateManager.slice;
-      const sliceState = sliceStateManager.rawState;
-
-      const otherSliceState =
-        otherStoreState.config.sliceStateMap[slice.sliceId]?.rawState;
-
-      if (sliceState !== otherSliceState) {
-        diff.push(sliceStateManager.slice);
-      }
-    });
-
-    return diff;
+    // just comparing state managers is good enough, as they are immutable.
+    return sliceStateManager !== otherSliceStateManager;
   }
 
   // @internal
@@ -181,7 +172,7 @@ export class SliceStateManager {
     return new SliceStateManager(slice, override);
   }
 
-  constructor(
+  private constructor(
     public readonly slice: Slice,
     // @internal
     private readonly sliceState: Record<FieldId, unknown>,

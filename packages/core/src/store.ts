@@ -19,6 +19,7 @@ export interface StoreOptions<TSliceName extends string> {
   name?: string;
   slices: Slice<any, TSliceName, any>[];
   debug?: DebugLogger;
+  autoStartEffects?: boolean;
   overrides?: {
     stateOverride?: Record<SliceId, Record<string, unknown>>;
     /**
@@ -27,7 +28,6 @@ export interface StoreOptions<TSliceName extends string> {
     effectScheduler?: EffectScheduler;
     dispatchTransaction?: DispatchTransaction<TSliceName>;
   };
-  manualEffectsTrigger?: boolean;
 }
 
 export const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction<any> = (
@@ -155,10 +155,8 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     const oldState = this._state;
     this._state = newState;
 
-    if (!this.options.manualEffectsTrigger) {
-      queueMicrotask(() => {
-        this.effectsManager.run(this._state._getChangedSlices(oldState));
-      });
-    }
+    queueMicrotask(() => {
+      this.effectsManager.run();
+    });
   };
 }

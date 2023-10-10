@@ -132,13 +132,7 @@ export class Effect {
 
     this.pendingRun = true;
     this.scheduler(() => {
-      queueMicrotask(() => {
-        try {
-          this.runInternal();
-        } finally {
-          this.pendingRun = false;
-        }
-      });
+      this.runInternal();
     }, this.opts);
 
     return true;
@@ -194,7 +188,11 @@ export class Effect {
     this.runInstance = new EffectRun(this.rootStore, this.name);
 
     this.runCount++;
-    void this.effectCallback(this.effectStore);
+    try {
+      void this.effectCallback(this.effectStore);
+    } finally {
+      this.pendingRun = false;
+    }
 
     this.debugLogger?.({
       type: this.opts.deferred ? 'UPDATE_EFFECT' : 'SYNC_UPDATE_EFFECT',

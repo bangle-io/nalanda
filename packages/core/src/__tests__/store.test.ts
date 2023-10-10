@@ -25,6 +25,7 @@ afterEach(() => {
 
 test('basic setup', () => {
   const store = createStore({
+    autoStartEffects: true,
     slices: [counterSlice],
   });
 
