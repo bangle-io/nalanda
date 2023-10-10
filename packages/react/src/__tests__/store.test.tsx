@@ -10,11 +10,12 @@ import { useTrack, useTrackField } from '../react';
 import { StoreProvider, useStore } from '../store';
 
 const zeroTimeoutScheduler: EffectScheduler = (cb, opts) => {
-  setTimeout(() => {
-    cb();
-  }, 0);
-};
+  let id = setTimeout(cb, 0);
 
+  return () => {
+    clearTimeout(id);
+  };
+};
 const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const setup = () => {
