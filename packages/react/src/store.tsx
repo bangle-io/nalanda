@@ -41,9 +41,9 @@ export function StoreProvider({
       }
       setContextInSlice(slice, context);
     });
-
+    store.startEffects();
     return () => {
-      // TODO pause effects
+      store.pauseEffects();
     };
   }, [store, context]);
 

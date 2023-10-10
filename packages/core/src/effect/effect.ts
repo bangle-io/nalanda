@@ -141,7 +141,11 @@ export class Effect {
     this.pendingRun = true;
     this.cleanup?.();
     this.cleanup = this.scheduler(() => {
-      this.runInternal();
+      try {
+        this.runInternal();
+      } finally {
+        this.pendingRun = false;
+      }
     }, this.opts);
 
     return true;
@@ -204,11 +208,8 @@ export class Effect {
     this.runInstance = new EffectRun(this.rootStore, this.name);
 
     this.runCount++;
-    try {
-      void this.effectCallback(this.effectStore);
-    } finally {
-      this.pendingRun = false;
-    }
+    // note we are currently not awaiting on the effect callback
+    void this.effectCallback(this.effectStore);
 
     this.debugLogger?.({
       type: 'UPDATE_EFFECT',

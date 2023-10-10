@@ -10,7 +10,9 @@ import { useTrack, useTrackField } from '../react';
 import { StoreProvider, useStore } from '../store';
 
 const zeroTimeoutScheduler: EffectScheduler = (cb, opts) => {
-  let id = setTimeout(cb, 0);
+  let id = setTimeout(() => {
+    cb();
+  }, 0);
 
   return () => {
     clearTimeout(id);
@@ -38,6 +40,7 @@ const setup = () => {
   }
 
   const store = createStore({
+    autoStartEffects: false,
     slices: [counterSlice],
     name: 'test-store',
     overrides: {
@@ -139,9 +142,9 @@ describe('useTrack', () => {
 
     await act(async () => {
       _store.dispatch(increment());
-
       await sleep(20);
     });
+
     // should not render since the component is not tracking the field
     expect(renderCount).toBe(2);
     // should not update
@@ -151,11 +154,19 @@ describe('useTrack', () => {
     act(() => {
       _store.dispatch(incrementNegativeCounter());
     });
-
+    expect(counterSlice.get(_store.state).counterNegative).toBe(-2);
     await waitFor(() => {
       expect(screen.getByText('counterNegative=-2')).toBeDefined();
     });
 
+    expect(renderCount).toBe(3);
+
+    // dispatch untracked field again
+    await act(async () => {
+      _store.dispatch(increment());
+      await sleep(20);
+    });
+    // should not render since the component is not tracking the field
     expect(renderCount).toBe(3);
   });
 });
