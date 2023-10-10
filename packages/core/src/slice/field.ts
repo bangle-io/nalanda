@@ -78,22 +78,21 @@ export class DerivedField<
       );
     }
 
-    // TODO: return previously seen value based on isEqual and the lineage of store-state
     if (this.getCache.has(storeState)) {
       return this.getCache.get(storeState);
     }
 
-    const newValue = this.deriveCallback(storeState);
-
-    const finalVal = this._isEqualCheck(storeState, newValue);
+    const derivedVal = this.deriveCallback(storeState);
+    const finalVal = this._maintainOldReference(storeState, derivedVal);
 
     this.getCache.set(storeState, finalVal);
 
     return finalVal;
   }
 
+  // maintain the old reference  (if possible) when the value is equal to the previous value
   // @internal
-  _isEqualCheck(storeState: StoreState<any>, newValue: TVal) {
+  _maintainOldReference(storeState: StoreState<any>, newValue: TVal) {
     const ref = storeState._ref;
 
     const hasPrevValue = this.prevValCache.has(ref);
