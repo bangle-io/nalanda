@@ -6,7 +6,7 @@ export { ref } from '@nalanda/core';
 export { Slice } from '@nalanda/core';
 
 export type { BaseField } from '@nalanda/core';
-export type { Effect, EffectStore, EffectScheduler } from '@nalanda/core';
+export type { EffectStore, EffectScheduler } from '@nalanda/core';
 export type { IfSubset } from '@nalanda/core';
 export type { Key } from '@nalanda/core';
 export type { Store } from '@nalanda/core';

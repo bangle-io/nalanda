@@ -1,12 +1,5 @@
 import { BaseStore } from './base-store';
-import {
-  Effect,
-  effect,
-  type EffectCallback,
-  type EffectOpts,
-  type EffectScheduler,
-} from './effect/effect';
-import { EffectManager } from './effect/effect-manager';
+import { EffectsManager } from './effect/effect-manager';
 import { StoreState } from './store-state';
 import type { DebugLogger } from './logger';
 import type { Operation } from './effect/operation';
@@ -16,6 +9,12 @@ import { Transaction } from './transaction';
 import { genStoreId } from './helpers/id-generation';
 import { onAbortOnce } from './effect/on-abort';
 import { calcReverseDependencies } from './helpers/dependency-helpers';
+import type {
+  EffectCallback,
+  EffectOpts,
+  EffectScheduler,
+} from './effect/types';
+import { DEFAULT_SCHEDULER } from './effect/effect';
 
 export interface StoreOptions<TSliceName extends string> {
   name?: string;
@@ -93,7 +92,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
   // @internal
   _rootStore: Store<TSliceName>;
   // @internal
-  _effectsManager: EffectManager;
+  _effectsManager: EffectsManager;
   // @internal
   private _dispatchTxn: DispatchTransaction<TSliceName>;
 
@@ -128,11 +127,11 @@ export class Store<TSliceName extends string = any> extends BaseStore {
 
     this._rootStore = this;
 
-    // Keep effectsManager at the end - as it access `this` and we want to make sure
-    // everything is initialized before we call it.
-    this._effectsManager = new EffectManager(this.options.slices, {
-      debug: this.options.debug,
+    this._effectsManager = new EffectsManager({
+      debugger: options.debug,
+      scheduler: options.overrides?.effectScheduler || DEFAULT_SCHEDULER,
     });
+
     onAbortOnce(this.destroyController.signal, () => {
       this._effectsManager.destroy();
     });
@@ -140,13 +139,13 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     this.options.slices.forEach((slice) => {
       // register the known effects
       slice._key._effectCreators.forEach((creatorObject) => {
-        this._effectsManager.registerEffect(this, creatorObject);
+        this._effectsManager.add(this, creatorObject);
       });
 
       // if a new effect is added, register it
       const cleanup = slice._key._keyEvents.subscribe((event) => {
         if (event.type === 'new-effect') {
-          this._effectsManager.registerEffect(this, event.payload);
+          this._effectsManager.add(this, event.payload);
         }
       });
       onAbortOnce(this.destroyController.signal, cleanup);
@@ -178,28 +177,24 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     callback: EffectCallback<TSliceName>,
     options: Partial<EffectOpts> = {},
   ) {
-    return this._effectsManager.registerEffect(this, { callback, options });
-  }
-
-  unregisterEffect(effect: Effect): void {
-    this._effectsManager.unregisterEffect(effect);
+    return this._effectsManager.add(this, { callback, options });
   }
 
   /**
    * Starts the effects of the store. This is only useful if you have disabled the autoStartEffects option.
    */
   startEffects() {
-    this._effectsManager.unpauseEffects(this._state);
+    this._effectsManager.start(this);
   }
 
   pauseEffects() {
-    this._effectsManager.pauseEffects();
+    this._effectsManager.stop();
   }
 
   // @internal
   private updateState = (newState: StoreState<TSliceName>) => {
     const oldState = this._state;
     this._state = newState;
-    this._effectsManager.queueRunEffects(newState, oldState);
+    this._effectsManager.onStateChange({ store: this, oldState });
   };
 }

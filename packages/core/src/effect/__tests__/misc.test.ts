@@ -1,18 +1,19 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { createKey } from '../../slice/key';
 import { StoreState } from '../../store-state';
-import {
-  EffectCreator,
-  EffectRunner,
-  EffectScheduler,
-  EffectStore,
-  FieldTracker,
-  doesTrackSlice,
-  whatFieldChanged,
-} from '../temp';
+
 import { Slice } from '../../slice/slice';
 import { createStore } from '../../store';
 import { testCleanup } from '../../helpers/test-cleanup';
+import {
+  EffectCleanupCallback,
+  EffectCreator,
+  EffectScheduler,
+  FieldTracker,
+} from '../types';
+import { doesTrackSlice, whatFieldChanged } from '../utils';
+import { EffectStore } from '../effect-store';
+import { EffectRunner } from '../effect-run';
 
 beforeEach(() => {
   testCleanup();
@@ -275,7 +276,7 @@ describe('EffectStore', () => {
       slices: [slice],
     });
 
-    const cleanupFunction = jest.fn();
+    const cleanupFunction = jest.fn<EffectCleanupCallback>(() => {});
     effectStore._addCleanup(cleanupFunction);
     expect(effectStore._tracker.cleanups).toContain(cleanupFunction);
   });
@@ -285,7 +286,7 @@ describe('EffectStore', () => {
       slices: [slice],
     });
 
-    const cleanupFunction = jest.fn();
+    const cleanupFunction = jest.fn<EffectCleanupCallback>(() => {});
     effectStore._addCleanup(cleanupFunction);
 
     const trackedField: FieldTracker = {
@@ -341,7 +342,6 @@ describe('EffectRunner', () => {
       callback: effectCallback,
       options: {
         maxWait: 0,
-        scheduler: scheduler,
       },
     };
 

@@ -10,8 +10,9 @@ import { testCleanup } from '../../helpers/test-cleanup';
 import waitForExpect from 'wait-for-expect';
 import { createKey } from '../../slice/key';
 import { createStore } from '../../store';
-import { EffectScheduler, effect } from '../effect';
+import { effect } from '../effect';
 import { cleanup } from '../cleanup';
+import { EffectScheduler } from '../types';
 
 beforeEach(() => {
   testCleanup();
@@ -312,7 +313,7 @@ describe('effect with store', () => {
         expect(effectCalled).toHaveBeenCalledTimes(1);
       });
 
-      eff._destroy();
+      eff.destroy();
 
       await sleep(5);
 
@@ -334,7 +335,7 @@ describe('effect with store', () => {
         expect(effectCalled).toHaveBeenCalledTimes(1);
       });
 
-      eff._destroy();
+      eff.destroy();
 
       store.dispatch(updateSliceBField1('new-value'));
 
@@ -508,13 +509,24 @@ describe('effect with store', () => {
 
 describe('effect only', () => {
   const setup = () => {
+    const manualCallbacksRegistry = new Set<() => void>();
+    const manualEffectScheduler: EffectScheduler = (cb, opts) => {
+      manualCallbacksRegistry.add(cb);
+
+      return () => {
+        if (!manualCallbacksRegistry.has(cb)) {
+          throw new Error('unknown callback');
+        }
+        manualCallbacksRegistry.delete(cb);
+      };
+    };
     const callback = jest.fn();
     const store = createStore({
       autoStartEffects: true,
       name: 'test',
       slices: [sliceA, sliceB, sliceCDepB],
       overrides: {
-        effectScheduler: zeroTimeoutScheduler,
+        effectScheduler: manualEffectScheduler,
       },
     });
 
@@ -524,227 +536,174 @@ describe('effect only', () => {
       }, {}),
       callback,
       store,
+      runEffects: () => {
+        manualCallbacksRegistry.forEach((cb) => cb());
+        manualCallbacksRegistry.clear();
+      },
     };
   };
 
-  test('does not run the effect if shouldQueueRun returns false', async () => {
-    const { effect, callback } = setup();
-    jest.spyOn(effect, 'shouldQueueRun' as any).mockReturnValue(false);
-
-    effect._run();
-
-    await sleep(5);
-
-    expect(callback).not.toHaveBeenCalled();
-  });
-
-  test('does not run the effect if there is a pendingRun', async () => {
-    const { effect, callback } = setup();
-    effect['pendingRun'] = true;
-
-    effect._run();
-
-    await sleep(5);
-
-    expect(callback).not.toHaveBeenCalled();
-  });
-
   test('runs the effect if it has not run once', async () => {
-    const { effect, callback } = setup();
-
-    effect._run();
-
+    const { runEffects, effect, callback } = setup();
     await sleep(5);
+
+    runEffects();
 
     expect(callback).toHaveBeenCalled();
   });
-
-  test('runs the effect if it has run once and dependencies have changed', async () => {
-    const { effect, callback } = setup();
-    effect._run();
-
-    await sleep(5);
-
-    jest
-      .spyOn(effect['runInstance'], 'getFieldsThatChanged')
-      .mockReturnValue(sliceAKey.field('some field that changed'));
-
-    effect._run();
-    await sleep(5);
-
-    expect(callback).toHaveBeenCalledTimes(2);
-  });
-
-  test('does not run the effect if it has run once and dependencies have not changed', async () => {
-    const { effect, callback } = setup();
-    effect._run();
-
-    await sleep(5);
-    expect(callback).toHaveBeenCalledTimes(1);
-
-    jest
-      .spyOn(effect['runInstance'], 'getFieldsThatChanged')
-      .mockReturnValue(undefined);
-
-    effect._run();
-
-    await sleep(5);
-
-    expect(callback).toHaveBeenCalledTimes(1);
-  });
 });
 
-describe('manually running', () => {
-  const setup = () => {
-    let manualTrigger: { current: undefined | (() => void) } = {
-      current: undefined,
-    };
+// describe('manually running', () => {
+//   const setup = () => {
+//     let manualTrigger: { current: undefined | (() => void) } = {
+//       current: undefined,
+//     };
 
-    const manualEffectScheduler: EffectScheduler = (cb, opts) => {
-      manualTrigger.current = cb;
-      return () => {
-        manualTrigger.current = undefined;
-      };
-    };
+//     const manualEffectScheduler: EffectScheduler = (cb, opts) => {
+//       manualTrigger.current = cb;
+//       return () => {
+//         manualTrigger.current = undefined;
+//       };
+//     };
 
-    const mockDebugLogger = jest.fn();
-    const effectWasCalled = jest.fn();
+//     const mockDebugLogger = jest.fn();
+//     const effectWasCalled = jest.fn();
 
-    const store = createStore({
-      autoStartEffects: true,
-      name: 'test',
-      slices: [sliceA, sliceB, sliceCDepB],
-      overrides: {
-        effectScheduler: manualEffectScheduler,
-      },
-      debug: mockDebugLogger,
-    });
+//     const store = createStore({
+//       autoStartEffects: true,
+//       name: 'test',
+//       slices: [sliceA, sliceB, sliceCDepB],
+//       overrides: {
+//         effectScheduler: manualEffectScheduler,
+//       },
+//       debug: mockDebugLogger,
+//     });
 
-    return {
-      effect: store.effect(() => {
-        effectWasCalled();
-      }),
-      effectWasCalled,
-      store,
-      manualTrigger,
-      mockDebugLogger,
-    };
-  };
+//     return {
+//       effect: store.effect(() => {
+//         effectWasCalled();
+//       }),
+//       effectWasCalled,
+//       store,
+//       manualTrigger,
+//       mockDebugLogger,
+//     };
+//   };
 
-  describe('Pending Effect Execution Management', () => {
-    test('Effect can be manually triggered', async () => {
-      const { effect, manualTrigger, effectWasCalled } = setup();
+//   describe('Pending Effect Execution Management', () => {
+//     test('Effect can be manually triggered', async () => {
+//       const { effect, manualTrigger, effectWasCalled } = setup();
 
-      effect._run();
+//       effect._run();
 
-      await sleep(5);
+//       await sleep(5);
 
-      expect(effectWasCalled).not.toHaveBeenCalled();
+//       expect(effectWasCalled).not.toHaveBeenCalled();
 
-      manualTrigger.current?.();
+//       manualTrigger.current?.();
 
-      expect(effectWasCalled).toHaveBeenCalledTimes(1);
-    });
+//       expect(effectWasCalled).toHaveBeenCalledTimes(1);
+//     });
 
-    test('Effect does not run after clearing pending execution', async () => {
-      const { effect, manualTrigger, effectWasCalled } = setup();
+//     test('Effect does not run after clearing pending execution', async () => {
+//       const { effect, manualTrigger, effectWasCalled } = setup();
 
-      effect._run();
+//       effect._run();
 
-      await sleep(5);
+//       await sleep(5);
 
-      expect(effectWasCalled).not.toHaveBeenCalled();
+//       expect(effectWasCalled).not.toHaveBeenCalled();
 
-      // Stop the pending effect execution
-      effect._clearPendingRun();
+//       // Stop the pending effect execution
+//       effect._clearPendingRun();
 
-      expect(manualTrigger.current).toBeUndefined();
+//       expect(manualTrigger.current).toBeUndefined();
 
-      manualTrigger.current?.();
-      expect(effectWasCalled).not.toHaveBeenCalled();
+//       manualTrigger.current?.();
+//       expect(effectWasCalled).not.toHaveBeenCalled();
 
-      await sleep(5);
-      expect(effectWasCalled).not.toHaveBeenCalled();
-    });
+//       await sleep(5);
+//       expect(effectWasCalled).not.toHaveBeenCalled();
+//     });
 
-    test('Effect runs after re-scheduling post-clearance', () => {
-      const { effect, manualTrigger, effectWasCalled } = setup();
+//     test('Effect runs after re-scheduling post-clearance', () => {
+//       const { effect, manualTrigger, effectWasCalled } = setup();
 
-      effect._run();
+//       effect._run();
 
-      expect(effectWasCalled).not.toHaveBeenCalled();
+//       expect(effectWasCalled).not.toHaveBeenCalled();
 
-      // Stop the pending effect execution
-      effect._clearPendingRun();
+//       // Stop the pending effect execution
+//       effect._clearPendingRun();
 
-      manualTrigger.current?.();
+//       manualTrigger.current?.();
 
-      expect(effectWasCalled).not.toHaveBeenCalled();
+//       expect(effectWasCalled).not.toHaveBeenCalled();
 
-      effect._run();
-      manualTrigger.current?.();
+//       effect._run();
+//       manualTrigger.current?.();
 
-      expect(effectWasCalled).toBeCalledTimes(1);
-    });
-  });
+//       expect(effectWasCalled).toBeCalledTimes(1);
+//     });
+//   });
 
-  test('if destroyed while waiting for run', () => {
-    const { effect, manualTrigger, effectWasCalled } = setup();
+//   test('if destroyed while waiting for run', () => {
+//     const { effect, manualTrigger, effectWasCalled } = setup();
 
-    effect._run();
+//     effect._run();
 
-    expect(effectWasCalled).not.toHaveBeenCalled();
+//     expect(effectWasCalled).not.toHaveBeenCalled();
 
-    effect._destroy();
+//     effect._destroy();
 
-    manualTrigger.current?.();
+//     manualTrigger.current?.();
 
-    expect(effectWasCalled).not.toHaveBeenCalled();
-  });
+//     expect(effectWasCalled).not.toHaveBeenCalled();
+//   });
 
-  test('Effect runs at least once regardless of dependency changes', () => {
-    const { effect, manualTrigger, effectWasCalled } = setup();
+//   test('Effect runs at least once regardless of dependency changes', () => {
+//     const { effect, manualTrigger, effectWasCalled } = setup();
 
-    effect._run(undefined); // Undefined slicesChanged should simulate no dependency changes
+//     effect._run(undefined); // Undefined slicesChanged should simulate no dependency changes
 
-    manualTrigger.current?.();
+//     manualTrigger.current?.();
 
-    expect(effectWasCalled).toBeCalledTimes(1);
-  });
+//     expect(effectWasCalled).toBeCalledTimes(1);
+//   });
 
-  test('Effect does not run when already pending', () => {
-    const { effect, manualTrigger, effectWasCalled } = setup();
+//   test('Effect does not run when already pending', () => {
+//     const { effect, manualTrigger, effectWasCalled } = setup();
 
-    effect._run();
-    effect._run(); // Call it again
+//     effect._run();
+//     effect._run(); // Call it again
 
-    manualTrigger.current?.();
+//     manualTrigger.current?.();
 
-    expect(effectWasCalled).toBeCalledTimes(1); // Should still be called only once
-  });
+//     expect(effectWasCalled).toBeCalledTimes(1); // Should still be called only once
+//   });
 
-  test('Effect is able to resume gracefully after an error', () => {
-    const { effect, manualTrigger, effectWasCalled, mockDebugLogger } = setup();
+//   test('Effect is able to resume gracefully after an error', () => {
+//     const { effect, manualTrigger, effectWasCalled, mockDebugLogger } = setup();
 
-    effectWasCalled.mockImplementation(() => {
-      throw new Error('Effect run error');
-    });
+//     effectWasCalled.mockImplementation(() => {
+//       throw new Error('Effect run error');
+//     });
 
-    effect._run();
-    expect(() => manualTrigger.current?.()).toThrowError(/Effect run error/);
+//     effect._run();
+//     expect(() => manualTrigger.current?.()).toThrowError(/Effect run error/);
 
-    effectWasCalled.mockImplementation(() => {
-      // all good no erroring
-    });
+//     effectWasCalled.mockImplementation(() => {
+//       // all good no erroring
+//     });
 
-    effect._run();
+//     effect._run();
 
-    jest
-      .spyOn(effect['runInstance'], 'getFieldsThatChanged')
-      .mockReturnValue(sliceAKey.field('some field that changed'));
+//     jest
+//       .spyOn(effect['runInstance'], 'getFieldsThatChanged')
+//       .mockReturnValue(sliceAKey.field('some field that changed'));
 
-    expect(() => manualTrigger.current?.()).not.toThrowError();
+//     expect(() => manualTrigger.current?.()).not.toThrowError();
 
-    expect(mockDebugLogger).toBeCalledTimes(1);
-  });
-});
+//     expect(mockDebugLogger).toBeCalledTimes(1);
+//   });
+// });

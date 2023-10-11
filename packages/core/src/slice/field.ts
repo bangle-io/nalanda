@@ -1,10 +1,10 @@
-import { EffectStore } from '../effect/effect';
 import { fieldIdCounters } from '../helpers/id-generation';
 import { throwValidationError } from '../helpers/throw-error';
 import type { Key } from './key';
 import { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
 import type { FieldId, IfSubsetOfState, IfSubsetEffectStore } from '../types';
+import { EffectStore } from '../effect/effect-store';
 
 export type BaseFieldOptions<TVal> = {
   equal?: (a: TVal, b: TVal) => boolean;
@@ -42,7 +42,10 @@ export abstract class BaseField<
   ) {
     const state: any = store.state satisfies StoreState<any>;
     const value = this.get(state);
-    store._getRunInstance().addTrackedField(this, value);
+    store._addTrackField({
+      field: this,
+      value,
+    });
     return value;
   }
 

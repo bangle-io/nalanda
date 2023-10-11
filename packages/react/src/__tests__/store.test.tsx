@@ -112,7 +112,9 @@ describe('useTrack', () => {
     const { StoreProvider, counterSlice, increment, incrementNegativeCounter } =
       setup();
 
-    let _store: Store<any>;
+    let _store: Store<any> = createStore({
+      slices: [],
+    });
     let renderCount = 0;
     function MyComponent() {
       const store = useStore();

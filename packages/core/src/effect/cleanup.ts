@@ -1,15 +1,14 @@
-import { EffectStore } from './effect';
 import { OperationStore } from './operation';
 import { throwValidationError } from '../helpers/throw-error';
-
-export type CleanupCallback = () => void | Promise<void>;
+import { EffectStore } from './effect-store';
+import { EffectCleanupCallback } from './types';
 
 export function cleanup(
   store: EffectStore | OperationStore,
-  cb: CleanupCallback,
+  cb: EffectCleanupCallback,
 ): void {
   if (store instanceof EffectStore) {
-    store._getRunInstance().addCleanup(cb);
+    store._addCleanup(cb);
     return;
   }
 

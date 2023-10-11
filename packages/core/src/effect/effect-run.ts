@@ -1,75 +1,64 @@
-import type { CleanupCallback } from './cleanup';
-import type { BaseField } from '../slice/field';
+import { genEffectId } from '../helpers/id-generation';
+import { Slice } from '../slice/slice';
 import type { Store } from '../store';
+import { EffectStore } from './effect-store';
+import { EffectCreator } from './types';
+import { doesTrackSlice, whatFieldChanged } from './utils';
 
-type TrackedFieldObj = { field: BaseField<unknown>; value: unknown };
-
-export class EffectRun {
-  private cleanups: Set<CleanupCallback> = new Set();
-  private readonly trackedFields: TrackedFieldObj[] = [];
-  private isDestroyed = false;
-
-  /**
-   * @internal
-   * To keep track of how many times addTrackedField is called. If it's 0, then
-   * the user most likely forgot to destructure/access the tracked field.
-   *
-   * For example
-   * const foo = store.track() // this is incorrect and will not track anything
-   *
-   * const { foo } = store.track() // this is correct
-   */
-  private addTrackedCount = 0;
-
-  get trackedCount(): number {
-    return this.addTrackedCount;
-  }
+export class EffectRunner {
+  private destroyed = false;
+  private runCount = 0;
+  private effectStore: EffectStore;
+  public readonly effectName;
 
   constructor(
-    private readonly store: Store<any>,
-    public readonly name: string,
-  ) {}
-
-  getTrackedFields(): ReadonlyArray<TrackedFieldObj> {
-    return this.trackedFields;
+    store: Store<any>,
+    public readonly effectCreator: EffectCreator,
+  ) {
+    this.effectName = genEffectId.generate(
+      effectCreator.options.name ||
+        effectCreator.callback.name ||
+        'unnamed-effect',
+    );
+    this.effectStore = new EffectStore(store, this.effectName);
   }
 
-  addCleanup(cleanup: CleanupCallback): void {
-    // this condition can be reached if there is some async process that blocked the run
-    // for a while and then called cleanup.
-    if (this.isDestroyed) {
-      // immediately call cleanup, since the call is stale
-      void cleanup();
-      return;
+  destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.effectStore._destroy();
+  }
+
+  get neverRan() {
+    return this.runCount === 0;
+  }
+
+  tracksSlice(slices: ReadonlySet<Slice>): boolean {
+    return doesTrackSlice(slices, this.effectStore._tracker.fieldValues);
+  }
+
+  run(store: Store<any>): boolean {
+    if (this.destroyed) return false;
+
+    const fieldChanged = whatFieldChanged(
+      this.effectStore.state,
+      this.effectStore._tracker.fieldValues,
+    );
+
+    if (!this.neverRan && !fieldChanged) {
+      return false;
     }
-    this.cleanups.add(cleanup);
+
+    return this.runEffect(store);
   }
 
-  addTrackedField(field: BaseField<any>, val: unknown): void {
-    this.addTrackedCount++;
-    this.trackedFields.push({ field, value: val });
-    return;
-  }
+  private runEffect(store: Store<any>): true {
+    this.runCount++;
 
-  getFieldsThatChanged(): undefined | BaseField<any> {
-    for (const { field, value } of this.trackedFields) {
-      const curVal = field.get(this.store.state);
-      if (!field.isEqual(curVal, value)) {
-        return field;
-      }
-    }
+    this.effectStore._destroy();
+    this.effectStore = new EffectStore(store, this.effectName);
+    void this.effectCreator.callback(this.effectStore);
 
-    return undefined;
-  }
-
-  destroy(): void {
-    if (this.isDestroyed) {
-      return;
-    }
-    this.isDestroyed = true;
-    this.cleanups.forEach((cleanup) => {
-      void cleanup();
-    });
-    this.cleanups.clear();
+    return true;
   }
 }

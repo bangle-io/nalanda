@@ -1,8 +1,3 @@
-import type {
-  EffectCallback,
-  EffectCreatorObject,
-  EffectOpts,
-} from '../effect/effect';
 import {
   StateField,
   type BaseField,
@@ -16,6 +11,7 @@ import type { FieldId, NoInfer } from '../types';
 import { Slice } from './slice';
 import type { InferSliceActions, InferSliceNameFromSlice } from './slice';
 import { EventListener } from '../helpers/event-listener';
+import { EffectCallback, EffectCreator, EffectOpts } from '../effect/types';
 /**
  * @param name - The name of the slice.
  * @param dependencies - An array of slices that this slice depends on.
@@ -32,7 +28,7 @@ export type AnyExternal = Record<string, AnyAction | BaseField<any, any, any>>;
 
 type KeyEvents = {
   type: 'new-effect';
-  payload: EffectCreatorObject;
+  payload: EffectCreator;
 };
 
 export class Key<TName extends string, TDepName extends string> {
@@ -60,9 +56,11 @@ export class Key<TName extends string, TDepName extends string> {
     callback: EffectCallback<TName | TDepName>,
     options: Partial<EffectOpts> = {},
   ) {
-    const creator: EffectCreatorObject = {
+    const creator: EffectCreator = {
       callback,
-      options,
+      options: {
+        ...options,
+      },
     };
     this._effectCreators.push(creator);
     // for any effect that was created post store creation,
@@ -108,7 +106,7 @@ export class Key<TName extends string, TDepName extends string> {
   // @internal
   private _slice: Slice | undefined;
   // @internal
-  _effectCreators: EffectCreatorObject[] = [];
+  _effectCreators: EffectCreator[] = [];
   // @internal
   readonly _derivedFields: Record<FieldId, DerivedField<any, any, any>> = {};
   // @internal

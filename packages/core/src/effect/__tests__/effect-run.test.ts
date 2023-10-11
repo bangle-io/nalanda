@@ -1,9 +1,10 @@
 import { expect, jest, test, describe, beforeEach } from '@jest/globals';
 import { testCleanup } from '../../helpers/test-cleanup';
 import { createKey } from '../../slice/key';
-import { EffectRun } from '../effect-run';
 import { createStore } from '../../store';
-import { EffectScheduler } from '../effect';
+import { EffectScheduler } from '../types';
+import { EffectStore } from '../effect-store';
+import { whatFieldChanged } from '../utils';
 
 function sleep(t = 5): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
@@ -55,13 +56,13 @@ describe('EffectRun', () => {
   describe('dependencies are tracked', () => {
     test('should identify tracked slice correctly', () => {
       const { store, sliceA, sliceB, fooField, sliceBField } = setup();
-      let runInstance = new EffectRun(store, 'test');
-      runInstance.addTrackedField(fooField, 'foo');
+      let efStore = new EffectStore(store, 'test');
+      efStore._addTrackField({ field: fooField, value: 'foo' });
       expect(
-        runInstance.getTrackedFields().find((r) => r.field === fooField),
+        efStore._tracker.fieldValues.find((r) => r.field === fooField),
       ).toBeDefined();
       expect(
-        runInstance.getTrackedFields().find((r) => r.field === sliceBField),
+        efStore._tracker.fieldValues.find((r) => r.field === sliceBField),
       ).toBeUndefined();
     });
   });
@@ -69,45 +70,70 @@ describe('EffectRun', () => {
   describe('getFieldsThatChanged', () => {
     test('should return false for a blank instance', () => {
       const { store } = setup();
-      let runInstance1 = new EffectRun(store, 'test');
+      let efStore1 = new EffectStore(store, 'test');
 
-      expect(runInstance1.getFieldsThatChanged()).toBeUndefined();
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toBeUndefined();
     });
 
     test('should return undefined when value is the same', () => {
       const { store, sliceA, sliceB, fooField } = setup();
-      let runInstance1 = new EffectRun(store, 'test');
-      runInstance1.addTrackedField(fooField, fooField.initialValue);
+      let efStore1 = new EffectStore(store, 'test');
+      efStore1._addTrackField({
+        field: fooField,
+        value: fooField.initialValue,
+      });
 
-      expect(runInstance1.getFieldsThatChanged()).toBeUndefined();
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toBeUndefined();
       expect(
         // it should be still tracked
-        runInstance1.getTrackedFields().find((r) => r.field === fooField),
+        efStore1._tracker.fieldValues.find((r) => r.field === fooField),
       ).toBeDefined();
     });
 
     test('should return field if tracked things have changed', () => {
       const { store, sliceA, sliceB, fooField } = setup();
-      let runInstance1 = new EffectRun(store, 'test');
-      runInstance1.addTrackedField(fooField, fooField.initialValue);
+      let efStore1 = new EffectStore(store, 'test');
+      efStore1._addTrackField({
+        field: fooField,
+        value: fooField.initialValue,
+      });
 
-      expect(runInstance1.getFieldsThatChanged()).toBeUndefined();
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toBeUndefined();
 
       store.dispatch(fooField.update('new value'));
 
-      expect(runInstance1.getFieldsThatChanged()).toBe(fooField);
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toEqual({
+        oldVal: fooField.initialValue,
+        field: fooField,
+        newVal: 'new value',
+      });
     });
 
     test('should return undefined if none of tracked fields have changed', () => {
       const { store, sliceA, sliceB, fooField, sliceBField } = setup();
-      let runInstance1 = new EffectRun(store, 'test');
-      runInstance1.addTrackedField(fooField, fooField.initialValue);
+      let efStore1 = new EffectStore(store, 'test');
+      efStore1._addTrackField({
+        field: fooField,
+        value: fooField.initialValue,
+      });
 
-      expect(runInstance1.getFieldsThatChanged()).toBeUndefined();
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toBeUndefined();
 
       store.dispatch(sliceBField.update('new value'));
 
-      expect(runInstance1.getFieldsThatChanged()).toBeUndefined();
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toBeUndefined();
     });
 
     test('should return undefined if none of tracked fields have changed : 2', () => {
@@ -116,22 +142,28 @@ describe('EffectRun', () => {
 
       let updateOtherField = (val: string) => sliceBOtherField.update(val);
 
-      let runInstance1 = new EffectRun(store, 'test');
+      let efStore1 = new EffectStore(store, 'test');
 
-      runInstance1.addTrackedField(
-        sliceBField,
-        sliceB.get(store.state).sliceBField,
-      );
+      efStore1._addTrackField({
+        field: sliceBField,
+        value: sliceB.get(store.state).sliceBField,
+      });
 
-      expect(runInstance1.getFieldsThatChanged()).toBeUndefined();
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toBeUndefined();
 
       store.dispatch(updateOtherField('xyz'));
 
-      expect(runInstance1.getFieldsThatChanged()).toBeUndefined();
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toBeUndefined();
 
       store.dispatch(updateField('xyz'));
 
-      expect(runInstance1.getFieldsThatChanged()).toBe(sliceBField);
+      expect(
+        whatFieldChanged(efStore1.state, efStore1._tracker.fieldValues),
+      ).toMatchObject({ field: sliceBField });
     });
 
     describe('cleanup', () => {
@@ -139,17 +171,17 @@ describe('EffectRun', () => {
         const { store, sliceA, sliceB, sliceBField, sliceBOtherField } =
           setup();
 
-        let runInstance1 = new EffectRun(store, 'test');
+        let efStore1 = new EffectStore(store, 'test');
         const cleanup = jest.fn(async () => {});
-        runInstance1.addCleanup(cleanup);
+        efStore1._addCleanup(cleanup);
         expect(cleanup).toBeCalledTimes(0);
 
-        runInstance1.destroy();
+        efStore1._destroy();
         expect(cleanup).toBeCalledTimes(1);
 
         // if called again, it should not be called again
 
-        runInstance1.destroy();
+        efStore1._destroy();
         expect(cleanup).toBeCalledTimes(1);
       });
 
@@ -157,13 +189,13 @@ describe('EffectRun', () => {
         const { store, sliceA, sliceB, sliceBField, sliceBOtherField } =
           setup();
 
-        let runInstance1 = new EffectRun(store, 'test');
+        let efStore1 = new EffectStore(store, 'test');
         const cleanup = jest.fn(async () => {});
-        runInstance1.addCleanup(cleanup);
+        efStore1._addCleanup(cleanup);
 
-        runInstance1.destroy();
-        runInstance1.destroy();
-        runInstance1.destroy();
+        efStore1._destroy();
+        efStore1._destroy();
+        efStore1._destroy();
 
         expect(cleanup).toBeCalledTimes(1);
       });
@@ -172,11 +204,11 @@ describe('EffectRun', () => {
         const { store, sliceA, sliceB, sliceBField, sliceBOtherField } =
           setup();
 
-        let runInstance1 = new EffectRun(store, 'test');
+        let efStore1 = new EffectStore(store, 'test');
         const cleanup = jest.fn(async () => {});
 
-        runInstance1.destroy();
-        runInstance1.addCleanup(cleanup);
+        efStore1._destroy();
+        efStore1._addCleanup(cleanup);
         expect(cleanup).toBeCalledTimes(1);
       });
     });
@@ -227,7 +259,7 @@ describe('effects', () => {
     const sliceBSecondFieldEffectTriggered = jest.fn();
     sliceBKey.effect((store) => {
       const { secondFieldInSliceB } = sliceB.track(store);
-      sliceBSecondFieldEffectTriggered();
+      sliceBSecondFieldEffectTriggered(secondFieldInSliceB);
     });
 
     let manualCallbacksRegistry: { current: Set<() => void> } = {
@@ -390,7 +422,7 @@ describe('effects', () => {
     expect(combinedEffectTriggered).toBeCalledTimes(1);
   });
 
-  test('if paused effects dont run even after multiple dispatches', async () => {
+  test("if paused effects don't run even after multiple dispatches", async () => {
     const {
       store,
       sliceB,
@@ -404,41 +436,98 @@ describe('effects', () => {
     expect(combinedEffectTriggered).toBeCalledTimes(1);
     expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(1);
 
-    store.dispatch(sliceB.updateFirstFieldInSliceB('new value'));
+    store.dispatch(sliceB.updateFirstFieldInSliceB('new value 1'));
     await invokeManualTriggers();
 
     expect(combinedEffectTriggered).toBeCalledTimes(2);
     expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(1);
 
+    store.dispatch(sliceB.updateSecondFieldInSliceB('new value 2'));
+
+    await invokeManualTriggers();
+
+    expect(combinedEffectTriggered).toBeCalledTimes(2);
+    expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(2);
+    expect(sliceBSecondFieldEffectTriggered).toHaveBeenLastCalledWith(
+      'new value 2',
+    );
+
     store.pauseEffects();
 
-    store.dispatch(sliceB.updateFirstFieldInSliceB('new value 2'));
+    // update the same thing again
+    store.dispatch(sliceB.updateSecondFieldInSliceB('new value 3'));
+    await invokeManualTriggers();
+    await sleep(10);
+    // should not be called
+    expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(2);
+
+    store.startEffects();
+    await invokeManualTriggers();
+    await sleep(10);
+    expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(3);
+    // gets the pending value
+    expect(sliceBSecondFieldEffectTriggered).toHaveBeenLastCalledWith(
+      'new value 3',
+    );
+  });
+
+  test('paused, dispatches multiple and then resume', async () => {
+    const {
+      store,
+      sliceB,
+      combinedEffectTriggered,
+      sliceBSecondFieldEffectTriggered,
+      invokeManualTriggers,
+    } = setup({ autoStartEffects: true });
+
     await invokeManualTriggers();
 
-    expect(store._effectsManager._slicesChanged.size).toBe(1);
+    expect(combinedEffectTriggered).toBeCalledTimes(1);
+    expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(1);
+    expect(sliceBSecondFieldEffectTriggered).toHaveBeenLastCalledWith('bizz');
 
-    store._effectsManager._effects.forEach((effect) => {
-      jest.spyOn(effect, '_run');
-    });
+    store.pauseEffects();
+    store.dispatch(sliceB.updateSecondFieldInSliceB('new value 3'));
+    store.dispatch(sliceB.updateSecondFieldInSliceB('new value 4'));
+    store.dispatch(sliceB.updateSecondFieldInSliceB('new value 5'));
+
+    store.dispatch(sliceB.updateFirstFieldInSliceB('first:new value'));
+
+    store.startEffects();
+    await invokeManualTriggers();
+    await sleep(10);
+
+    expect(combinedEffectTriggered).toBeCalledTimes(2);
+    expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(2);
+    expect(sliceBSecondFieldEffectTriggered).toHaveBeenLastCalledWith(
+      'new value 5',
+    );
+  });
+
+  test('destroying when paused', async () => {
+    const {
+      store,
+      sliceB,
+      combinedEffectTriggered,
+      sliceBSecondFieldEffectTriggered,
+      invokeManualTriggers,
+    } = setup({ autoStartEffects: true });
+
+    await invokeManualTriggers();
+    expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(1);
+
+    store.pauseEffects();
+
+    store.destroy();
+    store.dispatch(sliceB.updateSecondFieldInSliceB('new value 3'));
+
     store.startEffects();
 
-    for (const effect of store._effectsManager._effects) {
-      const fn = jest.fn();
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(effect._run as jest.Mock).toBeCalledTimes(1);
-      // run is called with all the slices which is 2
-      expect(
-        ((effect._run as jest.Mock).mock.lastCall?.at(0) as any).size,
-      ).toEqual(2);
-    }
-
-    await sleep(4);
-    // since scheduler hasnt triggered
-    expect(combinedEffectTriggered).toBeCalledTimes(2);
+    store.dispatch(sliceB.updateSecondFieldInSliceB('new value 4'));
 
     await invokeManualTriggers();
+    await sleep(10);
 
-    expect(combinedEffectTriggered).toBeCalledTimes(3);
     expect(sliceBSecondFieldEffectTriggered).toBeCalledTimes(1);
   });
 
@@ -555,7 +644,7 @@ describe('effects', () => {
 
     // now destroy it
 
-    newEffect._destroy();
+    newEffect.destroy();
     store.dispatch(sliceA.updateFieldInSliceA('new value2'));
 
     await invokeManualTriggers();

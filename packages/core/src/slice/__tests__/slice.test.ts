@@ -6,7 +6,7 @@ import { StateField } from '../field';
 import { testCleanup } from '../../helpers/test-cleanup';
 import { StoreState } from '../../store-state';
 import { Transaction } from '../../transaction';
-import { EffectStore } from '../../effect/effect';
+import { EffectStore } from '../../effect/effect-store';
 
 beforeEach(() => {
   testCleanup();

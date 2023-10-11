@@ -1,160 +1,166 @@
-import { calcReverseDependencies } from '../helpers/dependency-helpers';
-import { throwValidationError } from '../helpers/throw-error';
-import type { DebugLogger } from '../logger';
+import { DebugLogger } from '../logger';
 import type { Slice } from '../slice/slice';
 import type { Store } from '../store';
 import { StoreState } from '../store-state';
-import type { SliceId } from '../types';
-import { effect, type Effect, type EffectCreatorObject } from './effect';
-import { onAbortOnce } from './on-abort';
+import { DEFAULT_MAX_WAIT } from './effect';
+import { EffectRunner } from './effect-run';
+import { EffectCreator, EffectScheduler, SchedulerOptions } from './types';
+import { calculateSlicesChanged } from './utils';
 
-export class EffectManager {
-  private abortController = new AbortController();
-  // @internal
-  _effects: Set<Effect> = new Set();
-  private paused = true;
-  private reverseDependencies: Record<SliceId, Set<Slice>> = {};
-  private runCount = 0;
-  // @internal
-  _slicesChanged = new Set<Slice>();
-  private slicesLookup: Record<SliceId, Slice>;
+type EffectsManagerOpts = {
+  debugger: DebugLogger | undefined;
+  scheduler: EffectScheduler;
+};
 
-  constructor(
-    private slices: Slice[],
-    private readonly options: {
-      debug?: DebugLogger | undefined;
-    },
-  ) {
-    this.slicesLookup = Object.fromEntries(
-      slices.map((slice) => [slice.sliceId, slice]),
-    );
+export class EffectsManager {
+  private effectManagers: EffectManager[] = [];
+  private stopped = true;
+  private destroyed = false;
 
-    this.reverseDependencies = Object.fromEntries(
-      Object.entries(calcReverseDependencies(slices)).map(
-        ([sliceId, sliceIds]) => {
-          return [
-            sliceId,
-            new Set([...sliceIds].map((id) => this.slicesLookup[id]!)),
-          ];
-        },
-      ),
-    );
+  constructor(private readonly options: EffectsManagerOpts) {}
 
-    onAbortOnce(this.abortController.signal, () => {
-      this.paused = true;
-      this._effects.forEach((effect) => {
-        effect._destroy();
-      });
-      this._effects.clear();
-      this._slicesChanged.clear();
+  stop() {
+    if (this.stopped) return;
+
+    this.stopped = true;
+    this.effectManagers.forEach((effect) => effect._stop());
+  }
+
+  start(store: Store<any>) {
+    if (!this.stopped) return;
+
+    this.stopped = false;
+    this.effectManagers.forEach((effect) => effect._start(store));
+  }
+
+  add(store: Store<any>, effectCreator: EffectCreator) {
+    const initManager = new EffectManager(store, effectCreator, {
+      ...this.options,
+      onDestroy: (manager) => {
+        this.effectManagers = this.effectManagers.filter(
+          (effect) => effect !== manager,
+        );
+      },
     });
+    this.effectManagers.push(initManager);
+
+    if (!this.stopped) {
+      initManager._start(store);
+    }
+
+    return initManager;
   }
 
   destroy() {
-    this.abortController.abort();
+    if (this.destroyed) return;
+
+    this.stop();
+    this.effectManagers.forEach((effect) => effect.destroy());
+    this.effectManagers = [];
+    this.destroyed = true;
   }
 
-  registerEffect(
+  onStateChange({
+    store,
+    oldState,
+  }: {
+    store: Store<any>;
+    oldState: StoreState<any>;
+  }) {
+    const slicesChanged = calculateSlicesChanged({
+      newState: store.state,
+      oldState,
+      storeComputed: store._computed,
+    });
+
+    this.effectManagers.forEach((effect) =>
+      effect._onStateChange({
+        store,
+        oldState,
+        slicesChanged,
+      }),
+    );
+  }
+}
+
+export class EffectManager {
+  private destroyed = false;
+  private effectRunner;
+  private pendingRunCancelCb: undefined | (() => void);
+  private schedulerOptions: SchedulerOptions;
+  private stopped = true;
+
+  constructor(
     store: Store<any>,
-    effectCreatorObject: EffectCreatorObject,
-  ): Effect {
-    if (this.abortController.signal.aborted) {
-      throwValidationError('Cannot register effect on a destroyed store.');
-    }
-
-    const effectInstance = effect(
-      effectCreatorObject.callback,
-      effectCreatorObject.options,
-    )(store);
-
-    this._effects.add(effectInstance);
-
-    if (
-      // if first run has happened
-      this.runCount > 0 &&
-      !this.paused
-    ) {
-      effectInstance._run();
-    }
-
-    return effectInstance;
+    effectCreator: EffectCreator,
+    private options: {
+      onDestroy: (effectManager: EffectManager) => void;
+      scheduler: EffectScheduler;
+    },
+  ) {
+    this.effectRunner = new EffectRunner(store, effectCreator);
+    this.schedulerOptions = {
+      maxWait:
+        typeof effectCreator.options.maxWait === 'number'
+          ? effectCreator.options.maxWait
+          : DEFAULT_MAX_WAIT,
+      metadata: effectCreator.options.metadata || {},
+    };
   }
 
-  unpauseEffects(storeState: StoreState<any>) {
-    if (!this.paused) {
-      return;
-    }
-
-    this.paused = false;
-    // do a full run of all effects by passing undefined as oldState
-    this.queueRunEffects(storeState);
+  destroy() {
+    this._stop();
+    this.destroyed = true;
+    this.effectRunner.destroy();
+    this.options.onDestroy(this);
   }
 
-  pauseEffects() {
-    this.paused = true;
-    this._effects.forEach((effect) => {
-      effect._clearPendingRun();
-    });
-  }
+  // @internal
+  _onStateChange({
+    store,
+    oldState,
+    slicesChanged,
+  }: {
+    store: Store<any>;
+    oldState: StoreState<any> | undefined;
+    slicesChanged: ReadonlySet<Slice>;
+  }) {
+    if (this.destroyed || this.stopped || this.pendingRunCancelCb) return;
 
-  // if oldState is not passed, it means that all effects should be run
-  queueRunEffects(newState: StoreState<any>, oldState?: StoreState<any>) {
-    if (!oldState) {
-      // add every slice to the list of slices that changed
-      this.slices.forEach((slice) => {
-        this._slicesChanged.add(slice);
-      });
-    } else {
-      this.slices.forEach((slice) => {
-        if (this._slicesChanged.has(slice)) {
-          return;
+    const neverRan = this.effectRunner.neverRan;
+    const effectTracksSlices = this.effectRunner.tracksSlice(slicesChanged);
+    // an optimization to run effect only if it tracks any of the slices
+    // or it has never ran before
+    if (neverRan || effectTracksSlices) {
+      this.pendingRunCancelCb = this.options.scheduler(() => {
+        try {
+          if (!this.stopped) {
+            this.effectRunner.run(store);
+          }
+        } finally {
+          this.pendingRunCancelCb = undefined;
         }
-        if (newState._didSliceStateChange(slice, oldState)) {
-          this._slicesChanged.add(slice);
-          // also add all slices that depend on this slice, so that derived state can be recalculated
-          this.reverseDependencies[slice.sliceId]?.forEach((dependentSlice) => {
-            // TODO we can add a check here on _didSliceStateChange to avoid adding slices that didn't change
-            // but I am not sure if it's worth the optimization - since there are
-            // additional checks on the effect side aswell.
-            this._slicesChanged.add(dependentSlice);
-          });
-        }
-      });
+      }, this.schedulerOptions);
     }
-
-    // do the run ;)
-    this.run();
   }
 
-  unregisterEffect(effect: Effect): void {
-    effect._destroy();
-    this._effects.delete(effect);
+  // @internal
+  _stop() {
+    this.stopped = true;
+    this.pendingRunCancelCb?.();
+    this.pendingRunCancelCb = undefined;
   }
 
-  private run() {
-    if (this.paused) {
-      return;
-    }
-    // increment run count even if there are no slices that changed
-    // so that we know if the effect has run at least once.
-    this.runCount++;
-
-    if (this._slicesChanged.size === 0) {
-      return;
-    }
-
-    const slicesChanged = this._slicesChanged;
-    const effectsToDelete = new Set<Effect>();
-    this._slicesChanged = new Set();
-    this._effects.forEach((effect) => {
-      if (effect.destroyed) {
-        effectsToDelete.add(effect);
-      } else {
-        effect._run(slicesChanged);
-      }
-    });
-    effectsToDelete.forEach((effect) => {
-      this._effects.delete(effect);
+  // @internal
+  _start(store: Store<any>) {
+    if (!this.stopped) return;
+    this.stopped = false;
+    this._onStateChange({
+      store,
+      oldState: undefined,
+      // signal all slices changed, so that
+      // every effect considers itself as changed
+      slicesChanged: store._computed.allSlices,
     });
   }
 }
