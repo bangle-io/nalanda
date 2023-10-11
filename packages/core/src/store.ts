@@ -15,6 +15,7 @@ import type { SliceId } from './types';
 import { Transaction } from './transaction';
 import { genStoreId } from './helpers/id-generation';
 import { onAbortOnce } from './effect/on-abort';
+import { calcReverseDependencies } from './helpers/dependency-helpers';
 
 export interface StoreOptions<TSliceName extends string> {
   name?: string;
@@ -52,6 +53,37 @@ export function createStore<TSliceName extends string>(
   return new Store<TSliceName>(config);
 }
 
+type StoreComputed = {
+  readonly allSlices: ReadonlySet<Slice>;
+  /**
+   * A map of sliceId to all slices that depend on it.
+   */
+  readonly reverseAllDependencies: Record<SliceId, ReadonlySet<Slice>>;
+  readonly slicesLookup: Record<SliceId, Slice>;
+};
+
+function getStoreComputed(options: StoreOptions<any>): StoreComputed {
+  const allSlices = new Set<Slice>(options.slices);
+
+  const slicesLookup = Object.fromEntries(
+    options.slices.map((slice) => [slice.sliceId, slice]),
+  );
+
+  const reverseAllDependencies = Object.fromEntries(
+    Object.entries(calcReverseDependencies(options.slices)).map(
+      ([sliceId, sliceIds]) => {
+        return [sliceId, new Set([...sliceIds].map((id) => slicesLookup[id]!))];
+      },
+    ),
+  );
+
+  return {
+    allSlices,
+    reverseAllDependencies,
+    slicesLookup,
+  };
+}
+
 export class Store<TSliceName extends string = any> extends BaseStore {
   public readonly initialState: StoreState<TSliceName>;
   public readonly uid: string;
@@ -70,6 +102,8 @@ export class Store<TSliceName extends string = any> extends BaseStore {
   public get destroySignal() {
     return this.destroyController.signal;
   }
+
+  readonly _computed: StoreComputed;
 
   get state() {
     return this._state;
@@ -117,6 +151,8 @@ export class Store<TSliceName extends string = any> extends BaseStore {
       });
       onAbortOnce(this.destroyController.signal, cleanup);
     });
+
+    this._computed = getStoreComputed(this.options);
 
     if (this.options.autoStartEffects) {
       // this is important to make sure that the store is fully
