@@ -53,7 +53,7 @@ export function useTrack<
       });
 
       return () => {
-        _store.unregisterEffect(sliceEffect);
+        sliceEffect.destroy();
       };
     },
     [_store, slice],
@@ -91,7 +91,7 @@ export function useTrackField<
       });
 
       return () => {
-        _store.unregisterEffect(sliceEffect);
+        sliceEffect.destroy();
       };
     },
     [_store, slice, fieldName],

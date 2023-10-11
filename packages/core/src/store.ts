@@ -1,12 +1,5 @@
 import { BaseStore } from './base-store';
-import {
-  Effect,
-  effect,
-  type EffectCallback,
-  type EffectOpts,
-  type EffectScheduler,
-} from './effect/effect';
-import { EffectManager } from './effect/effect-manager';
+import { EffectsManager } from './effect/effect-manager';
 import { StoreState } from './store-state';
 import type { DebugLogger } from './logger';
 import type { Operation } from './effect/operation';
@@ -14,11 +7,20 @@ import type { Slice } from './slice/slice';
 import type { SliceId } from './types';
 import { Transaction } from './transaction';
 import { genStoreId } from './helpers/id-generation';
+import { onAbortOnce } from './effect/on-abort';
+import { calcReverseDependencies } from './helpers/dependency-helpers';
+import type {
+  EffectCallback,
+  EffectOpts,
+  EffectScheduler,
+} from './effect/types';
+import { DEFAULT_SCHEDULER } from './effect/effect';
 
 export interface StoreOptions<TSliceName extends string> {
   name?: string;
   slices: Slice<any, TSliceName, any>[];
   debug?: DebugLogger;
+  autoStartEffects?: boolean | undefined;
   overrides?: {
     stateOverride?: Record<SliceId, Record<string, unknown>>;
     /**
@@ -27,7 +29,6 @@ export interface StoreOptions<TSliceName extends string> {
     effectScheduler?: EffectScheduler;
     dispatchTransaction?: DispatchTransaction<TSliceName>;
   };
-  manualEffectsTrigger?: boolean;
 }
 
 export const DEFAULT_DISPATCH_TRANSACTION: DispatchTransaction<any> = (
@@ -51,21 +52,47 @@ export function createStore<TSliceName extends string>(
   return new Store<TSliceName>(config);
 }
 
+type StoreComputed = {
+  readonly allSlices: ReadonlySet<Slice>;
+  /**
+   * A map of sliceId to all slices that depend on it.
+   */
+  readonly reverseAllDependencies: Record<SliceId, ReadonlySet<Slice>>;
+  readonly slicesLookup: Record<SliceId, Slice>;
+};
+
+function getStoreComputed(options: StoreOptions<any>): StoreComputed {
+  const allSlices = new Set<Slice>(options.slices);
+
+  const slicesLookup = Object.fromEntries(
+    options.slices.map((slice) => [slice.sliceId, slice]),
+  );
+
+  const reverseAllDependencies = Object.fromEntries(
+    Object.entries(calcReverseDependencies(options.slices)).map(
+      ([sliceId, sliceIds]) => {
+        return [sliceId, new Set([...sliceIds].map((id) => slicesLookup[id]!))];
+      },
+    ),
+  );
+
+  return {
+    allSlices,
+    reverseAllDependencies,
+    slicesLookup,
+  };
+}
+
 export class Store<TSliceName extends string = any> extends BaseStore {
   public readonly initialState: StoreState<TSliceName>;
-  private uid: string;
+  public readonly uid: string;
 
   // @internal
   private _state: StoreState<TSliceName>;
-
   // @internal
   _rootStore: Store<TSliceName>;
   // @internal
-  private effectsManager: EffectManager;
-  // @internal
-  private destroyed = false;
-  // @internal
-  private registeredSlicesEffect = false;
+  _effectsManager: EffectsManager;
   // @internal
   private _dispatchTxn: DispatchTransaction<TSliceName>;
 
@@ -75,22 +102,14 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     return this.destroyController.signal;
   }
 
+  readonly _computed: StoreComputed;
+
   get state() {
     return this._state;
   }
 
   destroy() {
-    if (this.destroyed) {
-      return;
-    }
-
-    this.destroyed = true;
     this.destroyController.abort();
-    this.effectsManager.destroy();
-  }
-
-  isDestroyed() {
-    return this.destroyed;
   }
 
   constructor(public readonly options: StoreOptions<TSliceName>) {
@@ -100,30 +119,51 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     this._state = StoreState.create({
       slices: options.slices,
     });
+
     this.initialState = this._state;
 
     this._dispatchTxn =
       options.overrides?.dispatchTransaction || DEFAULT_DISPATCH_TRANSACTION;
 
-    this.effectsManager = new EffectManager(this.options.slices, {
-      debug: this.options.debug,
-    });
-
     this._rootStore = this;
 
-    // do it a bit later so that all effects are registered
-    queueMicrotask(() => {
-      this.options.slices.forEach((slice) => {
-        slice._key._effectCallbacks.forEach(([effectCallback, opts]) => {
-          this.effect(effectCallback, opts);
-        });
-      });
-      this.registeredSlicesEffect = true;
+    this._effectsManager = new EffectsManager({
+      debugger: options.debug,
+      scheduler: options.overrides?.effectScheduler || DEFAULT_SCHEDULER,
     });
+
+    onAbortOnce(this.destroyController.signal, () => {
+      this._effectsManager.destroy();
+    });
+
+    this.options.slices.forEach((slice) => {
+      // register the known effects
+      slice._key._effectCreators.forEach((creatorObject) => {
+        this._effectsManager.add(this, creatorObject);
+      });
+
+      // if a new effect is added, register it
+      const cleanup = slice._key._keyEvents.subscribe((event) => {
+        if (event.type === 'new-effect') {
+          this._effectsManager.add(this, event.payload);
+        }
+      });
+      onAbortOnce(this.destroyController.signal, cleanup);
+    });
+
+    this._computed = getStoreComputed(this.options);
+
+    if (this.options.autoStartEffects) {
+      // this is important to make sure that the store is fully
+      //  initialized before we start the effects
+      queueMicrotask(() => {
+        this.startEffects();
+      });
+    }
   }
 
   dispatch(transaction: Transaction<any, any> | Operation): void {
-    if (this.destroyed) {
+    if (this.destroySignal.aborted) {
       return;
     }
 
@@ -133,32 +173,28 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     // TODO - dispatch operation
   }
 
-  effect(callback: EffectCallback<TSliceName>, opts: Partial<EffectOpts> = {}) {
-    const effectInstance = effect(callback, opts)(this);
-    this.effectsManager.registerEffect(effectInstance);
-
-    return effectInstance;
+  effect(
+    callback: EffectCallback<TSliceName>,
+    options: Partial<EffectOpts> = {},
+  ) {
+    return this._effectsManager.add(this, { callback, options });
   }
 
-  unregisterEffect(effect: Effect): void {
-    this.effectsManager.unregisterEffect(effect);
+  /**
+   * Starts the effects of the store. This is only useful if you have disabled the autoStartEffects option.
+   */
+  startEffects() {
+    this._effectsManager.start(this);
   }
 
-  runEffects() {
-    queueMicrotask(() => {
-      this.effectsManager.run();
-    });
+  pauseEffects() {
+    this._effectsManager.stop();
   }
 
   // @internal
   private updateState = (newState: StoreState<TSliceName>) => {
     const oldState = this._state;
     this._state = newState;
-
-    if (!this.options.manualEffectsTrigger) {
-      queueMicrotask(() => {
-        this.effectsManager.run(this._state._getChangedSlices(oldState));
-      });
-    }
+    this._effectsManager.onStateChange({ store: this, oldState });
   };
 }

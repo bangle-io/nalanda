@@ -27,6 +27,7 @@ export const fieldIdCounters = createIdGenerator<FieldId>('f');
 export const sliceIdCounters = createIdGenerator<SliceId>('sl');
 export const genTransactionID = () => `tx_${txCounter++}`;
 export const genStoreId = createIdGenerator<string>('store');
+export const genEffectId = createIdGenerator<string>('effect_');
 
 /**
  * WARNING Should only be used in tests, to avoid side effects between tests
@@ -35,5 +36,6 @@ export const testOnlyResetIdGeneration = () => {
   fieldIdCounters[resetSymbol]();
   sliceIdCounters[resetSymbol]();
   genStoreId[resetSymbol]();
+  genEffectId[resetSymbol]();
   txCounter = 0;
 };

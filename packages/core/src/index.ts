@@ -6,7 +6,9 @@ export { ref } from './effect/ref';
 export { Slice } from './slice/slice';
 
 export type { BaseField } from './slice/field';
-export type { Effect, EffectStore, EffectScheduler } from './effect/effect';
+export type { EffectScheduler } from './effect/types';
+export type { EffectStore } from './effect/effect-store';
+
 export type { IfSubset } from './types';
 export type { Key } from './slice/key';
 export type { Store, StoreOptions } from './store';

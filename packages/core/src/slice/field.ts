@@ -1,10 +1,10 @@
-import { EffectStore } from '../effect/effect';
 import { fieldIdCounters } from '../helpers/id-generation';
 import { throwValidationError } from '../helpers/throw-error';
 import type { Key } from './key';
 import { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
 import type { FieldId, IfSubsetOfState, IfSubsetEffectStore } from '../types';
+import { EffectStore } from '../effect/effect-store';
 
 export type BaseFieldOptions<TVal> = {
   equal?: (a: TVal, b: TVal) => boolean;
@@ -42,7 +42,10 @@ export abstract class BaseField<
   ) {
     const state: any = store.state satisfies StoreState<any>;
     const value = this.get(state);
-    store._getRunInstance().addTrackedField(this, value);
+    store._addTrackField({
+      field: this,
+      value,
+    });
     return value;
   }
 
@@ -78,22 +81,21 @@ export class DerivedField<
       );
     }
 
-    // TODO: return previously seen value based on isEqual and the lineage of store-state
     if (this.getCache.has(storeState)) {
       return this.getCache.get(storeState);
     }
 
-    const newValue = this.deriveCallback(storeState);
-
-    const finalVal = this._isEqualCheck(storeState, newValue);
+    const derivedVal = this.deriveCallback(storeState);
+    const finalVal = this._maintainOldReference(storeState, derivedVal);
 
     this.getCache.set(storeState, finalVal);
 
     return finalVal;
   }
 
+  // maintain the old reference  (if possible) when the value is equal to the previous value
   // @internal
-  _isEqualCheck(storeState: StoreState<any>, newValue: TVal) {
+  _maintainOldReference(storeState: StoreState<any>, newValue: TVal) {
     const ref = storeState._ref;
 
     const hasPrevValue = this.prevValCache.has(ref);

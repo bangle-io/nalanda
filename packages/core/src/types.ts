@@ -1,4 +1,4 @@
-import { EffectStore } from './effect/effect';
+import { EffectStore } from './effect/effect-store';
 import { StoreState } from './store-state';
 
 /**

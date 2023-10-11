@@ -1,4 +1,3 @@
-import type { EffectStore } from '../effect/effect';
 import { BaseField, DerivedField } from './field';
 import { sliceIdCounters } from '../helpers/id-generation';
 import { throwValidationError } from '../helpers/throw-error';
@@ -11,6 +10,7 @@ import type {
   Simplify,
 } from '../types';
 import type { AnyAction, AnyExternal, Key } from './key';
+import { EffectStore } from '../effect/effect-store';
 
 export type InferSliceFieldState<T extends AnyExternal> = {
   // key mapping

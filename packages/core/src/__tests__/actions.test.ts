@@ -62,6 +62,7 @@ describe('actions', () => {
 
   function setup() {
     const store = createStore({
+      autoStartEffects: true,
       slices: [counterSlice],
     });
 
@@ -192,6 +193,7 @@ describe('actions', () => {
 
     test('should work', () => {
       const store = createStore({
+        autoStartEffects: true,
         slices: [counterSlice, baseSlice],
       });
 

@@ -10,11 +10,14 @@ import { useTrack, useTrackField } from '../react';
 import { StoreProvider, useStore } from '../store';
 
 const zeroTimeoutScheduler: EffectScheduler = (cb, opts) => {
-  setTimeout(() => {
+  let id = setTimeout(() => {
     cb();
   }, 0);
-};
 
+  return () => {
+    clearTimeout(id);
+  };
+};
 const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const setup = () => {
@@ -37,6 +40,7 @@ const setup = () => {
   }
 
   const store = createStore({
+    autoStartEffects: false,
     slices: [counterSlice],
     name: 'test-store',
     overrides: {
@@ -108,7 +112,9 @@ describe('useTrack', () => {
     const { StoreProvider, counterSlice, increment, incrementNegativeCounter } =
       setup();
 
-    let _store: Store<any>;
+    let _store: Store<any> = createStore({
+      slices: [],
+    });
     let renderCount = 0;
     function MyComponent() {
       const store = useStore();
@@ -138,9 +144,9 @@ describe('useTrack', () => {
 
     await act(async () => {
       _store.dispatch(increment());
-
       await sleep(20);
     });
+
     // should not render since the component is not tracking the field
     expect(renderCount).toBe(2);
     // should not update
@@ -150,11 +156,19 @@ describe('useTrack', () => {
     act(() => {
       _store.dispatch(incrementNegativeCounter());
     });
-
+    expect(counterSlice.get(_store.state).counterNegative).toBe(-2);
     await waitFor(() => {
       expect(screen.getByText('counterNegative=-2')).toBeDefined();
     });
 
+    expect(renderCount).toBe(3);
+
+    // dispatch untracked field again
+    await act(async () => {
+      _store.dispatch(increment());
+      await sleep(20);
+    });
+    // should not render since the component is not tracking the field
     expect(renderCount).toBe(3);
   });
 });

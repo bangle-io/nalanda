@@ -1,4 +1,3 @@
-import type { EffectCallback, EffectOpts, EffectStore } from '../effect/effect';
 import {
   StateField,
   type BaseField,
@@ -11,6 +10,8 @@ import { Transaction } from '../transaction';
 import type { FieldId, NoInfer } from '../types';
 import { Slice } from './slice';
 import type { InferSliceActions, InferSliceNameFromSlice } from './slice';
+import { EventListener } from '../helpers/event-listener';
+import { EffectCallback, EffectCreator, EffectOpts } from '../effect/types';
 /**
  * @param name - The name of the slice.
  * @param dependencies - An array of slices that this slice depends on.
@@ -25,7 +26,15 @@ export function createKey<TName extends string, TDepSlice extends Slice>(
 export type AnyAction = (...args: any) => Transaction<any, any>;
 export type AnyExternal = Record<string, AnyAction | BaseField<any, any, any>>;
 
+type KeyEvents = {
+  type: 'new-effect';
+  payload: EffectCreator;
+};
+
 export class Key<TName extends string, TDepName extends string> {
+  // @internal
+  readonly _keyEvents = new EventListener<KeyEvents>();
+
   constructor(
     public readonly name: TName,
     public readonly dependencies: Slice<any, TDepName, any>[],
@@ -45,9 +54,21 @@ export class Key<TName extends string, TDepName extends string> {
 
   effect(
     callback: EffectCallback<TName | TDepName>,
-    opts: Partial<EffectOpts> = {},
+    options: Partial<EffectOpts> = {},
   ) {
-    this._effectCallbacks.push([callback, opts]);
+    const creator: EffectCreator = {
+      callback,
+      options: {
+        ...options,
+      },
+    };
+    this._effectCreators.push(creator);
+    // for any effect that was created post store creation,
+    // we need to manually alert the store to register the effect.
+    this._keyEvents.emit({
+      type: 'new-effect',
+      payload: creator,
+    });
   }
 
   /**
@@ -85,7 +106,7 @@ export class Key<TName extends string, TDepName extends string> {
   // @internal
   private _slice: Slice | undefined;
   // @internal
-  _effectCallbacks: [EffectCallback, Partial<EffectOpts>][] = [];
+  _effectCreators: EffectCreator[] = [];
   // @internal
   readonly _derivedFields: Record<FieldId, DerivedField<any, any, any>> = {};
   // @internal
@@ -100,7 +121,7 @@ export class Key<TName extends string, TDepName extends string> {
   _assertedSlice(): Slice {
     if (!this._slice) {
       throwValidationError(
-        `Slice "${this.name}" does not exist. A slice must be created before it can be used.`,
+        `Slice "${this.name}" does not exist. Did you forget to create a slice using key.slice() ?`,
       );
     }
     return this._slice;

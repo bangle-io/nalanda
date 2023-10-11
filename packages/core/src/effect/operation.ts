@@ -1,10 +1,9 @@
 import { BaseStore } from '../base-store';
-import type { CleanupCallback } from './cleanup';
 import { Store } from '../store';
 import type { Transaction } from '../transaction';
+import { EffectCleanupCallback } from './types';
 
 export type OperationOpts = {
-  deferred?: boolean;
   maxWait?: number;
 };
 
@@ -12,7 +11,7 @@ export class Operation {}
 
 export class OperationStore extends BaseStore {
   private cleanupRan = false;
-  private readonly _cleanupCallbacks: Set<CleanupCallback> = new Set();
+  private readonly _cleanupCallbacks: Set<EffectCleanupCallback> = new Set();
 
   _rootStore: Store<any>;
   constructor(
@@ -32,7 +31,7 @@ export class OperationStore extends BaseStore {
     this.rootStore.dispatch(txn);
   }
 
-  _addCleanup(cb: CleanupCallback): void {
+  _addCleanup(cb: EffectCleanupCallback): void {
     if (this.cleanupRan) {
       console.warn(
         `Adding a new cleanup to ${this.name} as cleanups have already run`,

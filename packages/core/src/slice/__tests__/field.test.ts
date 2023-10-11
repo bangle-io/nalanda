@@ -37,6 +37,7 @@ describe('internal fields', () => {
     }
 
     const store = createStore({
+      autoStartEffects: true,
       slices: [counterSlice],
     });
 
@@ -90,6 +91,7 @@ describe('internal fields', () => {
     test('access external fields', () => {
       const { counterSlice, counter, callCount } = setup();
       const store = createStore({
+        autoStartEffects: true,
         slices: [counterSlice],
       });
 
@@ -117,6 +119,7 @@ describe('internal fields', () => {
       const { counterSlice, counter, callCount, updateCounter } = setup();
 
       const store = createStore({
+        autoStartEffects: true,
         slices: [counterSlice],
       });
 
@@ -143,6 +146,7 @@ describe('internal fields', () => {
       const { counterSlice, counter, callCount, updateCounter } = setup();
 
       const store = createStore({
+        autoStartEffects: true,
         slices: [counterSlice],
       });
 
