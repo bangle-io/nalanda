@@ -10,7 +10,7 @@ const store = createStore({
 });
 
 export function App() {
-  const [state, setState] = React.useState(0);
+  const [, setState] = React.useState(0);
 
   return (
     <StoreProvider store={store}>
