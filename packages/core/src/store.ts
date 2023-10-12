@@ -6,7 +6,7 @@ import type { Operation } from './effect/operation';
 import type { Slice } from './slice/slice';
 import type { SliceId } from './types';
 import { Transaction } from './transaction';
-import { genStoreId } from './helpers/id-generation';
+import { genEffectId, genStoreId } from './helpers/id-generation';
 import { onAbortOnce } from './effect/on-abort';
 import { calcReverseDependencies } from './helpers/dependency-helpers';
 import type {
@@ -14,7 +14,8 @@ import type {
   EffectOpts,
   EffectScheduler,
 } from './effect/types';
-import { DEFAULT_SCHEDULER } from './effect/effect';
+import { createEffectConfig } from './effect/effect';
+import { DEFAULT_SCHEDULER } from './defaults';
 
 export interface StoreOptions<TSliceName extends string> {
   name?: string;
@@ -139,7 +140,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
 
     this.options.slices.forEach((slice) => {
       // register the known effects
-      slice._key._effectCreators.forEach((creatorObject) => {
+      slice._key._effects.forEach((creatorObject) => {
         this._effectsManager.add(this, creatorObject);
       });
 
@@ -178,7 +179,15 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     callback: EffectCallback<TSliceName>,
     options: Partial<EffectOpts> = {},
   ) {
-    return this._effectsManager.add(this, { callback, options });
+    const effect = createEffectConfig(callback, options);
+
+    this._effectsManager.add(this, effect);
+
+    return effect.name;
+  }
+
+  destroyEffect(effectName: string) {
+    this._effectsManager.destroyEffect(effectName);
   }
 
   /**

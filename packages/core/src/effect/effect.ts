@@ -1,35 +1,33 @@
+import { DEFAULT_MAX_WAIT } from '../defaults';
 import { hasIdleCallback } from '../helpers/has-idle-callback';
+import { genEffectId } from '../helpers/id-generation';
 import type {
+  EffectConfig,
   EffectCallback,
-  EffectCreator,
   EffectOpts,
   EffectScheduler,
 } from './types';
 
-export const DEFAULT_MAX_WAIT = 15;
-
-export const DEFAULT_SCHEDULER: EffectScheduler = (cb, opts) => {
-  if (hasIdleCallback) {
-    const ref = window.requestIdleCallback(cb, {
-      timeout: opts.maxWait,
-    });
-    return () => {
-      window.cancelIdleCallback(ref);
-    };
-  } else {
-    const ref = setTimeout(cb, opts.maxWait);
-    return () => {
-      clearTimeout(ref);
-    };
-  }
-};
-
-export function effect<TSliceName extends string>(
-  callback: EffectCallback<TSliceName>,
+export function createEffectConfig(
+  callback: EffectCallback<any>,
   options: Partial<EffectOpts> = {},
-): EffectCreator {
+): EffectConfig {
+  const name = genEffectId.generate(
+    options.name || callback.name || 'unnamed-effect',
+  );
+
+  // TODO unify effect options
+  const schedulerOptions = {
+    name,
+    maxWait:
+      typeof options.maxWait === 'number' ? options.maxWait : DEFAULT_MAX_WAIT,
+    metadata: options.metadata || {},
+  };
+
   return {
-    callback,
+    name,
     options,
+    callback,
+    schedulerOptions,
   };
 }
