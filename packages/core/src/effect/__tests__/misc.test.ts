@@ -2,15 +2,8 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { createKey } from '../../slice/key';
 import { StoreState } from '../../store-state';
 
-import { Slice } from '../../slice/slice';
-import { createStore } from '../../store';
 import { testCleanup } from '../../helpers/test-cleanup';
-import {
-  EffectCleanupCallback,
-  EffectCreator,
-  EffectScheduler,
-  FieldTracker,
-} from '../types';
+import { FieldTracker } from '../types';
 import { doesTrackSlice, whatFieldChanged } from '../utils';
 import { EffectStore } from '../effect-store';
 

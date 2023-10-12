@@ -22,11 +22,6 @@ export type EffectCallback<TSliceName extends string = any> = (
   store: EffectStore<TSliceName>,
 ) => void | Promise<void>;
 
-export type EffectCreator = {
-  callback: EffectCallback<any>;
-  options: EffectOpts;
-};
-
 export type EffectCleanupCallback = () => void | Promise<void>;
 
 export interface EffectConfig {
