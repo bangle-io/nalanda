@@ -9,61 +9,63 @@ import {
 import { testCleanup } from '../../helpers/test-cleanup';
 import waitForExpect from 'wait-for-expect';
 import { createKey } from '../../slice/key';
-import { createStore } from '../../store';
-import { effect } from '../effect';
+import { StoreOptions, createStore } from '../../store';
 import { cleanup } from '../cleanup';
-import { EffectScheduler } from '../types';
+import { EffectOpts, EffectScheduler } from '../types';
+import { DEFAULT_MAX_WAIT } from '../../defaults';
 
 beforeEach(() => {
   testCleanup();
 });
+
+const SAFE_WAIT = DEFAULT_MAX_WAIT + 5;
 
 function sleep(t = 1): Promise<void> {
   return new Promise((res) => setTimeout(res, t));
 }
 
 const zeroTimeoutScheduler: EffectScheduler = (cb, opts) => {
-  let id = setTimeout(cb, 0);
+  let id = setTimeout(() => void cb(), 0);
 
   return () => {
     clearTimeout(id);
   };
 };
 
-const sliceAKey = createKey('sliceA', []);
-const sliceAField1 = sliceAKey.field('value:sliceAField1');
-const sliceAField2 = sliceAKey.field('value:sliceAField2');
-
-const sliceA = sliceAKey.slice({
-  sliceAField1,
-  sliceAField2,
-});
-
-const sliceBKey = createKey('sliceB', []);
-const sliceBField1 = sliceBKey.field('value:sliceBField1');
-
-const sliceB = sliceBKey.slice({
-  sliceBField1,
-});
-
-const sliceCDepBKey = createKey('sliceCDepB', [sliceB]);
-const sliceCDepBField = sliceCDepBKey.field('value:sliceCDepBField');
-
-const sliceCDepBSelector1 = sliceCDepBKey.derive((state) => {
-  return sliceCDepBField.get(state) + ':' + sliceB.get(state).sliceBField1;
-});
-
-const sliceCDepBSelector2 = sliceCDepBKey.derive((state) => {
-  return sliceCDepBField.get(state) + ':selector2';
-});
-
-const sliceCDepB = sliceCDepBKey.slice({
-  sliceCDepBField,
-  sliceCDepBSelector1,
-  sliceCDepBSelector2,
-});
-
 describe('effect with store', () => {
+  const sliceAKey = createKey('sliceA', []);
+  const sliceAField1 = sliceAKey.field('value:sliceAField1');
+  const sliceAField2 = sliceAKey.field('value:sliceAField2');
+
+  const sliceA = sliceAKey.slice({
+    sliceAField1,
+    sliceAField2,
+  });
+
+  const sliceBKey = createKey('sliceB', []);
+  const sliceBField1 = sliceBKey.field('value:sliceBField1');
+
+  const sliceB = sliceBKey.slice({
+    sliceBField1,
+  });
+
+  const sliceCDepBKey = createKey('sliceCDepB', [sliceB]);
+  const sliceCDepBField = sliceCDepBKey.field('value:sliceCDepBField');
+
+  const sliceCDepBSelector1 = sliceCDepBKey.derive((state) => {
+    return sliceCDepBField.get(state) + ':' + sliceB.get(state).sliceBField1;
+  });
+
+  const sliceCDepBSelector2 = sliceCDepBKey.derive((state) => {
+    return sliceCDepBField.get(state) + ':selector2';
+  });
+
+  const sliceCDepB = sliceCDepBKey.slice({
+    sliceCDepBField,
+    sliceCDepBSelector1,
+    sliceCDepBSelector2,
+  });
+
   const setup = () => {
     function updateSliceAField1(val: string) {
       return sliceAField1.update(val);
@@ -313,7 +315,7 @@ describe('effect with store', () => {
         expect(effectCalled).toHaveBeenCalledTimes(1);
       });
 
-      eff.destroy();
+      store.destroyEffect(eff);
 
       await sleep(5);
 
@@ -335,7 +337,7 @@ describe('effect with store', () => {
         expect(effectCalled).toHaveBeenCalledTimes(1);
       });
 
-      eff.destroy();
+      store.destroyEffect(eff);
 
       store.dispatch(updateSliceBField1('new-value'));
 
@@ -509,7 +511,50 @@ describe('effect with store', () => {
 
 describe('effect only', () => {
   const setup = () => {
-    const manualCallbacksRegistry = new Set<() => void>();
+    const sliceAKey = createKey('sliceA', []);
+    const sliceAField1 = sliceAKey.field('value:sliceAField1');
+    const sliceAField2 = sliceAKey.field('value:sliceAField2');
+
+    function updateSliceAField1(val: string) {
+      return sliceAField1.update(val);
+    }
+
+    function updateSliceAField2(val: string) {
+      return sliceAField2.update(val);
+    }
+
+    const sliceA = sliceAKey.slice({
+      sliceAField1,
+      sliceAField2,
+      updateSliceAField1,
+      updateSliceAField2,
+    });
+
+    const sliceBKey = createKey('sliceB', []);
+    const sliceBField1 = sliceBKey.field('value:sliceBField1');
+
+    const sliceB = sliceBKey.slice({
+      sliceBField1,
+    });
+
+    const sliceCDepBKey = createKey('sliceCDepB', [sliceB]);
+    const sliceCDepBField = sliceCDepBKey.field('value:sliceCDepBField');
+
+    const sliceCDepBSelector1 = sliceCDepBKey.derive((state) => {
+      return sliceCDepBField.get(state) + ':' + sliceB.get(state).sliceBField1;
+    });
+
+    const sliceCDepBSelector2 = sliceCDepBKey.derive((state) => {
+      return sliceCDepBField.get(state) + ':selector2';
+    });
+
+    const sliceCDepB = sliceCDepBKey.slice({
+      sliceCDepBField,
+      sliceCDepBSelector1,
+      sliceCDepBSelector2,
+    });
+
+    const manualCallbacksRegistry = new Set<() => void | Promise<void>>();
     const manualEffectScheduler: EffectScheduler = (cb, opts) => {
       manualCallbacksRegistry.add(cb);
 
@@ -531,13 +576,14 @@ describe('effect only', () => {
     });
 
     return {
+      sliceA,
       effect: store.effect(() => {
         callback();
       }, {}),
       callback,
       store,
       runEffects: () => {
-        manualCallbacksRegistry.forEach((cb) => cb());
+        manualCallbacksRegistry.forEach((cb) => void cb());
         manualCallbacksRegistry.clear();
       },
     };
@@ -551,159 +597,462 @@ describe('effect only', () => {
 
     expect(callback).toHaveBeenCalled();
   });
+
+  test('tracks dependencies correctly', async () => {
+    const { runEffects, effect, callback, store, sliceA } = setup();
+
+    let runCount = 0;
+    const called = jest.fn();
+
+    store.effect((store) => {
+      called(sliceA.get(store.state).sliceAField1);
+      if (runCount++ == 1) {
+        return;
+      }
+      const { sliceAField1 } = sliceA.track(store);
+    });
+
+    await sleep(5);
+    runEffects();
+
+    store.dispatch(sliceA.updateSliceAField1('new-value'));
+    await sleep(5);
+    runEffects();
+
+    store.dispatch(sliceA.updateSliceAField1('new-value2'));
+    await sleep(5);
+    runEffects();
+
+    store.dispatch(sliceA.updateSliceAField1('new-value3'));
+    await sleep(5);
+    runEffects();
+
+    expect(called).toHaveBeenCalledTimes(2);
+    // first initial setup call
+    expect(called).nthCalledWith(1, 'value:sliceAField1');
+    expect(called).nthCalledWith(2, 'new-value');
+    // in the second since  it tracks nothing we should not expect this
+    // effect to be called again
+
+    await sleep(5);
+    runEffects();
+
+    expect(called).toHaveBeenCalledTimes(2);
+  });
 });
 
-// describe('manually running', () => {
-//   const setup = () => {
-//     let manualTrigger: { current: undefined | (() => void) } = {
-//       current: undefined,
-//     };
+describe('dependent slices', () => {
+  const setup = () => {
+    const sliceAKey = createKey('sliceA', []);
+    const sliceAField1 = sliceAKey.field('value:sliceAField1');
 
-//     const manualEffectScheduler: EffectScheduler = (cb, opts) => {
-//       manualTrigger.current = cb;
-//       return () => {
-//         manualTrigger.current = undefined;
-//       };
-//     };
+    const sliceADrived = sliceAKey.derive((state) => {
+      return sliceAField1.get(state) + ':derived';
+    });
 
-//     const mockDebugLogger = jest.fn();
-//     const effectWasCalled = jest.fn();
+    function updateAField1(val: string) {
+      return sliceAField1.update(val);
+    }
 
-//     const store = createStore({
-//       autoStartEffects: true,
-//       name: 'test',
-//       slices: [sliceA, sliceB, sliceCDepB],
-//       overrides: {
-//         effectScheduler: manualEffectScheduler,
-//       },
-//       debug: mockDebugLogger,
-//     });
+    const sliceA = sliceAKey.slice({
+      sliceADrived,
+      updateAField1,
+    });
 
-//     return {
-//       effect: store.effect(() => {
-//         effectWasCalled();
-//       }),
-//       effectWasCalled,
-//       store,
-//       manualTrigger,
-//       mockDebugLogger,
-//     };
-//   };
+    const sliceBKey = createKey('sliceB', [sliceA]);
 
-//   describe('Pending Effect Execution Management', () => {
-//     test('Effect can be manually triggered', async () => {
-//       const { effect, manualTrigger, effectWasCalled } = setup();
+    const sliceB = sliceBKey.slice({});
 
-//       effect._run();
+    const sliceBNoTrackCalled = jest.fn();
 
-//       await sleep(5);
+    const sliceBNoTrack = sliceBKey.effect(function sliceBNoTrack(store) {
+      sliceBNoTrackCalled();
+    });
 
-//       expect(effectWasCalled).not.toHaveBeenCalled();
+    const sliceBTrackCalled = jest.fn();
 
-//       manualTrigger.current?.();
+    const sliceBTrack = sliceBKey.effect(function sliceBTrack(store) {
+      const { sliceADrived } = sliceA.track(store);
+      sliceBTrackCalled(sliceADrived);
+    });
 
-//       expect(effectWasCalled).toHaveBeenCalledTimes(1);
-//     });
+    return {
+      createTestStore: (options: Partial<StoreOptions<any>> = {}) =>
+        createStore({
+          name: 'test',
+          slices: [sliceA, sliceB],
+          overrides: {},
+          ...options,
+        }),
+      sliceA,
+      sliceB,
+      sliceBNoTrack,
+      sliceBNoTrackCalled,
+      sliceBTrack,
+      sliceBTrackCalled,
+    };
+  };
 
-//     test('Effect does not run after clearing pending execution', async () => {
-//       const { effect, manualTrigger, effectWasCalled } = setup();
+  test('runs all effect  dependent changes', async () => {
+    const { createTestStore, sliceBTrackCalled, sliceBNoTrackCalled } = setup();
 
-//       effect._run();
+    const store = createTestStore({ autoStartEffects: true });
 
-//       await sleep(5);
+    await sleep(SAFE_WAIT);
 
-//       expect(effectWasCalled).not.toHaveBeenCalled();
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(1);
+  });
 
-//       // Stop the pending effect execution
-//       effect._clearPendingRun();
+  test('when autoStart is false', async () => {
+    const { createTestStore, sliceBTrackCalled, sliceBNoTrackCalled } = setup();
 
-//       expect(manualTrigger.current).toBeUndefined();
+    const store = createTestStore({ autoStartEffects: false });
 
-//       manualTrigger.current?.();
-//       expect(effectWasCalled).not.toHaveBeenCalled();
+    await sleep(SAFE_WAIT);
 
-//       await sleep(5);
-//       expect(effectWasCalled).not.toHaveBeenCalled();
-//     });
+    expect(sliceBTrackCalled).toBeCalledTimes(0);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(0);
 
-//     test('Effect runs after re-scheduling post-clearance', () => {
-//       const { effect, manualTrigger, effectWasCalled } = setup();
+    store.startEffects();
+    expect(sliceBTrackCalled).toBeCalledTimes(0);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(0);
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(1);
+  });
 
-//       effect._run();
+  test('updating parent slice', async () => {
+    const { createTestStore, sliceA, sliceBTrackCalled, sliceBNoTrackCalled } =
+      setup();
 
-//       expect(effectWasCalled).not.toHaveBeenCalled();
+    const store = createTestStore({ autoStartEffects: true });
+    await sleep(SAFE_WAIT);
 
-//       // Stop the pending effect execution
-//       effect._clearPendingRun();
+    store.dispatch(sliceA.updateAField1('new-value'));
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(2);
+    expect(sliceBTrackCalled).toHaveBeenLastCalledWith('new-value:derived');
 
-//       manualTrigger.current?.();
+    expect(sliceBNoTrackCalled).toBeCalledTimes(1);
+  });
 
-//       expect(effectWasCalled).not.toHaveBeenCalled();
+  test('updating parent slice right after creation', async () => {
+    const { createTestStore, sliceA, sliceBTrackCalled, sliceBNoTrackCalled } =
+      setup();
 
-//       effect._run();
-//       manualTrigger.current?.();
+    const store = createTestStore({ autoStartEffects: true });
+    store.dispatch(sliceA.updateAField1('new-value'));
+    expect(sliceBTrackCalled).toBeCalledTimes(0);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(0);
 
-//       expect(effectWasCalled).toBeCalledTimes(1);
-//     });
-//   });
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(1);
+  });
 
-//   test('if destroyed while waiting for run', () => {
-//     const { effect, manualTrigger, effectWasCalled } = setup();
+  test('updating parent slice back to same value after creation', async () => {
+    const { createTestStore, sliceA, sliceBTrackCalled, sliceBNoTrackCalled } =
+      setup();
 
-//     effect._run();
+    const store = createTestStore({ autoStartEffects: true });
+    store.dispatch(sliceA.updateAField1('new-value'));
+    await sleep(SAFE_WAIT);
 
-//     expect(effectWasCalled).not.toHaveBeenCalled();
+    store.dispatch(sliceA.updateAField1('new-value-1'));
+    await sleep(1);
+    store.dispatch(sliceA.updateAField1('new-value'));
 
-//     effect._destroy();
+    await sleep(SAFE_WAIT);
+    // since in a short time we updated to the same value it say, the effect should not run again
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(1);
+  });
 
-//     manualTrigger.current?.();
+  test('stopping the effect run', async () => {
+    const { createTestStore, sliceA, sliceBTrackCalled, sliceBNoTrackCalled } =
+      setup();
 
-//     expect(effectWasCalled).not.toHaveBeenCalled();
-//   });
+    const store = createTestStore({ autoStartEffects: true });
+    store.dispatch(sliceA.updateAField1('new-value'));
+    await sleep(1);
+    store.pauseEffects();
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(0);
+    expect(sliceBNoTrackCalled).toBeCalledTimes(0);
 
-//   test('Effect runs at least once regardless of dependency changes', () => {
-//     const { effect, manualTrigger, effectWasCalled } = setup();
+    store.startEffects();
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
+    expect(sliceBTrackCalled).toHaveBeenLastCalledWith('new-value:derived');
+    expect(sliceBNoTrackCalled).toBeCalledTimes(1);
+  });
 
-//     effect._run(undefined); // Undefined slicesChanged should simulate no dependency changes
+  test('stopping and starting multiple times', async () => {
+    const { createTestStore, sliceA, sliceBTrackCalled, sliceBNoTrackCalled } =
+      setup();
 
-//     manualTrigger.current?.();
+    const store = createTestStore({ autoStartEffects: true });
+    store.dispatch(sliceA.updateAField1('new-value'));
+    store.pauseEffects();
+    store.startEffects();
+    await sleep(SAFE_WAIT);
+    store.pauseEffects();
+    store.startEffects();
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(2);
+    expect(sliceBTrackCalled).toHaveBeenLastCalledWith('new-value:derived');
+    expect(sliceBNoTrackCalled).toBeCalledTimes(2);
+  });
 
-//     expect(effectWasCalled).toBeCalledTimes(1);
-//   });
+  test('destroying an effect when paused', async () => {
+    const {
+      createTestStore,
+      sliceA,
+      sliceBTrackCalled,
+      sliceBTrack,
+      sliceBNoTrackCalled,
+    } = setup();
 
-//   test('Effect does not run when already pending', () => {
-//     const { effect, manualTrigger, effectWasCalled } = setup();
+    const store = createTestStore({ autoStartEffects: true });
+    store.pauseEffects();
+    store.destroyEffect(sliceBTrack);
+    store.startEffects();
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(0);
+  });
 
-//     effect._run();
-//     effect._run(); // Call it again
+  test('destroying an effect after a run when paused', async () => {
+    const {
+      createTestStore,
+      sliceA,
+      sliceBTrackCalled,
+      sliceBTrack,
+      sliceBNoTrackCalled,
+    } = setup();
 
-//     manualTrigger.current?.();
+    const store = createTestStore({ autoStartEffects: true });
+    store.pauseEffects();
+    store.dispatch(sliceA.updateAField1('new-value'));
+    store.startEffects();
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
 
-//     expect(effectWasCalled).toBeCalledTimes(1); // Should still be called only once
-//   });
+    store.destroyEffect(sliceBTrack);
 
-//   test('Effect is able to resume gracefully after an error', () => {
-//     const { effect, manualTrigger, effectWasCalled, mockDebugLogger } = setup();
+    // shouldn't run after resume work
+    store.pauseEffects();
+    store.startEffects();
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
 
-//     effectWasCalled.mockImplementation(() => {
-//       throw new Error('Effect run error');
-//     });
+    // shouldn't run if state changes
+    store.dispatch(sliceA.updateAField1('new-value-2'));
+    await sleep(SAFE_WAIT);
+    expect(sliceBTrackCalled).toBeCalledTimes(1);
+  });
+});
 
-//     effect._run();
-//     expect(() => manualTrigger.current?.()).toThrowError(/Effect run error/);
+describe('throwing error', () => {
+  const setup = () => {
+    const sliceAKey = createKey('sliceA', []);
+    const sliceAField1 = sliceAKey.field('value:sliceAField1');
 
-//     effectWasCalled.mockImplementation(() => {
-//       // all good no erroring
-//     });
+    const sliceADrived = sliceAKey.derive((state) => {
+      return sliceAField1.get(state) + ':derived';
+    });
 
-//     effect._run();
+    const sliceAEffectMock = jest.fn();
+    const sliceAEffect2Mock = jest.fn();
 
-//     jest
-//       .spyOn(effect['runInstance'], 'getFieldsThatChanged')
-//       .mockReturnValue(sliceAKey.field('some field that changed'));
+    const sliceAEffect = sliceAKey.effect(function sliceAEffect(store) {
+      const val = sliceADrived.track(store);
+      sliceAEffectMock(val);
+    });
 
-//     expect(() => manualTrigger.current?.()).not.toThrowError();
+    const sliceAEffect2 = sliceAKey.effect(function sliceAEffect(store) {
+      const val = sliceADrived.track(store);
+      sliceAEffect2Mock(val);
+    });
 
-//     expect(mockDebugLogger).toBeCalledTimes(1);
-//   });
-// });
+    function updateAField1(val: string) {
+      return sliceAField1.update(val);
+    }
+
+    const sliceA = sliceAKey.slice({
+      sliceADrived,
+      updateAField1,
+    });
+
+    return {
+      createTestStore: (options: Partial<StoreOptions<any>> = {}) =>
+        createStore({
+          name: 'test',
+          slices: [sliceA],
+          ...options,
+          overrides: {
+            ...options.overrides,
+          },
+        }),
+      sliceA,
+      sliceAKey,
+      sliceAEffect,
+      sliceAEffectMock,
+      sliceAEffect2Mock,
+    };
+  };
+
+  test('throwing of error doesn\nt breaks the current run of effects but future runs work', async () => {
+    const { sliceAEffect2Mock, createTestStore, sliceAEffectMock, sliceA } =
+      setup();
+
+    let count = 0;
+    sliceAEffectMock.mockImplementation(() => {
+      if (count++ === 1) {
+        throw new Error('effect error');
+      }
+    });
+
+    const store = createTestStore({
+      autoStartEffects: true,
+      overrides: {
+        effectScheduler: (cb) => {
+          void cb();
+          return () => {};
+        },
+      },
+    });
+
+    await sleep(SAFE_WAIT);
+    expect(() => {
+      store.dispatch(sliceA.updateAField1('new-value'));
+    }).toThrowError(/effect error/);
+    expect(sliceAEffectMock).toBeCalledTimes(2);
+    // second effect cannot run because first effect threw a sync error
+    expect(sliceAEffect2Mock).toBeCalledTimes(1);
+
+    await sleep(SAFE_WAIT);
+
+    // new dispatches should work fine if nothing throws error
+    store.dispatch(sliceA.updateAField1('new-value2'));
+
+    expect(sliceAEffectMock).toBeCalledTimes(3);
+
+    expect(sliceAEffectMock).nthCalledWith(1, 'value:sliceAField1:derived');
+    expect(sliceAEffectMock).nthCalledWith(2, 'new-value:derived');
+    expect(sliceAEffectMock).nthCalledWith(3, 'new-value2:derived');
+    expect(sliceAEffect2Mock).toBeCalledTimes(2);
+
+    expect(sliceAEffect2Mock).nthCalledWith(1, 'value:sliceAField1:derived');
+    expect(sliceAEffect2Mock).nthCalledWith(2, 'new-value2:derived');
+  });
+
+  test('throwing of async error', async () => {
+    const {
+      sliceAEffectMock,
+      sliceAEffect2Mock,
+      createTestStore,
+      sliceAKey,
+      sliceA,
+    } = setup();
+
+    let count = 0;
+
+    sliceAKey.effect(async (store) => {
+      const { sliceADrived } = sliceA.track(store);
+      if (count++ === 1) {
+        throw new Error('effect async error');
+      }
+      await sleep(1);
+    });
+
+    const onError = jest.fn();
+
+    const store = createTestStore({
+      autoStartEffects: true,
+      overrides: {
+        effectScheduler: (run) => {
+          let id = setTimeout(() => {
+            let r = run();
+            if (r) {
+              r.catch((err) => {
+                onError(err);
+              });
+            }
+          }, 5);
+          return () => {
+            clearTimeout(id);
+          };
+        },
+      },
+    });
+
+    store.dispatch(sliceA.updateAField1('new-value'));
+
+    store.dispatch(sliceA.updateAField1('new-value2'));
+    await sleep(SAFE_WAIT);
+
+    store.dispatch(sliceA.updateAField1('new-value3'));
+
+    await sleep(SAFE_WAIT);
+
+    expect(onError).toBeCalledTimes(1);
+    expect(onError).toBeCalledWith(new Error('effect async error'));
+
+    // other effects should continue to work
+    expect(sliceAEffectMock).toBeCalledTimes(2);
+    expect(sliceAEffect2Mock).toBeCalledTimes(2);
+  });
+
+  test('scheduler is called with correct options', async () => {
+    const { createTestStore, sliceAKey, sliceA } = setup();
+
+    sliceAKey.effect(
+      async (store) => {
+        await sleep(1);
+      },
+      {
+        metadata: {
+          mySpecialEffect: 'mySpecialValue',
+        },
+      },
+    );
+
+    const optionsCalled = jest.fn();
+
+    const store = createTestStore({
+      autoStartEffects: true,
+      overrides: {
+        effectScheduler: (run, options) => {
+          optionsCalled(options);
+          const id = setTimeout(() => {
+            void run();
+          }, DEFAULT_MAX_WAIT);
+          return () => {
+            clearTimeout(id);
+          };
+        },
+      },
+    });
+
+    await sleep(SAFE_WAIT);
+
+    store.dispatch(sliceA.updateAField1('new-value'));
+
+    await sleep(SAFE_WAIT);
+
+    expect(optionsCalled).toBeCalledTimes(5);
+
+    expect(
+      optionsCalled.mock.calls
+        .map((r) => r[0] as EffectOpts)
+        .find((r) => r?.metadata?.['mySpecialEffect'] === 'mySpecialValue'),
+    ).toEqual({
+      maxWait: 15,
+      metadata: {
+        mySpecialEffect: 'mySpecialValue',
+      },
+      name: 'effect__unnamed-effect$',
+    });
+  });
+});

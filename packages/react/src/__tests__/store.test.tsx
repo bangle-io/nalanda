@@ -5,13 +5,12 @@ import React, { useEffect } from 'react';
 import { expect, test, describe } from '@jest/globals';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { Store, createKey, EffectScheduler, createStore } from '@nalanda/core';
-import { createContext, useContext, useRef } from 'react';
 import { useTrack, useTrackField } from '../react';
 import { StoreProvider, useStore } from '../store';
 
 const zeroTimeoutScheduler: EffectScheduler = (cb, opts) => {
   let id = setTimeout(() => {
-    cb();
+    void cb();
   }, 0);
 
   return () => {

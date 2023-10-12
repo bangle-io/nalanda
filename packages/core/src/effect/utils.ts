@@ -1,7 +1,7 @@
-import { BaseField } from '../slice/field';
-import { Slice } from '../slice/slice';
-import { Store } from '../store';
-import { StoreState } from '../store-state';
+import type { BaseField } from '../slice/field';
+import type { Slice } from '../slice/slice';
+import type { Store } from '../store';
+import type { StoreState } from '../store-state';
 import { FieldTracker } from './types';
 
 // find out what field changed

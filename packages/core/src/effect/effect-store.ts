@@ -2,65 +2,58 @@ import { BaseStore } from '../base-store';
 import { Store } from '../store';
 import { StoreState } from '../store-state';
 import { Transaction } from '../transaction';
-import { FieldTracker, Tracker } from './types';
+import { EffectTracker } from './effect-tracker';
+import { EffectCleanupCallback, FieldTracker, EffectConfig } from './types';
 
 export class EffectStore<TSliceName extends string = any> extends BaseStore {
   private destroyed = false;
-  private readonly internalTracker: Tracker = {
-    fieldValues: [],
-    cleanups: [],
-  };
 
   get state(): StoreState<TSliceName> {
     return this._rootStore.state;
   }
 
   dispatch(txn: Transaction<any, any>) {
+    // TODO consider freeze, where we prevent dispatching txns post effect cleanup
+    // if user wants that behaviour
     this._rootStore.dispatch(txn);
   }
 
   // @internal
-  get _tracker(): {
-    readonly fieldValues: ReadonlyArray<FieldTracker>;
-    readonly cleanups: ReadonlyArray<() => void>;
-  } {
-    return this.internalTracker;
-  }
-
-  // @internal
   constructor(
-    // TODO does this have to be public
     // @internal
     public _rootStore: Store<any>,
-    public readonly name: string,
+    // @internal
+    private effectTracker: EffectTracker,
+    // @internal
+    private cleanups: EffectCleanupCallback[] = [],
   ) {
     super();
   }
 
   // @internal
   _addTrackField(trackedField: FieldTracker) {
-    this.internalTracker.fieldValues.push(trackedField);
+    this.effectTracker.addTracker(trackedField);
   }
 
   // @internal
-  _addCleanup(cleanup: Tracker['cleanups'][0]) {
+  _addCleanup(cleanup: EffectCleanupCallback) {
     if (this.destroyed) {
       void cleanup();
       return;
     }
-    this.internalTracker.cleanups.push(cleanup);
+
+    this.cleanups.push(cleanup);
   }
 
-  // TODO freeze, where we prevent dispatching txns post effect cleanup
-  // if user wants that behaviour
   // @internal
   _destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.internalTracker.cleanups.forEach((cleanup) => {
+    this.cleanups.forEach((cleanup) => {
+      // TODO what to do with errors here? currently it
+      // will prevent other cleanups from running
       void cleanup();
     });
-    this.internalTracker.cleanups = [];
-    this.internalTracker.fieldValues = [];
+    this.cleanups.length = 0;
   }
 }

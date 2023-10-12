@@ -10,10 +10,11 @@ export type EffectOpts = {
 export type SchedulerOptions = {
   metadata: Record<string, any>;
   maxWait: number;
+  name: string;
 };
 
 export type EffectScheduler = (
-  run: () => void,
+  run: () => void | Promise<void>,
   schedulerOptions: SchedulerOptions,
 ) => () => void;
 
@@ -28,12 +29,14 @@ export type EffectCreator = {
 
 export type EffectCleanupCallback = () => void | Promise<void>;
 
-export interface Tracker {
-  fieldValues: FieldTracker[];
-  cleanups: EffectCleanupCallback[];
+export interface EffectConfig {
+  readonly name: string;
+  readonly options: EffectOpts;
+  readonly callback: EffectCallback<any>;
+  readonly schedulerOptions: SchedulerOptions;
 }
 
 export type FieldTracker = {
-  field: BaseField<any>;
-  value: unknown;
+  readonly field: BaseField<any>;
+  readonly value: unknown;
 };

@@ -38,6 +38,7 @@ export class Transaction<TName extends string, TDepName extends string> {
 
   // @internal
   _destroy() {
+    if (this.destroyed) return;
     this.destroyed = true;
   }
 
