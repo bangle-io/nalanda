@@ -102,6 +102,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
     return this.destroyController.signal;
   }
 
+  // @internal
   readonly _computed: StoreComputed;
 
   get state() {
