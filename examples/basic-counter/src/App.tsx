@@ -1,87 +1,51 @@
-import { Button, defaultTheme, Provider } from '@adobe/react-spectrum';
-import { StoreProvider, useStore, useTrack, createStore } from '@nalanda/react';
-
-import { counterSlice } from './store/counter-slice';
 import React from 'react';
+import { StoreProvider, createStore, useStore, useTrack } from '@nalanda/react';
+
+import { counterSlice } from './counter-slice';
 
 const store = createStore({
-  name: 'my-app-store',
   slices: [counterSlice],
 });
 
 export function App() {
-  const [, setState] = React.useState(0);
-
   return (
     <StoreProvider store={store}>
-      <Provider theme={defaultTheme}>
-        <Button variant="accent" onPress={() => setState(1)}>
-          Hello React Spectrum!
-        </Button>
-      </Provider>
-      <Foo />
-      <NoTracked />
-      <FooTracked />
-      <NegCounter />
+      <div>
+        <Counter />
+        <Increment />
+        <Decrement />
+      </div>
     </StoreProvider>
   );
 }
 
-function Foo() {
-  const store = useStore();
-
-  console.log(store.options.name);
-  return <div>Foo</div>;
-}
-
-function NegCounter() {
-  const store = useStore();
-
-  return (
-    <div>
-      <button
-        onClick={() => {
-          store.dispatch(counterSlice.incrementNegCounter());
-        }}
-      >
-        neg
-      </button>
-    </div>
-  );
-}
-
-function NoTracked() {
-  const store = useStore();
-  const { counter } = counterSlice.get(store.state);
-
-  return (
-    <div>
-      <button
-        onClick={() => {
-          store.dispatch(counterSlice.incrementCounter());
-        }}
-      >
-        increment (NoTracked)
-      </button>
-      <div>Value {counter}</div>
-    </div>
-  );
-}
-
-function FooTracked() {
-  const store = useStore();
+function Counter() {
   const { counter } = useTrack(counterSlice);
+  return <div className="counter">Counter: {counter}</div>;
+}
 
+function Increment() {
+  const store = useStore();
   return (
-    <div>
-      <button
-        onClick={() => {
-          store.dispatch(counterSlice.incrementCounter());
-        }}
-      >
-        increment (FooTracked)
-      </button>
-      <div>Value {counter}</div>
-    </div>
+    <button
+      onClick={() => {
+        store.dispatch(counterSlice.incrementCounter());
+      }}
+    >
+      Increment
+    </button>
+  );
+}
+
+function Decrement() {
+  const store = useStore();
+  return (
+    <button
+      onClick={() => {
+        store.dispatch(counterSlice.decrementCounter());
+      }}
+    >
+      Decrement
+    </button>
   );
 }
