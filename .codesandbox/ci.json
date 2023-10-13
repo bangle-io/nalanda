@@ -2,5 +2,6 @@
   "installCommand": "codesandbox:install",
   "buildCommand": "build-packages",
   "sandboxes": ["/react/basic-counter"],
-  "node": "18"
+  "node": "18",
+  "packages": ["packages/**"]
 }
