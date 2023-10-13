@@ -1,0 +1,6 @@
+{
+  "installCommand": "codesandbox:install",
+  "buildCommand": "build-packages",
+  "sandboxes": ["/react/basic-counter"],
+  "node": "18"
+}

@@ -18,6 +18,7 @@
     "url": "https://github.com/bangle-io/nalanda/issues"
   },
   "scripts": {
+    "codesandbox:install": "corepack enable && pnpm install --frozen-lockfile",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "lint-packages": "pnpm -r  --filter \"./packages/**\" run lint",
