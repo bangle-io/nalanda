@@ -1,1 +1,30 @@
-# Nalanda
+import Image from "next/image";
+
+<div className="min-h-[80vh] flex flex-col justify-center">
+  <div className="mx-auto space-y-8">
+
+    <div className="flex justify-center">
+        <Image
+          src="/nalanda.png"
+          alt="Nalanda Logo"
+          className="border-4 border-orange-300 rounded-full z-10"
+          width={170}
+          height={170}
+        />
+    </div>
+    <div>
+
+    <div className="text-6xl font-black text-center leading-tight">
+      <span className="font-black inline-block text-transparent bg-clip-text bg-gradient-to-b dark:from-orange-600 dark:to-yellow-200 from-orange-500 to-yellow-500 animate-gradientAnimation">
+        Nalanda
+      </span>
+    </div>
+
+    <div className="text-2xl font-medium text-center text-gray-600 break-words">
+      State Management
+    </div>
+
+    </div>
+
+  </div>
+</div>
