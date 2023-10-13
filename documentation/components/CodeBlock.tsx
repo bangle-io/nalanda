@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 // import rawNsmCode from "../dist/nsm-docs-bundle/index.mjs?raw";
 import prettier from 'prettier';
 
+import Image from 'next/image';
 export function CodeBlockVanilla({
   height,
   children,
