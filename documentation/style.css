@@ -16,3 +16,18 @@
   background-size: 200% 200%;
   animation: gradientAnimation 6s infinite;
 }
+
+.feature-section {
+  margin-bottom: 3rem;
+  white-space: break-spaces;
+}
+
+@media (max-width: 599px) {
+  pre code {
+    font-size: 0.7rem;
+  }
+}
+
+code {
+  white-space: break-spaces;
+}

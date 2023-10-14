@@ -1,7 +1,7 @@
 import Image from 'next/image';
 
 <div className="min-h-[80vh] flex flex-col justify-center">
-  <div className="mx-auto space-y-8">
+  <div className="mx-auto space-y-8 mt-40">
     <div className="flex justify-center">
       <Image
         priority={true}
@@ -24,17 +24,149 @@ import Image from 'next/image';
       </div>
 
       <div className="text-lg text-center max-w-md pt-2 break-words">
-        A powerful state management library that <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 to-red-400 font-semibold">
-    scales
-  </span>
+        <span>
+          Effortlessly Powerful State Management
+          <br /> Simple to Start, Designed to <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 to-red-400 font-semibold">Scale</span>
+        </span>
       </div>
 
-      <div className="flex justify-center space-x-4 mt-7">
-        <a href="/docs" className="px-8 py-3 bg-transparent border dark:border-yellow-200 border-yellow-700  dark:hover:bg-gray-700 dark:text-yellow-100 font-semibold rounded shadow-md transition duration-300">
+      <div className="flex justify-center space-x-4 py-8">
+        <a
+          href="/docs"
+          className="px-8 py-3 bg-transparent border dark:border-yellow-200 border-yellow-700  dark:hover:bg-gray-700 dark:text-yellow-100 font-semibold rounded shadow-md transition duration-300"
+        >
           Get started
         </a>
       </div>
     </div>
-
   </div>
+
+  <div className="mt-16 px-2 max-w-4xl self-center">
+   <div className="feature-section  pb-8">
+      <div className="text-4xl font-semibold py-2 text-blue-600 dark:text-blue-400">
+        State dependency
+      </div>
+      <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+      With Nalanda, effortlessly blend states together! Craft complex yet type-safe relationships between different state slices.
+      </div>
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
+```ts
+const key = createKey('user-slice', [loginSlice]);;
+                                      // ^ declare loginSlice as a dependency
+
+const greetingField = key.derive(state => {
+  const { isLoggedIn } = loginSlice.get(state)
+  return isLoggedIn ? 'Welcome back' : 'Please login';
+});
+
+// Expose greeting to the outside world
+export const userSlice = key.slice({
+  greeting: greetingField
+})
+```
+      </div>
+    </div>
+
+
+     <div className="feature-section  pb-8">
+  <div className="text-4xl font-semibold py-2 text-green-600 dark:text-green-400">Side Effects</div>
+          <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+       Run side-effects in a predictable and easy to understand manner.
+      </div>
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
+```ts
+key.effect(store => {
+  // automatically runs the effect when isLoggedIn changes
+  const { isLoggedIn } = loginSlice.track(store);
+
+  if (isLoggedIn) {
+    alert('Welcome back');
+  } else {
+    alert('Please login');
+  }
+});
+```
+      </div>
+    </div>
+
+   <div className="feature-section ">
+      <div className="text-4xl font-semibold py-2 text-purple-600 dark:text-purple-400">Derive data</div>
+       <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+ Confidently derive data with efficient lazy evaluation and memoization.
+      </div>
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
+
+```ts
+
+const totalPriceField = key.derive(state => {
+  const { cartItems} = cartSlice.get(state);
+  return reallyExpensiveCalculation(cartItems);
+});
+
+
+key.effect(store => {
+    // memoizes and lazy runs the derived field
+    console.log(totalPriceField.get(store.state));
+})
+
+```
+      </div>
+ 
+    </div>
+
+    <div className="feature-section">
+      <div className="text-4xl font-semibold py-2 text-red-600 dark:text-red-400">Encapsulation of state</div>
+      <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+   Nalanda empowers you with state encapsulation, ensuring clear boundaries between different parts of your application.
+      </div>
+  
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
+```ts
+// internal state
+const internalItemIndex = key.field(0);
+
+const itemIndex = key.derive(state => {
+  const index = internalItemIndex.get(state);
+  //              ^ use the internal field to derive the itemIndex
+  return index < 0  ? 0 : internalCounter;
+});
+
+// only expose itemIndex to the outside world
+export const itemSlice = key.slice({
+  itemIndex,
+})
+
+```
+      </div>
+    </div>
+
+     <div className="feature-section">
+      <div className="text-4xl font-semibold py-2 text-pink-600 dark:text-ping-400">Works with React or any UI framework</div>
+      <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+   React bindings ensure automatic and efficient re-rendering of your components.
+      </div>
+  
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
+
+```tsx
+import { userSlice } from './userSlice';
+
+function UserGreeting() {
+  const { itemIndex } = useTrack(itemSlice)
+  //       ^ automatically re-renders whenever itemIndex changes
+  return (
+    <div>
+      The item index is {itemIndex}
+    </div>
+  )
+}
+
+```
+      </div>
+    </div>
+
+   
+  </div>
+
+
 </div>
