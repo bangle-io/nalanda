@@ -12,6 +12,10 @@
 Effortlessly Powerful State Management Simple to Start, Designed to Scale.
 </p>
 
+<div align="center">
+  <a href="https://nalanda.bangle.io/docs">Read the docs</a>
+</div>
+
 ## Features
 
 - **Predictable State Management:** No magic, predictable state management that scales with your app.
