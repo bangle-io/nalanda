@@ -21,6 +21,7 @@ const config: DocsThemeConfig = {
         titleTemplate: '%s – Nalanda',
       };
     }
+    return undefined;
   },
   primaryHue: {
     light: 40,
@@ -50,13 +51,13 @@ const config: DocsThemeConfig = {
         <meta property="og:url" content={url} />
         <meta
           property="og:title"
-          content={frontMatter.title || 'Nalanda State Management'}
+          content={frontMatter['title'] || 'Nalanda State Management'}
         />
         <link rel="icon" href="/nalanda.png" type="image/png" />
         <meta
           property="og:description"
           content={
-            frontMatter.description ||
+            frontMatter['description'] ||
             'Powerful state management for Javascript apps.'
           }
         />
