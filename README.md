@@ -4,9 +4,9 @@
         alt="screen" width="128" >
   </a>
 </p>
-<h3 align="center">
+<h2 align="center">
   Nalanda
-</h3>
+</h2>
 
 <p align="center">
 Effortlessly Powerful State Management Simple to Start, Designed to Scale.
