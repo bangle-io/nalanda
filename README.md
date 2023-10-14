@@ -4,18 +4,15 @@
         alt="screen" width="140">
   </a>
 </p>
-
-<h1 align="center">
-  <br>
- 
+<h3 align="center">
   <br>
   Nalanda
   <br>
-</h1>
-
-<h3 align="center">
-Effortlessly Powerful State Management Simple to Start, Designed to Scale.
 </h3>
+
+<p align="center">
+Effortlessly Powerful State Management Simple to Start, Designed to Scale.
+</p>
 
 ## Features
 
