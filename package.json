@@ -23,6 +23,7 @@
     "lint-packages": "pnpm -r  --filter \"./packages/**\" run lint",
     "test": "pnpm -r run test",
     "test:watch": "pnpm -r run test:watch",
+    "build-docs:netlify": "pnpm run build-packages && pnpm run build-docs",
     "build-docs": "pnpm -r --filter documentation build",
     "build-docs:watch": "pnpm -r --filter documentation preview",
     "build-packages": "pnpm -r --filter \"./packages/**\"  build",

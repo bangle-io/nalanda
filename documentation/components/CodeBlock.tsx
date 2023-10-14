@@ -2,10 +2,18 @@ import { Sandpack } from '@codesandbox/sandpack-react';
 import { sandpackDark } from '@codesandbox/sandpack-themes';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-// import rawNsmCode from "../dist/nsm-docs-bundle/index.mjs?raw";
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+// @ts-expect-error - not worth the effort to fix
+import rawNsmCode from '../../packages/core/dist/index.mjs?raw';
+// @ts-expect-error - not worth the effort to fix
+import rawNsmReactCode from '../../packages/react/dist/index.mjs?raw';
+
+// @ts-expect-error - not worth the effort to fix
+import rawUseSyncExternalStoreCode from 'use-sync-external-store/cjs/use-sync-external-store-shim.production.min.js?raw';
 import prettier from 'prettier';
 
 import Image from 'next/image';
+
 export function CodeBlockVanilla({
   height,
   children,
@@ -20,34 +28,52 @@ ${children.trim()}
 
   return (
     <Sandpack
+      template="react-ts"
       options={{
-        layout: 'console',
         editorHeight: height,
-        showRefreshButton: true,
-        editorWidthPercentage: 70, // default - 50
+        editorWidthPercentage: 66, // default - 50
       }}
+      theme={theme === 'light' ? 'light' : 'dark'}
       files={{
-        '/index.ts': {
-          code: `${code}`.trim(),
-        },
-        '/node_modules/nalanda/package.json': {
+        '/App.tsx': code,
+        '/node_modules/use-sync-external-store/shim/package.json': {
           hidden: true,
           code: JSON.stringify({
-            name: 'nalanda',
+            name: 'use-sync-external-store/shim',
+            main: './index.js',
+          }),
+        },
+        '/node_modules/use-sync-external-store/shim/index.js': {
+          hidden: true,
+          code: rawUseSyncExternalStoreCode,
+        },
+        '/node_modules/@nalanda/core/package.json': {
+          hidden: true,
+          code: JSON.stringify({
+            name: '@nalanda/core',
             main: './index.mjs',
           }),
         },
-        '/node_modules/nalanda/index.mjs': {
+        '/node_modules/@nalanda/core/index.mjs': {
           hidden: true,
-          code: '',
-          // code: rawNsmCode,
+          code: rawNsmCode,
+        },
+        '/node_modules/@nalanda/react/package.json': {
+          hidden: true,
+          code: JSON.stringify({
+            name: '@nalanda/react',
+            main: './index.mjs',
+          }),
+        },
+        '/node_modules/@nalanda/react/index.mjs': {
+          hidden: true,
+          code: rawNsmReactCode,
         },
       }}
-      theme={theme === 'light' ? 'light' : 'dark'}
-      template="vanilla-ts"
     />
   );
 }
+
 export function CodeBlock({ children }: { children: string }) {
   const { theme } = useTheme();
 

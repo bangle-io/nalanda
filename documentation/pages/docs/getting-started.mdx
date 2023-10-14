@@ -1,54 +1,185 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 import { CodeBlockVanilla } from '../../components/CodeBlock';
 
 # nalanda Documentation
 
-## Introduction
+## Installation
 
-`nalanda` is a lightweight state management library, which enables setting up stores, slices, and states in a simplified and efficient manner. Below is a guideline on how to use `nalanda` effectively.
+Use your preferred package manager to install:
 
-## Setup & Usage
+<Tabs items={["npm", "yarn", "pnpm"]}>
+  <Tab>  
+```bash
+# react codebase
+npm install @nalanda/react
 
-To use `nalanda`, it is essential to set up a store, create a slice, and define a state.
+# other codebases
+npm install @nalanda/core
+```
+  </Tab>
 
-### 1. Installing the Library
 
-Before setting up the store, ensure that `nalanda` is installed in your project.
+<Tab>
+```bash
+# react codebase
+yarn add @nalanda/react 
+
+# other codebases
+yarn add @nalanda/core
+```
+</Tab>
+
+<Tab>
+```bash
+# react codebase
+pnpm install @nalanda/react
+
+# other codebases
+pnpm install @nalanda/core
+```
+</Tab>
+</Tabs>
+
+<Callout type="info">
+
+`@nalanda/core` is the core library that can be used with any framework.
+ Read more about using Nalanda with <bold>other frameworks</bold> [here](/docs/advanced-topics/other-frameworks/).
+
+</Callout>
+
+## Creating a Slice
+
+Lets start by creating a simple counter slice.
+
+```tsx copy filename="counterSlice.ts"
+import { createKey } from '@nalanda/react';
+
+// key is local helper to define various things related to your slice
+const key = createKey('counterSlice', []);
+
+// state fields define the shape of your state
+const counter = key.field(0);
+
+// actions dicate how a field/s should be updated
+function increment() {
+  return counter.update((c) => c + 1);
+}
+
+// slice acts as an interface, exposing the chosen fields and actions to
+// the rest of the application.
+export const counterSlice = key.slice({
+  counter,
+  increment
+});
+```
+
+
+
+## Setting up the Store
+
+At the root of your React application create a store and wrap your app with the `StoreProvider` component.
+
+```tsx copy filename="app.tsx"
+import { createStore, StoreProvider } from '@nalanda/react';
+import { counterSlice } from './counterSlice';
+
+// Set up a global store that comprises of your slices
+const store = createStore({
+  slices: [counterSlice],
+});
+
+ReactDOM.render(
+  <StoreProvider store={store}>
+    <App />
+  </StoreProvider>,
+  document.getElementById('root')
+);
+```
+
+
+## Displaying the counter
+
+Now that we have set up the store, we can use the `useSlice` hook to access the state and actions from the slice.
+
+```tsx copy filename="counter.tsx"
+import { useTrack, useStore } from '@nalanda/react';
+import { counterSlice } from './counterSlice';
+
+export function Counter() {
+  // useTrack re-render the component whenever `counter` changes
+  const { counter } = useTrack(counterSlice);
+  const store = useStore();
+
+  const increment = () => {
+    // Dispatch an action to update the slice
+    store.dispatch(counterSlice.increment());
+  };
+
+  return (
+    <div>
+      <h1>Counter</h1>
+      <p>{counter}</p>
+      <button onClick={increment}>increment</button>
+    </div>
+  );
+}
+```
+
+
+## Final Code
+
+Here is the final code for the counter example. This is a live example and you can play around with it.
 
 <CodeBlockVanilla height={600}>
 {`
-import { createKey, createStore } from 'nalanda';
+import { useTrack, createKey, StoreProvider, useStore, createStore } from '@nalanda/react';
 
-// Create a key with a unique slice name
-const key = createKey('mySliceName');
+// key is local helper to define various things related to your slice
+const key = createKey('counterSlice', []);
 
-// Define the initial state field
+// state fields define the shape of your state
 const counter = key.field(0);
 
-// Define an action to update the state
+// actions dicate how a field/s should be updated
 function increment() {
-return counter.update((prev) => prev + 1);
+  return counter.update((c) => c + 1);
 }
 
-// A slice is a collection of state fields and actions
-// this will be the only way to access the state from outside.
-const counterSlice = key.slice({
-counter,
+// slice acts as an interface, exposing the chosen fields and actions to
+// the rest of the application.
+export const counterSlice = key.slice({
+  counter,
+  increment
 });
 
-// Set up the global store with your slice
 const store = createStore({
-slices: [counterSlice],
+  slices: [counterSlice],
 });
 
-// Log the initial state value
-console.log(counterSlice.get(store.state)); // 0
 
-// Dispatch an action to update the state
-store.dispatch(increment());
+export default function App() {
+  return <StoreProvider store={store}>
+    <Counter />
+    </StoreProvider>
+}
 
-// Log the updated state value
-console.log(counterSlice.get(store.state)); // 1
+export function Counter() {
+  // useTrack re-render the component whenever \`counter\` changes
+  const { counter } = useTrack(counterSlice);
+  const store = useStore();
 
+  const increment = () => {
+    // Dispatch an action to update the slice
+    store.dispatch(counterSlice.increment());
+  };
+
+  return (
+    <div>
+      <h1>Counter</h1>
+      <p>{counter}</p>
+      <button onClick={increment}>increment</button>
+    </div>
+  );
+}
 `}
-
 </CodeBlockVanilla>
