@@ -1,6 +1,6 @@
 [build]
   publish = "documentation/dist/"
-  command = "pnpm build-docs" 
+  command = "pnpm build-docs:netlify" 
 
 [build.environment]
   NODE_VERSION = "lts/*"

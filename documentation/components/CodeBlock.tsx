@@ -3,9 +3,12 @@ import { sandpackDark } from '@codesandbox/sandpack-themes';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Callout, Tabs, Tab } from 'nextra-theme-docs';
-
+// @ts-expect-error - not worth the effort to fix
 import rawNsmCode from '../../packages/core/dist/index.mjs?raw';
+// @ts-expect-error - not worth the effort to fix
 import rawNsmReactCode from '../../packages/react/dist/index.mjs?raw';
+
+// @ts-expect-error - not worth the effort to fix
 import rawUseSyncExternalStoreCode from 'use-sync-external-store/cjs/use-sync-external-store-shim.production.min.js?raw';
 import prettier from 'prettier';
 

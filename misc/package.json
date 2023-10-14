@@ -8,6 +8,7 @@
   },
   "scripts": {
     "set-version": "tsx ./set-version.ts",
+    "copy-dist-to-docs": "tsx ./copy-dist-to-docs.ts",
     "test:watch": "jest --watch",
     "test": "jest"
   },
