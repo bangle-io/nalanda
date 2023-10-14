@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://nalanda.bangle.io">
     <img src="https://raw.githubusercontent.com/bangle-io/nalanda/dev/documentation/public/nalanda.png"
-        alt="screen" width="140">
+        alt="screen" width="140" style="border: 3px solid yellow;">
   </a>
 </p>
 <h3 align="center">
