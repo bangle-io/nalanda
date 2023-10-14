@@ -5,9 +5,7 @@
   </a>
 </p>
 <h3 align="center">
-  <br>
   Nalanda
-  <br>
 </h3>
 
 <p align="center">
