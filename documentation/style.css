@@ -16,3 +16,7 @@
   background-size: 200% 200%;
   animation: gradientAnimation 6s infinite;
 }
+
+.feature-section {
+  margin-bottom: 3rem;
+}
