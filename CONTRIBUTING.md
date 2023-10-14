@@ -34,16 +34,43 @@ pnpm install
 4. **Build**:
 
 ```sh
-pnpm run build
+pnpm run build-packages
+
+# or to build in watch mode
+pnpm run build-packages:watch
+```
+
+5. **Test**:
+
+```sh
+pnpm run test
+
+# lint
+pnpm run lint
+
+# to run tests in watch mode
+pnpm run test:watch
+```
+
+6. **Documentation**:
+
+```sh
+# make sure pnpm run build-packages is run before this
+pnpm run build-docs:watch
 ```
 
 ## Project Structure
 
-Nalanda project is broken into the following directory structure:
+The Nalanda project is broken into the following directory structure:
 
 - **packages**: contains the Nalanda library packages. If you are **not** sure, more than likely, you'll be making changes here.
-- **documentation**: contains the documentation website built with Next.js and MDX.
+  - **core**: contains the core Nalanda library.
+  - **react**: contains the React bindings for Nalanda.
+  - **nalanda**: currently just rexports the core page.
+- **documentation**: contains the documentation website built with [Nextra](https://nextra.site) and Next.js.
 - **config**: Holds shared configurations for the entire project, including files like tsconfig.json, .eslintrc, and .prettierrc.
+- **misc**: contains the scripts to publish the packages to npm.
+- **examples**: contains the examples for Nalanda.
 
 ## 🔍 Testing Your Changes
 
@@ -96,7 +123,7 @@ Before submitting a PR, make sure to test your changes locally. Here's how:
 
 1. Run `pnpm publish-alpha --otp=123456` or `publish-latest` to publish the packages to npm.
 
-## Updating documentation site
+### Updating documentation site
 
 1. If you did an alpha/beta release, you don't need to do update docs.
 
@@ -106,7 +133,7 @@ Before submitting a PR, make sure to test your changes locally. Here's how:
 
 1. Ensure you are in `dev` branch and upto date with dev (`git pull origin dev`).
 
-1. Make sure the documentation site builds locally with `pnpm run build-docs`.
+1. Make sure the documentation site builds locally with `pnpm run build-docs:netlify`.
 
 1. Push changes to `main` branch.
 
