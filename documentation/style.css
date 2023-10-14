@@ -14,7 +14,7 @@
 
 .animate-gradientAnimation {
   background-size: 200% 200%;
-  animation: gradientAnimation 6s infinite;
+  animation: gradientAnimation 8s infinite;
 }
 
 .feature-section {

@@ -36,7 +36,7 @@ export function StoreProvider({
       }
       if (existing) {
         throw new Error(
-          `Cannot create a context store with a slice that is already associated with another store. Please see https://nalanda.bangle.io/docs/react/common-errors/#store-context`,
+          `Cannot create a context store with a slice that is already associated with another store. Please see https://nalanda.bangle.io/docs/guide/common-errors/#store-context`,
         );
       }
       setContextInSlice(slice, context);

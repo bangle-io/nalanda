@@ -1,7 +1,8 @@
+
 import Image from 'next/image';
 
 <div className="min-h-[80vh] flex flex-col justify-center">
-  <div className="mx-auto space-y-8 mt-40">
+  <div className="mx-auto space-y-8 mt-36">
     <div className="flex justify-center">
       <Image
         priority={true}
@@ -19,24 +20,20 @@ import Image from 'next/image';
         </span>
       </div>
 
-      <div className="text-2xl font-medium text-center  break-words">
+      <div className="text-3xl font-semibold text-center  break-words">
         State Management
       </div>
 
-      <div className="text-lg text-center max-w-md pt-2 break-words">
+      <div className="text-lg text-center font-bold max-w-md pt-2 break-words text-gray-900 dark:text-gray-300">
         <span>
           Effortlessly Powerful State Management
-          <br /> Simple to Start, Designed to <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 to-red-400 font-semibold">Scale</span>
+          <br /> Simple to Start, Designed to <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 to-red-400 font-bold">Scale</span>
         </span>
       </div>
 
       <div className="flex justify-center space-x-4 py-8">
-        <a
-          href="/docs"
-          className="px-8 py-3 bg-transparent border dark:border-yellow-200 border-yellow-700  dark:hover:bg-gray-700 dark:text-yellow-100 font-semibold rounded shadow-md transition duration-300"
-        >
-          Get started
-        </a>
+    
+        <a class="py-2 px-4 bg-gradient-to-b dark:from-orange-600 dark:to-yellow-400 from-orange-500 to-yellow-500 animate-gradientAnimation rounded text-white uppercase font-extrabold" href="/docs/">Get Started</a>
       </div>
     </div>
   </div>
