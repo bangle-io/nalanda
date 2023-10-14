@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://nalanda.bangle.io">
-    <img src="https://raw.githubusercontent.com/bangle-io/nalanda/dev/public/nalanda.png"
+    <img src="https://raw.githubusercontent.com/bangle-io/nalanda/dev/documentation/public/nalanda.png"
          alt="screeh">
   </a>
 </p>
