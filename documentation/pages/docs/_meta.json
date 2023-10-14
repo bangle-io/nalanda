@@ -3,6 +3,16 @@
   "getting-started": "Getting started",
   "guide": "Guide",
   "examples": "Examples",
-  "advanced-topics": "Advanced topics",
-  "api": "API"
+  "advanced-topics": {
+    "title": "Advanced topics",
+    "theme": {
+      "collapsed": true
+    }
+  },
+  "api": {
+    "title": "API",
+    "theme": {
+      "collapsed": true
+    }
+  }
 }
