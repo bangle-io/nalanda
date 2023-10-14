@@ -1,8 +1,8 @@
 <p align="center">
-   <svg width="146" height="[HEIGHT+6]" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="yellow"/>
-      <image href="https://raw.githubusercontent.com/bangle-io/nalanda/dev/documentation/public/nalanda.png" x="3" y="3" width="140" height="[HEIGHT-6]"/>
-    </svg>
+  <a href="https://nalanda.bangle.io">
+    <img src="https://raw.githubusercontent.com/bangle-io/nalanda/dev/documentation/public/nalanda.png"
+        alt="screen" width="128" >
+  </a>
 </p>
 <h3 align="center">
   Nalanda
