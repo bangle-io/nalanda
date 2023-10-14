@@ -1,3 +1,10 @@
+<p align="center">
+  <a href="https://nalanda.bangle.io">
+    <img src="https://raw.githubusercontent.com/bangle-io/nalanda/dev/documentation/public/nalanda.png"
+        alt="screen" width="140">
+  </a>
+</p>
+
 <h1 align="center">
   <br>
  
@@ -6,17 +13,9 @@
   <br>
 </h1>
 
-<p align="center">
-  <a href="https://nalanda.bangle.io">
-    <img src="https://raw.githubusercontent.com/bangle-io/nalanda/dev/documentation/public/nalanda.png"
-         alt="screeh">
-  </a>
-</p>
-<div align="center">
-
-Effortlessly Powerful State Management Simple to Start, Designed to Scale
-
-</div>
+<h3 align="center">
+Effortlessly Powerful State Management Simple to Start, Designed to Scale.
+</h3>
 
 ## Features
 
