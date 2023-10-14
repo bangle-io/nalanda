@@ -40,19 +40,19 @@ Lets start by creating a simple counter slice.
 ```tsx
 import { createKey } from '@nalanda/react';
 
-// key is local helper to define various things related to your slice
+// The key is a local helper used to define various components of your slice.
 const key = createKey('counterSlice', []);
 
-// state fields define the shape of your state
+// State fields define part of your state.
 const counter = key.field(0);
 
-// actions dicate how a field/s should be updated
+// Actions define how a field/s should be updated.
 function increment() {
   return counter.update((c) => c + 1);
 }
 
-// slice acts as an interface, exposing the chosen fields and actions to
-// the rest of the application.
+// A slice serves as an interface, revealing the specified fields
+// and actions to the entire application.
 export const counterSlice = key.slice({
   counter,
   increment,
@@ -61,13 +61,13 @@ export const counterSlice = key.slice({
 
 ### Setting up the Store
 
-At the root of your React application create a store and wrap your app with the `StoreProvider` component.
+At the root of your React app, set up a store and encapsulate your app with the StoreProvider component:
 
 ```tsx copy filename="app.tsx"
 import { createStore, StoreProvider } from '@nalanda/react';
 import { counterSlice } from './counterSlice';
 
-// Set up a global store that comprises of your slices
+// Establish a global store incorporating your slices.
 const store = createStore({
   slices: [counterSlice],
 });
@@ -82,7 +82,7 @@ ReactDOM.render(
 
 ### Displaying the counter
 
-Now that we have set up the store, we can use the `useSlice` hook to access the state and actions from the slice.
+With the store in place, employ the useSlice hook to access the state and actions from the slice:
 
 ```tsx copy filename="counter.tsx"
 import { useTrack, useStore } from '@nalanda/react';
@@ -108,11 +108,11 @@ export function Counter() {
 }
 ```
 
-### Next steps
+### Next Steps
 
-- Checkout out our [documentation](https://nalanda.bangle.io) to learn more about Nalanda.
-- Checkout some of the [examples](https://nalanda.bangle.io/docs/examples) to see Nalanda in action.
+- Dive deeper into Nalanda by exploring our [official documentation](https://nalanda.bangle.io).
+- View [real-world examples](https://nalanda.bangle.io/docs/examples) to see Nalanda in action.
 
-### Contributing
+### Contribute to Nalanda
 
-We'd love to have your helping hand on `nalanda`! See [CONTRIBUTING.md](CONTRIBUTING.md).
+Your contribution can make `nalanda` even better! If you're interested in lending a hand, please consult our [CONTRIBUTING.md](CONTRIBUTING.md) guide.
