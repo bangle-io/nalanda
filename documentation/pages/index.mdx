@@ -42,7 +42,7 @@ import Image from 'next/image';
   </div>
 
   <div className="mt-16 px-2 max-w-4xl self-center">
-   <div className="feature-section  pb-8">
+   <div className="feature-section">
       <div className="text-4xl font-semibold py-2 text-blue-600 dark:text-blue-400">
         State dependency
       </div>
@@ -51,24 +51,24 @@ import Image from 'next/image';
       </div>
            <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
 ```ts
+// declare loginSlice as a dependency
 const key = createKey('user-slice', [loginSlice]);;
-                                      // ^ declare loginSlice as a dependency
 
 const greetingField = key.derive(state => {
   const { isLoggedIn } = loginSlice.get(state)
   return isLoggedIn ? 'Welcome back' : 'Please login';
 });
 
-// Expose greeting to the outside world
+// create a slice which acts as the public API for the user state
 export const userSlice = key.slice({
   greeting: greetingField
-})
+});
 ```
       </div>
     </div>
 
 
-     <div className="feature-section  pb-8">
+     <div className="feature-section ">
   <div className="text-4xl font-semibold py-2 text-green-600 dark:text-green-400">Side Effects</div>
           <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
        Run side-effects in a predictable and easy to understand manner.
@@ -107,8 +107,7 @@ const totalPriceField = key.derive(state => {
 key.effect(store => {
     // memoizes and lazy runs the derived field
     console.log(totalPriceField.get(store.state));
-})
-
+});
 ```
       </div>
  
@@ -125,17 +124,16 @@ key.effect(store => {
 // internal state
 const internalItemIndex = key.field(0);
 
+// use the internal field to derive the itemIndex
 const itemIndex = key.derive(state => {
   const index = internalItemIndex.get(state);
-  //              ^ use the internal field to derive the itemIndex
   return index < 0  ? 0 : internalCounter;
 });
 
 // only expose itemIndex to the outside world
 export const itemSlice = key.slice({
   itemIndex,
-})
-
+});
 ```
       </div>
     </div>
@@ -149,7 +147,7 @@ export const itemSlice = key.slice({
            <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
 
 ```tsx
-import { userSlice } from './userSlice';
+import { itemSlice } from './item-slice';
 
 function UserGreeting() {
   const { itemIndex } = useTrack(itemSlice)
