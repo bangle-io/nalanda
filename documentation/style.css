@@ -19,4 +19,15 @@
 
 .feature-section {
   margin-bottom: 3rem;
+  white-space: break-spaces;
+}
+
+@media (max-width: 599px) {
+  pre code {
+    font-size: 0.7rem;
+  }
+}
+
+code {
+  white-space: break-spaces;
 }

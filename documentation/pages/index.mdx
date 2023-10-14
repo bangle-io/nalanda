@@ -49,7 +49,7 @@ import Image from 'next/image';
       <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
       With Nalanda, effortlessly blend states together! Craft complex yet type-safe relationships between different state slices.
       </div>
-      <div className="bg-gray-100 dark:bg-gray-900 mt-4 p-4 rounded-lg shadow-inner">
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
 ```ts
 const key = createKey('user-slice', [loginSlice]);;
                                       // ^ declare loginSlice as a dependency
@@ -59,7 +59,7 @@ const greetingField = key.derive(state => {
   return isLoggedIn ? 'Welcome back' : 'Please login';
 });
 
-// Expose greeting to the outside world via a user slice
+// Expose greeting to the outside world
 export const userSlice = key.slice({
   greeting: greetingField
 })
@@ -73,7 +73,7 @@ export const userSlice = key.slice({
           <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
        Run side-effects in a predictable and easy to understand manner.
       </div>
-      <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded shadow-md">
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
 ```ts
 key.effect(store => {
   // automatically runs the effect when isLoggedIn changes
@@ -94,23 +94,19 @@ key.effect(store => {
        <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
  Confidently derive data with efficient lazy evaluation and memoization.
       </div>
-      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded shadow-md">
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
 
 ```ts
 
 const totalPriceField = key.derive(state => {
-  const { cartItems, appliedDiscounts} = cartSlice.get(state);
-  return runReallyExpensiveCalculation(cartItems, appliedDiscounts);
+  const { cartItems} = cartSlice.get(state);
+  return reallyExpensiveCalculation(cartItems);
 });
 
 
-store.effect(store => {
-  const { isLoggedIn } = cartSlice.track(store);
-  
-  if (isLoggedIn) {
-    // lazy run the calculation only when needed
-    console.log(totalPriceField.get(store));
-  }
+key.effect(store => {
+    // memoizes and lazy runs the derived field
+    console.log(totalPriceField.get(store.state));
 })
 
 ```
@@ -121,16 +117,17 @@ store.effect(store => {
     <div className="feature-section">
       <div className="text-4xl font-semibold py-2 text-red-600 dark:text-red-400">Encapsulation of state</div>
       <div className="my-2 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
-   Nalanda empowers you with Slices for state encapsulation, ensuring clear boundaries and controlled visibility.
+   Nalanda empowers you with state encapsulation, ensuring clear boundaries between different parts of your application.
       </div>
   
-      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded shadow-md">
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
 ```ts
 // internal state
 const internalItemIndex = key.field(0);
 
 const itemIndex = key.derive(state => {
-  const index = myInternalCounterField.get(state);
+  const index = internalItemIndex.get(state);
+  //              ^ use the internal field to derive the itemIndex
   return index < 0  ? 0 : internalCounter;
 });
 
@@ -149,14 +146,14 @@ export const itemSlice = key.slice({
    React bindings ensure automatic and efficient re-rendering of your components.
       </div>
   
-      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded shadow-md">
+           <div className="bg-gray-100 dark:bg-gray-900 mt-4 py-2 md:p-4 rounded-lg shadow-inner ">
 
 ```tsx
 import { userSlice } from './userSlice';
 
 function UserGreeting() {
   const { itemIndex } = useTrack(itemSlice)
-  //       ^ automatically re-renders when itemIndex changes
+  //       ^ automatically re-renders whenever itemIndex changes
   return (
     <div>
       The item index is {itemIndex}
@@ -167,5 +164,9 @@ function UserGreeting() {
 ```
       </div>
     </div>
+
+   
   </div>
+
+
 </div>
