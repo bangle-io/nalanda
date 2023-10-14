@@ -5,6 +5,11 @@ const withNextra = require('nextra')({
 
 module.exports = {
   ...withNextra({
+    reactStrictMode: true,
+    eslint: {
+      // ESLint behaves weirdly in this monorepo.
+      ignoreDuringBuilds: true,
+    },
     trailingSlash: true,
     images: {
       unoptimized: true,

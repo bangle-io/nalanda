@@ -2,8 +2,7 @@
   "index": "Introduction",
   "getting-started": "Getting started",
   "guide": "Guide",
-  "react": "React",
+  "examples": "Examples",
   "advanced-topics": "Advanced topics",
-  "api": "API",
-  "react-api": "API (React)"
+  "api": "API"
 }

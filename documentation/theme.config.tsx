@@ -1,5 +1,7 @@
-import type { DocsThemeConfig } from "nextra-theme-docs";
-import Image from "next/image";
+import type { DocsThemeConfig } from 'nextra-theme-docs';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { useConfig } from 'nextra-theme-docs';
 
 const config: DocsThemeConfig = {
   logo: (
@@ -8,9 +10,58 @@ const config: DocsThemeConfig = {
     </span>
   ),
   docsRepositoryBase:
-    "https://github.com/bangle-io/nalanda/blob/dev/documentation/pages",
+    'https://github.com/bangle-io/nalanda/blob/dev/documentation/pages',
   project: {
-    link: "https://github.com/bangle-io/nalanda",
+    link: 'https://github.com/bangle-io/nalanda',
+  },
+  useNextSeoProps() {
+    const { asPath } = useRouter();
+    if (asPath !== '/') {
+      return {
+        titleTemplate: '%s – Nalanda',
+      };
+    }
+  },
+  primaryHue: {
+    light: 40,
+    dark: 50,
+  },
+  primarySaturation: {
+    light: 65,
+    dark: 70,
+  },
+  head: function useHead() {
+    const { asPath, defaultLocale, locale } = useRouter();
+    const { frontMatter } = useConfig();
+    const url =
+      'https://nalanda.bangle.io' +
+      (defaultLocale === locale ? asPath : `/${locale}${asPath}`);
+
+    return (
+      <>
+        <meta httpEquiv="Content-Language" content="en" />
+        <meta name="msapplication-TileColor" content="#fff" />
+        <meta name="theme-color" content="#fff" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+          name="description"
+          content="Powerful state management for Javascript apps."
+        />
+        <meta property="og:url" content={url} />
+        <meta
+          property="og:title"
+          content={frontMatter.title || 'Nalanda State Management'}
+        />
+        <link rel="icon" href="/nalanda.png" type="image/png" />
+        <meta
+          property="og:description"
+          content={
+            frontMatter.description ||
+            'Powerful state management for Javascript apps.'
+          }
+        />
+      </>
+    );
   },
   footer: {
     text: (
