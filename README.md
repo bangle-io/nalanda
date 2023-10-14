@@ -14,7 +14,7 @@
 </p>
 <div align="center">
 
-Nalanda is a modern state management library that is designed for high performance, maximum scalability, and ease of use with TypeScript.
+Effortlessly Powerful State Management Simple to Start, Designed to Scale
 
 </div>
 
