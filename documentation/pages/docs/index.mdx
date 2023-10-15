@@ -1,6 +1,86 @@
 import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 
-# Nalanda
+# Nalanda State Management
 
-Affordable state management library for everyone.
+<Callout type="caution">
+Nalanda is still in early release. We are working hard to make it production ready.
+</Callout>
 
+## Why?
+
+Nalanda State Management (NSM) was born out of a need for a scalable state management solution that is not at the mercy of React or any other UI library. 
+When developing for [Bangle.io](https://bangle.io), I encountered several limitations in existing state management approaches.
+While many of these systems work well for simpler applications, their dependency on the UI framework can become a bottleneck as the complexity of the app increases.
+
+A **majority** of state management libraries are not explicit about managing dependencies within the state and adequately handling side effects.
+The popular atom-based state management approach, for instance, offers simplicity but can be challenging to navigate as application complexity surges.
+
+Here's a breakdown of the challenges faced with conventional state management tools:
+
+- **UI Framework Dependency**: It's like having your state management on a leash a React-ive leash.
+- **Deriving State**: There's a lack of first party robust support for lazily and efficiently deriving state.
+- **Handling Side Effects**: Conventional approach like `React.useEffect` are often insufficient and too DOM centric.
+- **State Dependencies**: Many libraries overlook the importance of managing interdependencies between different states.
+- **Encapsulation**: There's often no straightforward way to maintain certain portions of the state as internal.
+- **Legacy Issues**: The API of many state library remains botched by past versions and their associated mistakes.
+- **Typescript Support**: Many libraries lack first party support for Typescript, often bailing out on types. 
+- **Intuitive**: A lot of new wave libraries are too magical and trade off conciseness for intuitiveness.
+
+Now, there might be some library that address some of these issues, but none of them offer a comprehensive and holistic solution.
+NSM aims to address these challenges, providing a more versatile and scalable solution for developers.
+
+
+## How?
+
+NSM draws inspiration from renowned atomic state management solutions like Angular signals, 
+Solid signals, Jotai, and the legendary Redux library. It weaves together the best ideas in state management while ensuring a user-friendly API.
+
+**Example: Fetching and Storing Data**
+
+Consider this: you wish to fetch some data from an API and update your state. Here's how NSM makes it seamless:
+
+```ts filename="fetch-user-slice.ts"
+import { cleanup, createKey } from '@nalanda/core';
+
+const key = createKey('fetch-user', [userSlice]);
+
+key.effect(async function fetchUser(store) {
+  // effect runs only when the userLoggedIn changes
+  const { userLoggedIn } = userSlice.track(store);
+  // Typescript provides type safety to ensure the fetch-user
+  // can only access userSlice and not any other slice.
+  if (userLoggedIn) {
+    const abort = new AbortController();
+
+    cleanup(store, () => {
+      // cancel the request if the effect runs again
+      abort.abort();
+    });
+
+    const data = await fetch('https://api.quotable.io/random', { signal }).then(
+      (response) => response.json(),
+    );
+
+    // simple and predictable update of state
+    store.dispatch(userSlice.setData(data));
+  }
+});
+```
+
+
+1. Encapsulating Effects: Forget the lengthy useEffect hooks. With NSM, effects are high-level, freeing you from tying them to specific UI components. 
+Your state's consumers (referred to as 'Slices') remain oblivious to any background effects, enhancing encapsulation and reusability.
+
+1. Auto tracking: NSM eliminates the hassle of handling hook dependencies. You'll appreciate the balanced mix of magic and explicitness. 
+Only values you track by doing `const { x } = slice.track()` get tracked. 
+The next run of effect will be triggered only when these one of the tracked values change.
+
+1. Cleanups: Introduce a cleanup call immediately after declaring a resource. This will help reduce the `useEffect` callback hell.
+
+
+### Much more!
+
+While this introduction offers a sneak peek, there are a lot of things to cover. Dive into our documentation to discover how Nalanda can elevate your developer experience, enhancing both the predictability and scalability of your applications.
+
+
+> \- ❤️ [Kepta](https://twitter.com/kushan2020)
