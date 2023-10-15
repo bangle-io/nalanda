@@ -140,7 +140,6 @@ Below is the complete code for the counter example. This interactive example all
 {`
 // counter-slice.js
 import { useTrack, createKey, StoreProvider, useStore, createStore } from '@nalanda/react';
-
 // key is local helper to define various things related to your slice
 const key = createKey('counterSlice', []);
 
@@ -156,7 +155,7 @@ function increment() {
 // the rest of the application.
 export const counterSlice = key.slice({
   counter,
-  increment
+  increment,
 });
 
 // app.js
@@ -164,11 +163,12 @@ const store = createStore({
   slices: [counterSlice],
 });
 
-
 export default function App() {
-  return <StoreProvider store={store}>
-    <Counter />
+  return (
+    <StoreProvider store={store}>
+      <Counter />
     </StoreProvider>
+  );
 }
 
 // counter.js
