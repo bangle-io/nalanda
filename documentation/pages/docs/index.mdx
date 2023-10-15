@@ -1,222 +1,86 @@
 import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 
-# Nalanda
+# Nalanda State Management
 
-Affordable state management library for everyone.
+<Callout type="caution">
+Nalanda is still in early release. We are working hard to make it production ready.
+</Callout>
 
-#### Installation
+## Why?
 
-<Tabs items={["npm", "yarn", "pnpm"]}>
-  <Tab>  
-```bash
-npm install nalanda
-```
-  </Tab>
+Nalanda State Management (NSM) was born out of a need for a scalable state management solution that is not at the mercy of React or any other UI library. 
+When developing for [Bangle.io](https://bangle.io), I encountered several limitations in existing state management approaches.
+While many of these systems work well for simpler applications, their dependency on the UI framework can become a bottleneck as the complexity of the app increases.
+
+A **majority** of state management libraries are not explicit about managing dependencies within the state and adequately handling side effects.
+The popular atom-based state management approach, for instance, offers simplicity but can be challenging to navigate as application complexity surges.
+
+Here's a breakdown of the challenges faced with conventional state management tools:
+
+- **UI Framework Dependency**: It's like having your state management on a leash a React-ive leash.
+- **Deriving State**: There's a lack of first party robust support for lazily and efficiently deriving state.
+- **Handling Side Effects**: Conventional approach like `React.useEffect` are often insufficient and too DOM centric.
+- **State Dependencies**: Many libraries overlook the importance of managing interdependencies between different states.
+- **Encapsulation**: There's often no straightforward way to maintain certain portions of the state as internal.
+- **Legacy Issues**: The API of many state library remains botched by past versions and their associated mistakes.
+- **Typescript Support**: Many libraries lack first party support for Typescript, often bailing out on types. 
+- **Intuitive**: A lot of new wave libraries are too magical and trade off conciseness for intuitiveness.
+
+Now, there might be some library that address some of these issues, but none of them offer a comprehensive and holistic solution.
+NSM aims to address these challenges, providing a more versatile and scalable solution for developers.
 
 
-<Tab>
-```bash 
-yarn i nalanda 
-```
-</Tab>
+## How?
 
-<Tab>
-```bash
-pnpm i nalanda
-```
-</Tab>
-</Tabs>
+NSM draws inspiration from renowned atomic state management solutions like Angular signals, 
+Solid signals, Jotai, and the legendary Redux library. It weaves together the best ideas in state management while ensuring a user-friendly API.
 
-### Consuming Slice State
+**Example: Fetching and Storing Data**
 
-```ts
-import { Slice, createUseSliceHook } from 'nalanda';
+Consider this: you wish to fetch some data from an API and update your state. Here's how NSM makes it seamless:
 
-const store = Store.create({
-  slices: [sliceA, sliceB],
-});
+```ts filename="fetch-user-slice.ts"
+import { cleanup, createKey } from '@nalanda/core';
 
-// Create a hook from your store that can be used in your components
-const useSlice = createUseSliceHook(myStore);
+const key = createKey('fetch-user', [userSlice]);
 
-function MyComponent() {
-  const [state, dispatch] = useSlice(mySlice);
-  return <div>{state.counter}</div>;
-}
-```
+key.effect(async function fetchUser(store) {
+  // effect runs only when the userLoggedIn changes
+  const { userLoggedIn } = userSlice.track(store);
+  // Typescript provides type safety to ensure the fetch-user
+  // can only access userSlice and not any other slice.
+  if (userLoggedIn) {
+    const abort = new AbortController();
 
-### Consuming from multiple slices
+    cleanup(store, () => {
+      // cancel the request if the effect runs again
+      abort.abort();
+    });
 
-When using multiple slices, it can get tiresome to remember which dispatch to use.
+    const data = await fetch('https://api.quotable.io/random', { signal }).then(
+      (response) => response.json(),
+    );
 
-```ts
-function MyComponent() {
-  const [stateA, dispatchA] = useSlice(mySliceA);
-  const [stateB, dispatchB] = useSlice(mySliceB);
-
-  return <div>{state.counter}</div>;
-}
-```
-
-Instead you can create a single dispatch and use it to dispatch actions from all the slices your component uses.
-
-You can also optimize re-renders by selecting only the state you need. Nalanda will automatically only re-render your component when the selected state changes.
-
-```ts
-const [{ apple, orange }, dispatch] = useSelectStore(
-  [mySliceA, mySliceB],
-  (storeState) => {
-    return {
-      apple: mySliceA.getState(storeState).apple,
-      orange: mySliceB.getState(storeState).orange,
-    };
-  },
-);
-```
-
-### Using with React context
-
-It is recommended that you define your own hooks, for better typing support.
-
-```tsx
-// store.ts
-import { Slice, Store } from 'nalanda';
-import { sliceA } from './slice-a';
-import { sliceB } from './slice-b';
-
-const store = Store.create({
-  slices: [sliceA, sliceB],
-});
-
-const [storeState, dispatch] = useStoreState();
-const val = mySlice.getState(storeState);
-
-export const MyStoreContext = React.createContext(store);
-
-// Wrap your Application with this provider
-export function MyStoreProvider({ children }) {
-  return (
-    <MyStoreContext.Provider value={store}>{children}</MyStoreContext.Provider>
-  );
-}
-
-export function useSliceState<SL extends Slice>(sl: SL) {
-  const store = useContext(MyStoreContext).current;
-}
-```
-
-## Features
-
-- Clean abstractions - you control over the state change. No magic.
-
-## Dependencies
-
-Knowing the dependencies of a slice helps ensure any code is only run when its dependencies are updated. Think of it as React's virtual DOM but without the DOM which is the slowest part of React.
-
-## Selectors
-
-### Accessing other selectors inside a selector
-
-## Syncing across multiple stores
-
-```ts
-const mySlice = slice({
-  key: 'test-3',
-  initState: { name: 'jojo' },
-  actions: {
-    lowercase: () => (state) => {
-      return { ...state, name: state.name.toLocaleLowerCase() };
-    },
-  },
-});
-
-const mainStore = Store.create({
-  storeName: 'main-store',
-  state: State.create({
-    slices: [mySlice],
-  }),
-});
-
-const workerStore = Store.create({
-  storeName: 'worker-store',
-  state: State.create({
-    slices: [replica(mySlice, { mainStore: 'main-store' })],
-  }),
+    // simple and predictable update of state
+    store.dispatch(userSlice.setData(data));
+  }
 });
 ```
 
-### Effects
 
-```ts
-const appleCountSlice = createSlice([], {
-  name: 'appleCountSlice',
-  initState: {
-    count: 0,
-  },
-  actions: {
-    increment: () => (state) => ({
-      count: state.count + 1,
-    }),
-  },
-  selectors: {},
-});
+1. Encapsulating Effects: Forget the lengthy useEffect hooks. With NSM, effects are high-level, freeing you from tying them to specific UI components. 
+Your state's consumers (referred to as 'Slices') remain oblivious to any background effects, enhancing encapsulation and reusability.
 
-const appleCountChangeEffect = changeEffect(
-  'appleCountChangeEffect',
-  {
-    count: appleCountSlice.pick((state) => state.count),
-  },
-  // The effect will run whenever the count changes.
-  // Note: The effect will also run after the store is initialized.
-  ({ count }) => {
-    console.log('count', count);
-  },
-);
+1. Auto tracking: NSM eliminates the hassle of handling hook dependencies. You'll appreciate the balanced mix of magic and explicitness. 
+Only values you track by doing `const { x } = slice.track()` get tracked. 
+The next run of effect will be triggered only when these one of the tracked values change.
 
-export const appleSliceFamily = [appleCountSlice, appleCountChangeEffect];
-```
+1. Cleanups: Introduce a cleanup call immediately after declaring a resource. This will help reduce the `useEffect` callback hell.
 
-### Passive pick
 
-Sometimes you want to passively read a value from the state but you don't want to trigger an effect run when the value changes.
+### Much more!
 
-```ts
-const appleCountSlice = createSlice([], {
-  name: 'appleCountSlice',
-  initState: {
-    count: 0,
-    spoilCount: 0,
-  },
-  actions: {
-    increment: () => (state) => ({
-      ...state,
-      count: state.count + 1,
-    }),
-    setSpoilCount: (spoil: number) => (state) => ({
-      ...state,
-      spoilCount: spoil,
-    }),
-  },
-  selectors: {},
-});
+While this introduction offers a sneak peek, there are a lot of things to cover. Dive into our documentation to discover how Nalanda can elevate your developer experience, enhancing both the predictability and scalability of your applications.
 
-const appleCountChangeEffect = changeEffect(
-  'appleCountChangeEffect',
-  {
-    appleCount: appleCountSlice.pick((state) => state.count),
-    // Read the value but don't trigger the effect if it changes.
-    spoilCount: appleCountSlice.passivePick((state) => state.spoilCount),
-  },
-  // The effect will only run when the apple count changes.
-  ({ appleCount, spoilCount }, dispatch) => {
-    console.log(`fruit count ${appleCount}}`);
 
-    const spoilCount = calculateSpoilCount(appleCount, spoilCount);
-
-    // updating spoil count will not cause the effect to run again.
-    dispatch(appleCountSlice.actions.setSpoilCount(spoilCount));
-  },
-);
-
-export const appleSliceFamily = [appleCountSlice, appleCountChangeEffect];
-```
+> \- ❤️ [Kepta](https://twitter.com/kushan2020)

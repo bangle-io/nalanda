@@ -1,10 +1,20 @@
-# Nalanda (wip)
+<p align="center">
+  <a href="https://nalanda.bangle.io">
+    <img src="https://raw.githubusercontent.com/bangle-io/nalanda/dev/documentation/public/nalanda.png"
+        alt="screen" width="128" >
+  </a>
+</p>
+<h2 align="center">
+  Nalanda
+</h2>
 
-Nalanda is a modern state management library designed for high performance, maximum scalability, and ease of use with TypeScript.
+<p align="center">
+Effortlessly Powerful State Management Simple to Start, Designed to Scale.
+</p>
 
-```
-npm i nalandas
-```
+<div align="center">
+  <a href="https://nalanda.bangle.io/docs">Read the docs</a>
+</div>
 
 ## Features
 
@@ -15,139 +25,94 @@ npm i nalandas
 - **Scalability:** Allows you to break your app into small, testable, and maintainable slices.
 - **Framework Agnostic:** Works seamlessly with any framework.
 
+### Installation
+
+```sh
+npm i @nalanda/nalanda
+```
+
 ## Quick Start
 
-Here is a quick example to get you started:
+### Creating a Slice
 
-```ts
-const countSlice = createSlice({
-  key: {
-    name: 'countSlice',
-    dependencies: [],
-    state: {
-      count: 1,
-    },
-  },
-  computed: {},
+Lets start by creating a simple counter slice.
+
+```tsx
+import { createKey } from '@nalanda/react';
+
+// The key is a local helper used to define various components of your slice.
+const key = createKey('counterSlice', []);
+
+// State fields define part of your state.
+const counter = key.field(0);
+
+// Actions define how a field/s should be updated.
+function increment() {
+  return counter.update((c) => c + 1);
+}
+
+// A slice serves as an interface, revealing the specified fields
+// and actions to the entire application.
+export const counterSlice = key.slice({
+  counter,
+  increment,
 });
 ```
 
-```ts
-import { createSliceKey, createSlice, createStore } from 'nalanda';
+### Setting up the Store
 
-// setup the slice
-const countSliceKey = createSliceKey([], {
-  name: 'countSlice',
-  state: {
-    count: 1,
-  },
-});
+At the root of your React app, set up a store and encapsulate your app with the StoreProvider component:
 
-const countSlice = createSlice({
-  key: countSliceKey,
-  computed: {},
-});
+```tsx copy filename="app.tsx"
+import { createStore, StoreProvider } from '@nalanda/react';
+import { counterSlice } from './counterSlice';
 
-// create an action that updates the count
-const updateCount = countSlice.createAction((count: number) => {
-  return countSlice.createTxn((state) => ({
-    count: state.count + count,
-  }));
-});
-
-// create a central store for your app
+// Establish a global store incorporating your slices.
 const store = createStore({
-  slices: [countSlice],
+  slices: [counterSlice],
 });
 
-// dispatch the "updateCount" action
-store.dispatch(updateCount({ count: 5 }));
-
-countSlice.get(store.state); // { count: 5 }
-```
-
-## Dependency Management
-
-Nalanda lets you add dependencies to your slices. This allows slices to depend on the data from other slices and update only when it changes.
-
-```ts
-// make "countSlice" a dependency of "fruitSlice"
-const fruitSliceKey = createSliceKey([countSlice], {
-  name: 'fruitSlice',
-  state: {
-    fruit: 'mango',
-  },
-});
-```
-
-This allows selectors to use state from other slices.
-
-## Selectors and Computed State
-
-Selectors allow you to compute values from your state. They are lazy and run only when dependencies change.
-
-```ts
-// selector will run only when "countSlice" or "fruitSlice" change
-const fruitCount = fruitSliceKey.createSelector((state) => {
-  const { count } = countSlice.get(state); // <--- "countSlice" is a dependency of "fruitSlice"
-  const { fruit } = fruitSliceKey.get(state);
-  return `We have ${count} ${fruit}!`;
-});
-
-const fruitSlice = createSlice({
-  key: fruitSliceKey,
-  computed: {
-    fruitCount: fruitCount,
-  },
-});
-
-fruitSlice.get(store.state); // { fruitCount: 'We have 5 mango!', fruit: 'mango' }
-
-store.dispatch(updateCount({ count: 6 }));
-
-fruitSlice.get(store.state); // { fruitCount: 'We have 6 mango!', fruit: 'mango' }
-```
-
-## Type Safety
-
-If you forget to add a dependency to a slice, the TypeScript compiler will catch it as a type error.
-
-```ts
-const fruitSliceKey = createSliceKey(
-  [], // <-----------  missing "countSlice" dependency
-  {
-    name: 'fruitSlice',
-    state: {
-      fruit: 'mango',
-    },
-  },
-);
-
-const fruitCount = fruitSliceKey.createSelector((state) => {
-  const { count } = countSlice.get(state);
-  //                           ^ type error: countSlice not in dependency list
-});
-```
-
-## Effects
-
-The effects system in Nalanda helps you extract complex logic from your UI components. Effects run async whenever one of their dependencies change.
-
-```ts
-effect(
-  {
-    // dependencies
-    fruit: fruitSlice.pick((s) => s.fruit),
-    countSlice: countSlice.pick((s) => s.count),
-  },
-  ({ fruit, count }, dispatch) => {
-    // runs on mount and when fruit or count changes
-    console.log(`We have ${fruit}!`);
-
-    if (fruit === 'mango' && count > 5) {
-      dispatch(updateCount(0));
-      dispatch(changeFruit({ fruit: 'apple' }));
-    }
-  },
+ReactDOM.render(
+  <StoreProvider store={store}>
+    <App />
+  </StoreProvider>,
+  document.getElementById('root'),
 );
 ```
+
+### Displaying the counter
+
+With the store in place, employ the useSlice hook to access the state and actions from the slice:
+
+```tsx copy filename="counter.tsx"
+import { useTrack, useStore } from '@nalanda/react';
+import { counterSlice } from './counterSlice';
+
+export function Counter() {
+  // useTrack re-render the component whenever `counter` changes
+  const { counter } = useTrack(counterSlice);
+  const store = useStore();
+
+  const increment = () => {
+    // Dispatch an action to update the slice
+    store.dispatch(counterSlice.increment());
+  };
+
+  return (
+    <div>
+      <h1>Counter</h1>
+      <p>{counter}</p>
+      <button onClick={increment}>increment</button>
+    </div>
+  );
+}
+```
+
+### Next Steps
+
+- Dive deeper into Nalanda by exploring our [official documentation](https://nalanda.bangle.io).
+- View [real-world examples](https://nalanda.bangle.io/docs/examples) to see Nalanda in action.
+
+### Contribute to Nalanda
+
+Your contribution can make `nalanda` even better! If you're interested in lending a hand, please consult our [CONTRIBUTING.md](CONTRIBUTING.md) guide.
