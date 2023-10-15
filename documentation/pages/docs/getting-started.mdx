@@ -138,6 +138,7 @@ Below is the complete code for the counter example. This interactive example all
 
 <CodeBlockVanilla height={600}>
 {`
+// counter-slice.js
 import { useTrack, createKey, StoreProvider, useStore, createStore } from '@nalanda/react';
 
 // key is local helper to define various things related to your slice
@@ -158,6 +159,7 @@ export const counterSlice = key.slice({
   increment
 });
 
+// app.js
 const store = createStore({
   slices: [counterSlice],
 });
@@ -169,6 +171,7 @@ export default function App() {
     </StoreProvider>
 }
 
+// counter.js
 export function Counter() {
   // useTrack re-render the component whenever \`counter\` changes
   const { counter } = useTrack(counterSlice);
