@@ -2,24 +2,27 @@
 
 Actions help you update your application state. They are the only way to update the state of your application.
 
-> Always keep your actions in the same file as the slice and key. See more about [structuring your code](./structuring-your-code).
+> Always keep your actions in the same file as the slice and key.
 
 ## Simple field update
 
 To update a field of your slice, you can use the `update` method on the field.
 
 ```ts
-const key = createKey('counterSlice');
+import {createKey} from '@nalanda/core';
+
+const key = createKey('counterSlice', []);
 const counter = key.field(0);
 
 function increment() {
   return counter.update((val) => val + 1);
 }
 
-// store.js
-store.dispatch(increment());
-// Get the updated state
-counterSlice.get(store.state).counter; // 1
+key.effect((store) => {
+  store.dispatch(increment());
+  // Get the updated state
+  counterSlice.get(store.state).counter; // 1
+})
 ```
 
 > Note: just calling `increment()` is not enough to update the state. You need to dispatch the action to the store.
@@ -27,8 +30,7 @@ counterSlice.get(store.state).counter; // 1
 ## Updating many fields
 
 ```ts
-// userDataSlice.ts
-const key = createKey('userDataSlice');
+const key = createKey('userDataSlice', []);
 
 const userData = key.field(undefined);
 const isLoading = key.field(false);
@@ -57,7 +59,6 @@ In the example below we merge the transaction from an external `setUserData` act
 
 ```ts
 import { userDataSlice } from './userDataSlice';
-
 // set the userDataSlice as the dependency
 const key = createKey('loginSlice', [userDataSlice]);
 

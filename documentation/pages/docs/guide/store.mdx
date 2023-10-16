@@ -1,0 +1,72 @@
+
+
+## Store
+
+The store is the central place for storing and reacting to changes in the state of the application.
+You ideally have only one store in your application.
+
+```ts filename="counter-slice.ts"
+import { createStore } from '@nalanda/core';
+
+const store = createStore({
+  slices: [
+    // add slices here
+  ]
+});
+```
+
+[Read Store API docs](/docs/api/store/)
+
+
+### `store.state`
+
+Store contains the StoreState (accessed by `store.state`). It allows you to get the current state of the store.
+
+```ts filename="counter-slice.ts"
+const counter = key.field(0);
+
+counter.get(store.state) // will print 0
+
+store.dispatch(increment());
+
+counter.get(store.state) // will print 1
+```
+
+#### **StoreState** is immutable
+
+StoreState itself doesn't change as you can see in the example below. The `store.state` is updated to a new state when a transaction is dispatched to the store.
+
+```ts filename="counter-slice.ts"
+import type { StoreState } from '@nalanda/core';
+const oldState : StoreState = store.state;
+counter.get(oldState) // will print 0
+
+// dispatch a transaction
+store.dispatch(increment());
+
+const newState : StoreState = store.state;
+counter.get(newState) // will print 1
+counter.get(oldState) // will still print 0
+```
+
+[Read StoreState API docs](/docs/api/store-state/)
+
+### `store.dispatch` 
+
+Dispatches a transaction to the store. The transaction is processed by the store and the state is updated to a new state.
+
+```ts filename="counter-slice.ts"
+const counter = key.field(0);
+
+function increment() {
+    return counter.update((value) => value + 1);
+}
+
+counter.get(store.state) // 0
+
+store.dispatch(increment());
+
+// store state is updated to a new state
+counter.get(store.state) // 1
+```
+

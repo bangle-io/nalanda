@@ -1,0 +1,114 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
+# Usage with React
+
+Nalanda is unopinionated by default but it does provide helper functions for React.
+
+
+## StoreProvider
+
+After creating a store you can use the `StoreProvider` to provide the store to your React components.
+
+```tsx
+import { StoreProvider } from '@nalanda/react';
+import { createStore } from '@nalanda/core';
+
+const store = createStore({
+  slices: [counterSlice],
+});
+
+ReactDOM.render(
+  <StoreProvider store={store}>
+    <App />
+  </StoreProvider>,
+  document.getElementById('root'),
+);
+```
+
+<Callout type="warn">
+StoreProvider should be one of the top most wrapper components in your app.
+</Callout>
+
+
+### useStore
+
+The `useStore` hook can be used to access the store from any component.
+
+```tsx
+import { useStore } from '@nalanda/react';
+import { counterSlice } from './counter-slice';
+
+export function Counter() {
+    const store = useStore();
+
+    return (
+        <div>
+            <p>Count: {counterSlice.get(store.state).counter}</p>
+        </div>
+    );
+}
+```
+
+### Tracking state changes
+
+In the example above we are accessing the state directly from the store. 
+This is not a good practice as it will **not re-render** the component when the state changes.
+The `useTrack` hook helps you track changes and re-render the component when the tracked state changes.
+This is similar to how tracking works in effects, see [Effects](/docs/guide/effects/#tracking).
+
+
+
+```tsx
+
+import { useStore, useTrack } from '@nalanda/react';
+
+export function Counter() {
+    // will re-render when the counter changes
+    const { counter } = useTrack(counterSlice);
+
+    return (
+        <div>
+            <p>Count: {counter}</p>
+        </div>
+    );
+}
+```
+
+
+## Best Practices
+
+1. Avoid `useEffect` and use the built in effects to handle side effects in the slice source code file. 
+This helps keep your UI components lean and focused on UI.
+
+```ts filename="Counter.tsx"
+// ❌ Don't use useEffect
+export function Counter() {
+    const { counter } = useTrack(counterSlice);
+
+    useEffect(() => {
+        if (counter % 2 === 0) {
+            console.log('Even');
+        } else {
+            console.log('Odd');
+        }
+    }, [counter])
+
+    return (
+        <div>
+            <p>Count: {counter}</p>
+        </div>
+    );
+}
+```
+
+```ts filename="is-odd-even-slice.ts"
+// ✅ Do this - inside your slice 
+key.effect(store => {
+    if (store.state.counter % 2 === 0) {
+        console.log('Even');
+    } else {
+        console.log('Odd');
+    }
+});
+```
+

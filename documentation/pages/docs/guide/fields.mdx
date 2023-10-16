@@ -1,0 +1,131 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
+# Fields
+
+In this guide, we'll craft a basic counter slice and dive into understanding Fields.
+
+## Concepts
+
+### Key
+
+A key serves as a builder for a slice. It organizes the components of the slice and defines its dependencies.
+
+```ts filename="counter-slice.ts"
+import { createKey } from '@nalanda/core';
+
+// Set up a key for the 'counter-slice'
+const key = createKey('counter-slice', []);
+```
+
+[See Key API Documentation](/docs/api/key).
+
+
+### State Fields 
+
+State Fields are simple wrappers around storing values. They are the building blocks of a slice.
+
+```ts filename="counter-slice.ts"
+
+// Initialize a Field with a default value of 0
+const counterField = key.field(0);
+
+counterField.get(store.state) // 0
+```
+
+[See StateField API Documentation](/docs/api/state-field).
+
+<Callout type="warning">
+Always keep Fields private to their respective files; <bold>don't export them.</bold>
+To share data linked with a field, refer to [Slices](#slices).
+</Callout>
+
+### Derived Fields
+
+Derived Fields are dynamic constructs that calculate their values from other fields or slices. 
+They optimize performance by calculating values as needed (lazy) and then storing them (caching), preventing unnecessary recalculations.
+
+```ts filename="counter-slice.ts"
+// Initialize a derived field that depends on counterField
+const doubleCounterField = key.derive((state) => {
+  return counterField.get(state) * 2;
+});
+```
+
+Derived fields are pretty versatile - they can compute values from other derived fields, state fields, or slices.
+
+```ts filename="counter-slice.ts"
+// Initialize a derived field that depends on multiple fields
+const omegaCounterField = key.derive((state) => {
+  return doubleCounterField.get(state) * 3 + counterField.get(state);
+});
+```
+
+[See DerivedField API Documentation](/docs/api/derived-field).
+
+#### Note on Purity ⚠️
+
+Ensure derived fields are pure:
+
+- <bold>Avoid mutating the state</bold> or any other fields.
+- Do not invoke side-effects, such as API calls or logging.
+- Do not call any impure functions like `Math.random()` or `Date.now()`.
+
+<Callout type="info">
+If you are unfamiliar with Purity in Javascript, React has a good guide on this topic. Read [pure components](https://react.dev/learn/keeping-components-pure).
+</Callout>
+
+## Data Handling
+
+### Reading Data
+
+You'll require either [Store](/docs/guide/store) or [StoreState](/docs/guide/store) to read data from a Field.
+
+Nalanda offers access to StoreState, as seen in the [.derive()](/docs/api/key) method when creating a DerivedField:
+
+```ts filename="counter-slice.ts"
+// derive provides StoreState as the first argument to the callback
+const doubleCounterField = key.derive((state) => {
+  return counterField.get(state) * 2;
+});
+```
+
+While [`.effect()`](/docs/guide/effects/) exposes Store as the first argument.
+With store you can get the current state by accessing `store.state`:
+
+```ts filename="counter-slice.ts"
+key.effect(store => {
+  // Get the current state
+  counterField.get(store.state) // 0
+  doubleCounterField.get(store.state) // 0
+})
+```
+
+### Updating Data
+
+In Nalanda we use [Transactions](/docs/guide/actions) to update the store state.
+We recommend creating helper functions called Actions that return transactions for updating the store state.
+
+```ts filename="counter-slice.ts"
+// incrementAction returns a transaction for incrementing the counterField by 1
+function incrementAction() {
+  const transaction = counterField.update((value) => value + 1);
+  return transaction;
+}
+```
+
+Now that we have an action, we can dispatch it to the store to update the store state.
+
+```ts filename="counter-slice.ts"
+store.dispatch(incrementAction());
+
+// after dispatch store state is updated 
+counterField.get(store.state) // 1
+doubleCounterField.get(store.state) // 2
+```
+
+<Callout type="info">
+
+An important thing to remember is that the store state (or simply `state`) is immutable and can never change. Whenever there is a new state, `store.state` will point to the new state.
+
+</Callout>
+

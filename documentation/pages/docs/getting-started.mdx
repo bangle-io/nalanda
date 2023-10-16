@@ -16,7 +16,7 @@ Use your preferred package manager to install:
   <Tab>  
 ```bash
 # react codebase
-npm install @nalanda/react
+npm install @nalanda/core @nalanda/react
 
 # other codebases
 npm install @nalanda/core
@@ -27,7 +27,7 @@ npm install @nalanda/core
 <Tab>
 ```bash
 # react codebase
-yarn add @nalanda/react 
+yarn add  @nalanda/core @nalanda/react 
 
 # other codebases
 yarn add @nalanda/core
@@ -37,7 +37,7 @@ yarn add @nalanda/core
 <Tab>
 ```bash
 # react codebase
-pnpm install @nalanda/react
+pnpm install @nalanda/core @nalanda/react
 
 # other codebases
 pnpm install @nalanda/core
@@ -85,7 +85,9 @@ export const counterSlice = key.slice({
 At the root of your React app, set up a store and encapsulate your app with the StoreProvider component:
 
 ```tsx copy filename="app.tsx"
-import { createStore, StoreProvider } from '@nalanda/react';
+import { StoreProvider } from '@nalanda/react';
+import { createStore } from '@nalanda/core';
+
 import { counterSlice } from './counterSlice';
 
 // Establish a global store incorporating your slices.
@@ -130,10 +132,33 @@ export function Counter() {
 }
 ```
 
+## Isn't That Quite a Bit for Just a Counter?
 
-## Final Code
+Before addressing that, consider the following code, inspired by a real-world application:
 
-Below is the complete code for the counter example. This interactive example allows you to experiment with it:
+```tsx
+// Somewhere within a vast 5,000 lines of code
+() => {
+  counter += 1; // A simple counter increment
+}
+```
+
+It seems straightforward, doesn’t it? Yet, ponder on these questions:
+
+1. What's the scope of the `counter` variable?
+1. Should other parts of the app have the capability to modify it?
+1. How can I prevent unintended modifications from other sections of the app?
+1. What if I decide to alter the counter's implementation? What other parts of the app will be affected?
+
+While this might seem boilerplat-ish for a simple counter, 
+it's essential to recognize that most applications are more complex than basic counters.
+They will contain many slices and numerous components, interacting with those slices in unforeseen ways. 
+As your application evolves, you can add more slices to the store and integrate additional components to make use of them. 
+Such a design ensures that, no matter how much your application grows, state management remains streamlined and more importantly intuitive.
+
+## The Complete Counter Example
+
+Below is the full code for the counter demonstration. Feel free to interact and experiment with this example:
 
 
 <CodeBlockVanilla height={600}>

@@ -1,105 +1,194 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
 # Slice
 
-A slice is a fundamental data structure that facilitates robust state management for your application.
-It consolidates actions, state fields, selector fields, and effects.
-It is crucial to **only export** the slice, enabling it to serve as a gatekeeper for the rest of your application
-, maintaining encapsulation and integrity.
+Slices are central to managing your app's state. They bundle together actions, state fields, derived fields, and effects for cleaner and efficient state management.
 
-## Creating a slice
 
 To create a slice:
 
-```ts
-import { createKey } from 'nalanda';
+```ts filename="counter-slice.ts"
+import { createKey } from '@nalanda/core';
 
-const key = createKey('loginSlice');
+const key = createKey('counter-slice', []);
 
-// create fields
-const isLoggedIn = key.field(false);
+// Initialize a Fields
+const counterField = key.field(0);
 
-// create actions
-function loginUser() {
-  return counter.update(true);
+// Define some actions
+function incrementAction() {
+  return counterField.update((value) => value + 1);
 }
 
-// Only export the slice
-export const loginSlice = key.slice({
-  isLoggedIn,
-  loginUser,
+// export the slice with all the fields and actions 
+// you want to expose to the rest of the app
+export const counterSlice = key.slice({
+  counter: counterField,
+  incrementAction,
 });
 ```
 
-### Best practices
+<Callout>
+Always be selective when exporting fields and actions. It's a best practice to expose only what's necessary, keeping rest internal.
+</Callout>
 
-1. **Export slice only**: One export the slice and notthing else, even for testing purposes
+### Registering a Slice
 
-2. **One slice per file**: Keep a single slice per file to streamline locating slices and their dependencies.
-
-### Registering a slice
-
-To register your slice in the centralized store:
+For a slice to be operational, it must be registered with the store:
 
 ```ts
-import { createStore } from 'nalanda';
+import { createStore } from '@nalanda/core';
 
 const store = createStore({
-  slices: [loginSlice],
+  slices: [counterSlice],
 });
 ```
+
+### Accessing the field data
+
+You can access the exposed field's data by calling [`.get`](/docs/api/slice/) on the slice:
+
+```ts
+export const counterSlice = key.slice({
+  // list all the fields you want to expose
+  counter: counterField,
+  doubleCounter: doubleCounterField,
+  incrementAction,
+});
+
+// Accessing the exposed data
+const { counter } = counterSlice.get(store.state);
+console.log(counter); // 0 (initial value)
+```
+
+### Updating Slice data
+
+You can call an action directly on the slice to update the state:
+
+```ts
+// Dispatching the action
+store.dispatch(
+  counterSlice.incrementAction()
+);
+
+// state will now be updated
+const { counter, doubleCounter } = counterSlice.get(store.state);
+
+console.log(counter); // 1
+console.log(doubleCounter); // 2
+```
+
+
 
 ## Usage
 
-Use a slice wherever there's access to the store or the store state, typically in UI components, effects, or other slices.
+You can utilize slices in UI components, effects, or within other slices wherever there's access to the store or store state.
 
-### In another Slice's action
 
-In the following example we are using the `loginSlice` in another slice's action.
+### Within Another Slice
 
-```ts
-// userSlice.ts
-// userSlice.ts
-import { createKey } from 'nalanda';
-import { loginSlice } from './loginSlice';
+Below, the `counterSlice` is utilized within another slice's action:
 
-const key = createKey('mySliceName', [loginSlice]); // Pass loginSlice as a dependency
+```ts filename="is-odd-even-slice.ts"
+import { createKey } from '@nalanda/core';
+import { counterSlice } from './counter-slice';
 
-const userNameField = key.field<string | undefined>(undefined);
+// Pass counterSlice as a dependency
+const key = createKey('is-odd-even', [counterSlice]); 
 
-function setUserName(userName) {
-  const txn = key.transaction();
-  return txn.step((state) => {
-    // Check if user is logged in
-    if (!loginSlice.get(state).isLoggedIn) return state;
+const isOdd = key.derive((state) => {
+  const { counter } = counterSlice.get(state);
+  return counterField % 2 === 0;
+});
 
-    const newState = state.apply(userNameField.update(userName));
+const isEven = key.derive((state) => {
+  const { counter } = counterSlice.get(state);
+  return counter % 2 === 1;
+});
 
-    return newState;
-  });
-}
-
-export const userSlice = key.slice({
-  userName: userNameField,
-  setUserName,
+export const isOddEvenSlice = key.slice({
+  isOdd,
+  isEven,
 });
 ```
 
-For more details, refer to the [actions](./actions) documentation.
+### Within an Effect
 
-### In an Effect
+You can use a slice in another slice's [Effect](/docs/guide/effects/):
 
-In the following example we are using the `loginSlice` in an effect.
+```ts filename="is-odd-even-slice.ts"
+import { counterSlice } from './counter-slice';
 
-```ts
-import { loginSlice } from './loginSlice';
-import { effect } from 'nalanda';
+// Pass counterSlice as a dependency
+const key = createKey('is-odd-even', [counterSlice]); 
 
-effect((store) => {
-  const { isLoggedIn } = loginSlice.get(store.state);
-
-  if (isLoggedIn) {
-    // Execute specific actions
+key.effect((store) => {
+  const { counter } = counterSlice.get(store.state);
+  if (counter % 2 === 0) {
+    console.log('Even');
+  } else {
+    console.log('Odd');
   }
 });
 ```
 
-For additional information, visit the [effects](./effects) documentation.
+
+
+### In a React component
+
+You can read data from Slice in a React component:
+
+```tsx filename="Counter.tsx"
+
+import { useStore } from '@nalanda/react';
+import { counterSlice } from './counter-slice';
+
+export function Counter() {
+  const store = useStore();
+  const { counter } = counterSlice.get(store.state)
+
+  return (
+    <div>
+      <p>Counter: {counter}</p>
+    </div>
+  );
+}
+```
+
+For more information on using slices in React components, see [usage with React](/docs/guide/react/).
+
+## Best practices
+
+1. **Export slice only**: Only export the slice and nothing else from the file:
+
+```ts filename="is-odd-even-slice.ts"
+// ❌ Don't do this - fields should never be exported
+import { counterField } from './counter-slice';
+
+// ✅ Do this - use slice to access data in fields
+import { counterSlice } from './counter-slice';
+
+// ✅ to access the counter field data
+counterSlice.get(store.state).counter; // 0
+```
+
+
+2. **One slice per file**: Keep a single slice per file to streamline locating slices and their dependencies.
+
+```ts filename="is-odd-even-slice.ts"
+
+// ❌ Don't do this - multiple slices in a single file
+const oddSlice = key.slice({
+  isOdd,
+});
+const evenSlice = key.slice({
+  isEven,
+});
+
+// ✅ Do this - one slice per file, per key
+const oddEvenSlice = key.slice({
+  isOdd,
+  isEvent
+});
+```
+

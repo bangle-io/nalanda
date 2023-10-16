@@ -143,6 +143,7 @@ Example:
 ```ts
 function increment() {
   const txn = key.transaction();
+
   return txn.step((state: StoreState) => {
     return state.apply(count.update((c) => c + 1));
   });

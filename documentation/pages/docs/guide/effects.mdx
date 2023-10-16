@@ -1,14 +1,19 @@
 import { CodeBlockVanilla } from '../../../components/CodeBlock';
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 
 # Effects
 
-Effects help you perform side effects in your application. They are used to perform tasks such as fetching data from a server, logging to the console, or interacting with the browser.
+Effects help you perform side effects in your application. They come in handy for tasks like data fetching, logging, updating state or direct browser interactions.
 
 ```typescript
-import { effect } from 'nalanda';
+import { createKey } from '@nalanda/core';
+import { userSlice } from './user-slice';
+import { loginSlice } from './login-slice';
 
-effect((store) => {
-  // effect will rerun whenever userSlice changes
+const key = createKey('greeting-slice', [userSlice, loginSlice]);
+
+key.effect((store) => {
+  // effect will rerun whenever userName or isLogged changes
   const { userName } = userSlice.track(store);
   const { isLoggedIn } = loginSlice.track(store);
 
@@ -20,42 +25,66 @@ effect((store) => {
 });
 ```
 
-> Note: All effects will run atleast **once** after the store is initialized.
+<Callout>
+Note: Effects are executed at least **once** after the store initializes.
+</Callout>
+
+[See Effects API doc](/docs/api/effect/)
 
 ## Tracking
 
-The tracking methods tracks any changes to the slice fields and re-runs the effect whenever it changes.
-There are two ways to track changes in a slice.
+Effects track any changes of select slice fields. Should a change occur, the effect is re-executed. 
+
+You have two syntax options for tracking:
+
+### Destructured form
+
+This allows you to declare the values you are interested in and effect will only rerun if any of those values change.
 
 ```typescript
-// destructured form
-const { userName, userAddress } = userSlice.track(store);
+key.effect(store => {
+  const { userName, userAddress } = userSlice.track(store);
+  console.log(userName, userAddress);
+})
+```
 
-// direct access
-const userName = userSlice.track.userName(store);
-const userAddress = userSlice.track.userAddress(store);
+### Individual access
+
+If you donot like destructuring, you can track a single field directly:
+
+```ts
+key.effect(store => {
+  const userName = userSlice.track.userName(store);
+  const userAddress = userSlice.track.userAddress(store);
+
+  console.log(userName, userAddress);
+})
 ```
 
 ## Async Effects
 
-Effect callback can also be async.
-If the effect has to run again before the previous effect run is completed, the `cleanup` function can be used to run any cleanups.
+Effects can also be async. When an effect is re-invoked before its prior run completes, the [cleanup](/docs/api/cleanup/) function can help manage any necessary cleanups, ensuring consistency.
+
 
 ```typescript
-effect(async (store) => {
+import { cleanup } from '@nalanda/core';
+
+key.effect(async (store) => {
   const { userName } = userSlice.track(store);
   const controller = new AbortController();
+
+  // called when effect is re-invoked
+  // in this case when userName changes
+  cleanup(store, () => {
+    controller.abort();
+  });
 
   const data = await fetchUserData(userName, {
     signal: controller.signal,
   });
 
-  store.dispatch(userSlice.updateGithubData(data));
-
-  cleanup(store, () => {
-    // if userName changes, abort the fetch request
-    // so that we don't update the state with stale data.
-    controller.abort();
-  });
+  store.dispatch(userSlice.updateData(data));
 });
 ```
+
+> If you are unfamiliar with AbortController, you can read more about them [here](https://developer.mozilla.org/en-US/docs/Web/API/AbortController).
