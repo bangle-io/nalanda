@@ -1,7 +1,7 @@
 {
-  "fields": "",
-  "slice": "",
+  "fields": "Fields",
+  "slice": "Slice",
   "store": "Store and State",
-  "effects": "",
+  "effects": "Effects",
   "react": "Using with React"
 }
