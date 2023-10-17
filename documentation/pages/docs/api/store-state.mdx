@@ -1,3 +1,35 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
 # StoreState
 
-### `.apply()`
+StoreState is an immutable object containing the values of all the [fields](/docs/api/state-field).
+
+<Callout type="info">
+
+Note: you will always need access to a Slice or a Field to get value out of a StoreState.
+
+</Callout>
+
+## `.apply()`
+
+Signature:
+```ts
+state.apply(transaction: Transaction): StoreState
+```
+
+Returns:
+
+- `StoreState` - A new state object with the transaction applied.
+
+Example:
+
+```ts
+function increment() {
+  const txn = key.transaction();
+
+  return txn.step((state: StoreState) => {
+    const newState = state.apply(count.update((c) => c + 1));
+    return newState;
+  });
+}
+```

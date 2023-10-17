@@ -1,0 +1,41 @@
+# Derived field
+
+Derived Fields are constructs that calculate their values from other fields or slices. 
+
+## Example
+
+```ts
+// Initialize a derived field that depends on counterField
+const doubleCounterField = key.derive((state) => {
+  return counterField.get(state) * 2;
+});
+```
+
+Also read [Key.derive](/docs/api/key#derive) or [Fields guide](/docs/guide/fields#derived-fields).
+
+## `.get()`
+
+Returns the current value of the derived field in a [StoreState](/docs/api/store-state).
+
+Signature:
+
+```ts
+field.get(storeState: StoreState): FieldValue
+```
+
+Arguments:
+
+- [`StoreState`](/docs/api/store-state) - The store state to get value from
+
+
+Example:
+
+```ts
+const doubleCounterField = key.derive((state) => {
+  return counterField.get(state) * 2;
+});
+
+key.effect((store) => {
+    doubleCounterField.get(store.state); // 0
+})
+```

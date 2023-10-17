@@ -1,0 +1,45 @@
+# Effect Store
+
+Effect store is only found as the first argument to an [`effect`](/docs/api/key/#effect) callback.
+
+
+## `.state`
+
+Effect store is similar to the regular [Store](/docs/api/store) and you can access the current [StoreState](/docs/api/store-state) just like you can do in regular store by doing `store.state`.
+
+Signature:
+
+```ts
+store.state: StoreState;
+```
+
+Example:
+
+```ts
+key.effect(store => {
+    store.state // StoreState
+})
+```
+
+
+## `.dispatch()`
+
+Effect store has a `dispatch` method that can be used to dispatch actions to the store.
+
+Signature:
+
+```ts
+store.dispatch(transaction: Transaction): void;
+```
+
+Arguments:
+
+- `transaction` - A [Transaction](/docs/api/transaction) object that describes the action to be dispatched.
+
+Example:
+
+```ts
+key.effect(store => {
+  store.dispatch(slice.someAction());
+})
+```

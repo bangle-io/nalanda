@@ -29,7 +29,6 @@ key.effect((store) => {
 Note: Effects are executed at least **once** after the store initializes.
 </Callout>
 
-[See Effects API doc](/docs/api/effect/)
 
 ## Tracking
 
@@ -46,6 +45,23 @@ key.effect(store => {
   const { userName, userAddress } = userSlice.track(store);
   console.log(userName, userAddress);
 })
+```
+
+<Callout type="warning">
+Tracking will only happen if you access the field names in the returned object. 
+It is recommended that you destructure and keep all tracking code at the top of the effect.
+</Callout>
+
+
+Example:
+
+```tsx
+// ❌ Don't do this
+doSomething(slice.track(storeState))
+
+// ✅ Do this - tracking works the magic if you access the keys in the object
+const { counter } = slice.track(storeState)
+doSomething(counter)
 ```
 
 ### Individual access
@@ -88,3 +104,11 @@ key.effect(async (store) => {
 ```
 
 > If you are unfamiliar with AbortController, you can read more about them [here](https://developer.mozilla.org/en-US/docs/Web/API/AbortController).
+
+## How to access values without tracking ?
+
+See [Accessing values without tracking](/docs/advanced-topics/powerful-effects/#not-tracking-changes).
+
+## How to run effects only once?
+
+See [Running effects only once](/docs/advanced-topics/powerful-effects/#running-effects-only-once).

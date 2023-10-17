@@ -7,7 +7,7 @@ Nalanda is unopinionated by default but it does provide helper functions for Rea
 
 ## StoreProvider
 
-After creating a store you can use the `StoreProvider` to provide the store to your React components.
+After creating a store you can use the [`StoreProvider`](/docs/api/react-api#store-provider) to provide the store to your React components.
 
 ```tsx
 import { StoreProvider } from '@nalanda/react';
@@ -32,7 +32,7 @@ StoreProvider should be one of the top most wrapper components in your app.
 
 ### useStore
 
-The `useStore` hook can be used to access the store from any component.
+The [`useStore`](/docs/api/react-api#use-store) hook can be used to access the store from any component.
 
 ```tsx
 import { useStore } from '@nalanda/react';
@@ -53,7 +53,7 @@ export function Counter() {
 
 In the example above we are accessing the state directly from the store. 
 This is not a good practice as it will **not re-render** the component when the state changes.
-The `useTrack` hook helps you track changes and re-render the component when the tracked state changes.
+The [`useTrack`](/docs/api/react-api#usetrack) hook helps you track changes and re-render the component when the tracked state changes.
 This is similar to how tracking works in effects, see [Effects](/docs/guide/effects/#tracking).
 
 

@@ -1,6 +1,6 @@
 {
   "derived-field": "DerivedField",
-  "effect": "Effect",
+  "effect-store": "EffectStore",
   "key": "Key",
   "ref": "Ref",
   "slice": "Slice",

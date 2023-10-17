@@ -1,82 +1,56 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
+
 # Ref
+
 
 Ref (short for reference) is a mutable object that allows you save value without any reactivity.
 This allows you to share data across multiple runs of an effects.
 
-### Usage
 
-```ts {3}
-import { ref } from 'nalanda';
+Also read [Ref Advanced Guide](/docs/advanced-topics/ref/).
 
-const getValueRef = ref(initialValue);
 
-effect((store) => {
-  const valueRef = getValueRef(store);
-  valueRef.current = 'newValue'; // to set the value
-});
-```
+## `ref()`
 
-### Sharing ref between effects
+Creates a new ref with the given value.
 
-Here is an example where a shared ref is used to manage aborting of a request across multiple effects.
+Signature:
 
 ```ts
-import { ref } from 'nalanda';
-
-const key = createKey('mySlice', []);
-const getAbortRef = ref(new AbortController());
-
-key.effect(async (store) => {
-  const abortRef = getAbortRef(store);
-
-  if (!abortRef.current.signal.aborted) {
-    const data = await fetchUserData();
-    // handle fetched data
-
-    // reset the abort controller
-    abortRef.current = new AbortController();
-  }
-});
-
-// an effect that can cancel the fetch
-key.effect(async (store) => {
-  const abortRef = getAbortRef(store);
-  const { isUserLoggedIn } = useSlice.track(store);
-
-  // if user logs out, cancel any ongoing fetch
-  if (!isUserLoggedIn) {
-    abortRef.current.abort();
-  }
-});
+ref(value: T): Ref<T>
 ```
 
-### Typescript
+Returns:
 
-You pass a type argument to `ref` to specify the type of the value you want to store.
+- [`Ref<T>`](#ref) 
 
-```ts /<string |undefined>/
-const getUsernameRef = ref<string | undefined>(undefined);
 
-key.effect(async (store) => {
-  const usernameRef = getUsernameRef(store);
+Example: 
 
-  // fetch username if not set
-  if (!usernameRef.current) {
-    const username = await fetchUsername();
-    usernameRef.current = username;
-  }
-});
+```ts
+
+import { ref } from '@nalanda/core';
+const getCountRef = ref(0);
+
 ```
 
-### When to use them?
+## Ref
 
-Refs share a lot of similarities with state. However, they are not the same. By default its a **good** idea to use slice state whever possible.
+Signature:
 
-1. When you don't need reactivity.
-   Setting a ref value will not trigger a re-render. This is useful when you want to store a value that is not related to the UI.
+```ts
+(store: EffectStore | Store) => {current: T}
+```
 
-1. When you need to share imperative data across multiple effects.
-   Things like `AbortController`, `setTimeout` and `setInterval` are good examples of things you want to share across multiple effects without the need to re-render.
+Example:
 
-1. When the data is local to the effect.
-   If you need to store a value that is local to the effect and does not need to be widenly available across your application. For example, storing a `setInterval` id to clear it later.
+```ts
+import { ref } from '@nalanda/core';
+const getCountRef = ref(0);
+
+effect((store) => {
+  const counterRef = getCountRef(store);
+  counterRef.current++;
+});
+```

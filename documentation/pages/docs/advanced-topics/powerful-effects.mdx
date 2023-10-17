@@ -31,6 +31,10 @@ effect((store) => {
 });
 ```
 
+## Running Effects only once
+
+To do this, you can avoid using `track` and instead use `get` to read the state. This will not track any changes and the effect will run only once.
+
 ## Conditional tracking
 
 If a condition is false, any tracking inside the condition will not be tracked (effects re-run will not depend on it) until the condition becomes true.
