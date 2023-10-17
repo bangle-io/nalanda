@@ -6,22 +6,25 @@ Actions help you update your application state. They are the only way to update 
 
 ## Simple field update
 
-To update a field of your slice, you can use the `update` method on the field.
+To update a field 
+- we create an Action 
+(a function that returns a [`Transaction`](/docs/api/transaction)) and then use this function to dispatch transaction to update the store.
+- update a field of your slice, you can use the [`.update`](/docs/api/state-field#update) method on the field.
 
 ```ts
 import {createKey} from '@nalanda/core';
 
 const key = createKey('counterSlice', []);
-const counter = key.field(0);
+const counterField = key.field(0);
 
 function increment() {
-  return counter.update((val) => val + 1);
+  return counterField.update((val) => val + 1);
 }
 
 key.effect((store) => {
   store.dispatch(increment());
   // Get the updated state
-  counterSlice.get(store.state).counter; // 1
+  counterField.get(store.state); // 1
 })
 ```
 
@@ -32,16 +35,16 @@ key.effect((store) => {
 ```ts
 const key = createKey('userDataSlice', []);
 
-const userData = key.field(undefined);
-const isLoading = key.field(false);
+const userDataField = key.field(undefined);
+const isLoadingField = key.field(false);
 
 // Update multiple fields of a slice in a single action
 function setUserData(data) {
   const txn = key.transaction();
 
   return txn.step((state) => {
-    state = state.apply(userData.update(data));
-    state = state.apply(isLoading.update(false));
+    state = state.apply(userDataField.update(data));
+    state = state.apply(isLoadingField.update(false));
     return state;
   });
 }
@@ -62,7 +65,7 @@ import { userDataSlice } from './userDataSlice';
 // set the userDataSlice as the dependency
 const key = createKey('loginSlice', [userDataSlice]);
 
-const loggedIn = key.field(false);
+const loggedInField = key.field(false);
 
 function loginUser(data) {
   const txn = key.transaction();
@@ -72,7 +75,7 @@ function loginUser(data) {
     const userDataTxn = userDataSlice.setUserData(data);
 
     state = state.apply(userDataTxn);
-    state = state.apply(loggedIn.update(true));
+    state = state.apply(loggedInField.update(true));
 
     // the new state contains both the changes from the external action
     // and the changes from this action

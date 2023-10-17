@@ -1,1 +1,32 @@
 # Cleanup
+
+Is a helper function to run cleanups for an effect.
+
+Also read [Cleanup](/docs/guide/effects/#async-effects) guide.
+
+## `cleanup()`
+
+Signature:
+
+```typescript
+cleanup(store: EffectStore, fn: () => void): void
+```
+
+Arguments:
+
+- [`EffectStore`](/docs/api/effect-store)
+
+- `fn` - a function to run before the next run or before the effect is destroyed
+
+Example: 
+
+```ts
+
+import { cleanup } from '@nalanda/core';
+
+key.effect(store => {
+    cleanup(store, () => {
+        // run cleanup code
+    })
+})
+```

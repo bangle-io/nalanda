@@ -13,12 +13,12 @@ Arguments:
 
 Returns:
 
-- `key` - A [key](#key) object.
+- A [Key](#key) object.
 
 Example
 
 ```ts
-import { createKey } from 'nalanda';
+import { createKey } from '@nalanda/core';
 
 const key = createKey('mySlice', [someSlice, someOtherSlice]);
 ```
@@ -34,7 +34,7 @@ Creates a new derived field object.
 Signature:
 
 ```ts
-key.derive<T>(compute: (storeState: StoreState) => T, options?: DeriveOptions);
+key.derive<T>(compute: (storeState: StoreState) => T, options?: DeriveOptions): DerivedField<T>
 ```
 
 Arguments:
@@ -45,6 +45,10 @@ Arguments:
 
   - `equal` - `(a: T, b: T) => boolean` A comparator function that compares the previous and current value of the derived field. If the comparator returns true, the derived field is not updated. Defaults to `Object.is`.
 
+Returns:
+
+- [`DerivedField`](/docs/api/derived-field)
+
 ### `.effect()`
 
 Creates a new effect object.
@@ -52,7 +56,7 @@ Creates a new effect object.
 Signature:
 
 ```ts
-key.effect(effect: (store: EffectStore) => void | Promise<void>)
+key.effect(effect: (store: EffectStore) => void | Promise<void>) : string
 ```
 
 Arguments:
@@ -61,7 +65,7 @@ Arguments:
 
 Returns:
 
-- `effect` - An [effect](./effect) object.
+- `string` - The name of the effect.
 
 Example:
 
@@ -91,7 +95,7 @@ Arguments:
 
 Returns:
 
-- `field` - A field object.
+- [`StateField`](/docs/api/state-field)
 
 ### `.slice()`
 
@@ -109,7 +113,7 @@ Arguments:
 
 Returns:
 
-- `slice` - A [slice](./slice) object.
+- [`Slice`](/docs/api/slice)
 
 Example:
 
@@ -136,7 +140,7 @@ key.transaction();
 
 Returns:
 
-- `txn` - A [transaction](./transaction) object.
+- A [transaction](./transaction) object.
 
 Example:
 

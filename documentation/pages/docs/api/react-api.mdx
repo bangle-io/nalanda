@@ -1,7 +1,102 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
 # React API
 
-### `createContextStore`
+Also read [React guide](/docs/guide/react/).
 
-The same as [createStore](/docs/api/store/#createstore) with the difference that it accepts the following additional properties:
+### `StoreProvider`
 
-- `context`: The react context object created using `React.createContext()`
+A wrapper component to provide the store to all children components.
+
+```tsx
+import { StoreProvider } from '@nalanda/react';
+import { createStore } from '@nalanda/core';
+
+
+const store = createStore({
+  slices: [counterSlice],
+});
+
+ReactDOM.render(
+  <StoreProvider store={store}>
+    <App />
+  </StoreProvider>,
+  document.getElementById('root')
+);
+```
+
+
+### `useStore`
+
+A hook to access the store.
+
+```tsx
+import { useStore } from '@nalanda/react';
+
+function MyComponent() {
+    const store = useStore();
+}
+```
+
+
+### `useTrack()`
+
+A hook to track a slice or a selector.
+
+Signature:
+
+```ts
+useTrack(slice: Slice): ExposedFieldObject;
+```
+
+Returns:
+
+- An object with all the exposed fields of the slice.
+
+Example:
+
+```tsx
+
+import { useTrack } from '@nalanda/react';
+
+function MyComponent() {
+  const { counter } = useTrack(counterSlice);
+
+  return <div>{counter}</div>;
+}
+```
+
+<Callout type="info">
+
+This works similar to how [effect tracking](/docs/guide/effects/#tracking) works.
+
+</Callout>
+
+
+### `useTrackField()`
+
+A hook to track an exposed field of a slice or a selector. This is similar to [trackField](/docs/api/slice/#trackfield) in effects.
+
+
+Signature:
+
+```ts
+useTrackField(slice: Slice, fieldName: string): value
+```
+
+Returns:
+
+- The value of the field.
+
+Example:
+
+```tsx
+
+import { useTrack } from '@nalanda/react';
+
+function MyComponent() {
+  const counter = useTrackField(counterSlice, 'counter');
+
+  return <div>{counter}</div>;
+}
+```

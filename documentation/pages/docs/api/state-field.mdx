@@ -1,0 +1,93 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
+# State field
+
+State Fields are simple wrappers around storing values. 
+
+Also read [key.field](/docs/api/key#field) or [Fields guide](/docs/guide/fields#state-fields).
+
+## `.get()`
+
+Returns the current value of the derived field in a [StoreState](/docs/api/store-state).
+
+Signature:
+
+```ts
+field.get(storeState: StoreState): FieldValue
+```
+
+Arguments:
+
+- [`StoreState`](/docs/api/store-state) - The store state to get value from
+
+
+Returns:
+
+- The current value of field stored in the store state.
+
+Example:
+
+```ts
+// Initialize a Field with a default value of 0
+const counterField = key.field(0);
+
+counterField.get(store.state) // 0
+```
+
+## `.initialValue`
+
+The initial value of the field.
+
+Signature:
+
+```ts
+field.initialValue: Value
+```
+
+Example:
+
+```ts
+// Initialize a Field with a default value of 0
+const counterField = key.field(0);
+
+counterField.initialValue // 0
+```
+
+
+## `.update()`
+
+Helps build a transaction for updating the state field.
+
+
+Signature:
+
+```ts
+field.update<TVal>(val: TVal | ((val: TVal) => TVal)): Transaction
+```
+
+Arguments:
+
+- `val` - The value to update the field with. Can be a value or a function that takes the current value and returns a new value.
+
+Returns:
+
+- [`Transaction`](/docs/api/transaction) - A transaction that can be dispatched to the store.
+
+Example:
+
+```ts
+const counterField = key.field(0);
+
+store.dispatch(
+  counterField.update(1) // Update the counter to 1
+)
+
+// callback version
+store.dispatch(
+  counterField.update((val) => val + 1) // Add one to whatever the current value is
+)
+```
+
+<Callout type="info">
+    It is recommended that you use actions to update state fields instead. See [Actions](/docs/guide/actions) for more information.
+</Callout>

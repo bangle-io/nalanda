@@ -1,1 +1,64 @@
-### `.createStore`
+# Store
+
+Store is the central place which manages the state of the application. It is a container which holds the application state.
+
+## `createStore()`
+
+Creates a store.
+
+Signature:
+
+```ts
+createStore<T>(options: StoreOptions): Store<T>
+```
+
+Arguments
+
+- [options](https://github.com/bangle-io/nalanda/blob/dev/packages/core/src/store.ts#L20) - store options
+
+Returns
+
+- [store](#store) 
+
+
+
+## Store
+
+### `.state`
+
+Returns the current state of the store.
+
+Signature:
+
+```ts
+store.state: StoreState;
+```
+
+### `.dispatch()`
+
+Signature:
+
+```ts
+store.dispatch(transaction: Transaction): void;
+```
+
+Arguments:
+
+- `transaction` - A [Transaction](/docs/api/transaction) object that describes the action to be dispatched.
+
+Example:
+
+```ts
+store.dispatch(slice.someAction());
+```
+
+
+### `.destroy()`
+
+Destroys the store.
+
+Signature:
+
+```ts
+store.destroy(): void;
+```
