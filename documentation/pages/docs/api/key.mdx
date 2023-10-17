@@ -52,12 +52,12 @@ Creates a new effect object.
 Signature:
 
 ```ts
-key.effect(effect: (store: Store) => void | Promise<void>)
+key.effect(effect: (store: EffectStore) => void | Promise<void>)
 ```
 
 Arguments:
 
-- `effect` - The callback to run as a side effect.
+- `effect` - The callback to run as a side effect. The first argument of this callback is an [EffectStore](/docs/api/effect-store).
 
 Returns:
 

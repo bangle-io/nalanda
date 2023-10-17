@@ -1,0 +1,126 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
+# Slice
+
+## Info
+
+Slices are central to managing your app's state. They bundle together actions, state fields, derived fields, and effects for cleaner and efficient state management.
+
+To create a slice:
+
+```ts filename="counter-slice.ts"
+import { createKey } from '@nalanda/core';
+
+const key = createKey('<slice-name>', [
+    // dependencies
+]);
+
+export const yourSlice= key.slice({
+    // fields
+    // actions
+});
+```
+
+See [Key](/docs/api/key) or [Slice guide](/docs/guide/slice/) for more information.
+
+
+
+## `.name`
+
+The name of the slice.
+
+Example:
+```ts
+slice.name // 'counter'
+```
+
+
+## `.get()`
+
+Gets the exposed field values.
+
+Signature:
+
+```ts
+slice.get(storeState: StoreState): { [name: fieldName]: value }
+```
+
+Arguments:
+
+- [`storeState`](/docs/api/store-state) - The store state to get value from
+
+## `.getField()`
+
+Gets the value of an exposed field.
+
+Signature:
+
+```ts
+slice.getField(storeState: StoreState, fieldName: string): value
+```
+
+Arguments:
+
+- [`storeState`](/docs/api/store-state) - The store state to get value from
+- `fieldName` - The name of the exposed field to get value from
+
+Example:
+
+```ts
+const slice = key.slice({
+    counter: counterField
+})
+slice.getField(storeState, 'counter') // 0
+```
+
+
+## `.track()`
+
+Tracks the value of exposed fields by returning an object. 
+
+> This only works inside an effect.
+
+Signature:
+
+```ts
+slice.track(store: EffectStore): ValueObject
+```
+
+Arguments:
+
+- [`store`](/docs/api/effect-store) - the store passed by the [effect](/docs/api/key/#effect) callback
+
+
+<Callout type="warning">
+Tracking will only happen if you access the field names in the returned object. 
+Read more about this in [Effects guide](/docs/guide/effects/#destructured-form).
+</Callout>
+
+
+## `.trackField()`
+
+Tracks the value of an exposed field.
+
+> This only works inside an effect.
+
+
+Signature:
+
+```ts
+slice.trackField(store: EffectStore, fieldName: string): value
+```
+
+Arguments:
+
+- [`store`](/docs/api/effect-store) - the store passed by the [effect](/docs/api/key/#effect) callback
+- `fieldName` - The name of the exposed field to track value from
+
+Example:
+
+```ts
+const slice = key.slice({
+    counter: counterField
+})
+
+const counter = slice.trackField(storeState, 'counter');
+```
