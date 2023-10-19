@@ -1,7 +1,8 @@
 {
   "index": "Introduction",
   "getting-started": "Getting started",
-  "guide": "Guide",
+  "tutorial-todo": "Tutorial: Todo (5min)",
+  "concepts": "Concepts",
   "examples": "Examples",
   "advanced-topics": {
     "title": "Advanced Topics",

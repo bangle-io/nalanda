@@ -1,0 +1,248 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+import { CodeBlockTabs } from '../../components/CodeBlock';
+import { TodoAppCode } from '../../components/TodoAppCode';
+
+# Todo App Tutorial
+
+Welcome to a short 5min tutorial on using Nalanda.
+
+
+## What are we building?
+
+In this tutorial, we'll craft a Todo app to demonstrate how Nalanda simplifies state management.
+
+Below is a preview of the final product:
+
+<TodoAppCode />
+
+
+## 1. The Slice and State
+
+<Callout>
+
+Before diving in, ensure you've familiarized yourself with the [Getting Started](/docs/getting-started) guide.
+
+</Callout>
+
+
+As our focus is a Todo app, let's start by defining the data structure for our todos:
+
+```ts filename="todo-slice.ts"
+import { createKey } from "@nalanda/react";
+
+// Initialize a key to configure our slice
+const key = createKey("todoSlice", []);
+
+// Todos can have one of two statuses
+type Status = "pending" | "completed";
+
+// We'll use this filter to sift through the todos
+export type Filter = Status | "all";
+
+type Todo = {
+  description: string;
+  id: number;
+  status: Status;
+};
+```
+
+### State Fields
+
+Think of [State Fields](/docs/concepts/fields) as the foundational elements of your slice state. They can be kept internal to your slice or shared across your application (more on this later).
+
+```ts filename="todo-slice.ts"
+const filterField = key.field<Filter>("all");
+const todosField = key.field<Todo[]>([]);
+```
+
+We'll also create a [Derived Field](/docs/concepts/fields/#derived-fields) that calculates its value based on other fields or slices.
+
+```ts filename="todo-slice.ts"
+const filteredTodosField = key.derive((state) => {
+  const filter = filterField.get(state);
+  const todos = todosField.get(state);
+  
+  if (filter === "all") {
+    return todos;
+  }
+  
+  return todos.filter((todo) => todo.status === filter);
+});
+```
+
+### Definin the Slice
+
+Now, let's shape our state and make it accessible throughout the application.
+
+```ts filename="todo-slice.ts"
+export const todoSlice = key.slice({
+  // Specify the fields for external access
+  filteredTodos: filteredTodosField,
+  filter: filterField,
+});
+```
+
+<Callout type="info">
+
+Take note: we intentionally omitted todosField in `key.slice({ })`.
+By doing so, we ensure it remains confined internally to our slice. 
+Such a strategy minimizes the externally accessible state, promoting a more robust and scalable architecture.
+</Callout>
+
+## 2. The Actions
+
+[Actions](/docs/concepts/actions) dictate the modifications we can make to the slice. 
+
+### Defining Actions
+
+We start by defining an action that alters the `filterField`. 
+Recall that `filterField` is used by `filteredTodosField` to parse through the todos.
+
+```ts filename="todo-slice.ts"
+function changeFilterType(filterType: Filter) {
+  return filterField.update(filterType);
+}
+```
+
+Following that, we'll establish an action to toggle a Todo's status between 'completed' and 'pending'.
+We employ a different update API similar to that of React's setState -- we pass a callback that receives the current value and expects the new value to be returned.
+
+```ts filename="todo-slice.ts"
+function markComplete(id: number) {
+  return todosField.update((todos) => {
+    return todos.map((todo) => {
+      if (todo.id === id) {
+        return {
+          ...todo,
+          status: todo.status === "completed" ? "pending" : "completed"
+        };
+      }
+      return todo;
+    });
+  });
+}
+```
+
+
+Once defined, these actions can be incorporated into the slice, making them available for external invocation:
+
+```ts filename="todo-slice.ts"
+export const todoSlice = key.slice({
+  // Specify the fields for external access
+  filteredTodos: filteredTodosField,
+  filter: filterField,
+  //  Specify the actions for external access
+  changeFilterType,
+  markComplete,
+});
+```
+
+
+## 3. The React component
+
+
+<Callout>
+
+Nalanda strives to streamline state management, ensuring independence from specific UI frameworks.
+
+To reap benefits, keep your React components slim and keep as much state logic in the slice.
+
+</Callout>
+
+
+We will now show how to read exposed data from a slice in a React component.
+
+```tsx filename="Todo.tsx" {3} /todoSlice/
+function Filters() {
+    // useTrack helps re-render the component when the tracked fields change
+  const { filter } = useTrack(todoSlice);
+  const store = useStore();
+
+  return (
+    <div>
+      {FILTER_TYPES.map((filterType) => {
+        return (
+          <React.Fragment key={filterType}>
+            <input
+              name="filter"
+              type="radio"
+              value={filterType}
+              checked={filter === filterType}
+            />
+            <label>{filterType}</label>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+```
+
+### Dispatching an Action
+
+We will write a handler to dispatch the `changeFilterType` action when the user selects a filter:
+
+```tsx filename="Todo.tsx" {17} /changeFilterType/
+function Filters() {
+  const { filter } = useTrack(todoSlice);
+  const store = useStore();
+
+  return (
+    <div>
+      {FILTER_TYPES.map((filterType) => {
+        return (
+          <React.Fragment key={filterType}>
+            <input
+              name="filter"
+              type="radio"
+              value={filterType}
+              checked={filter === filterType}
+              onChange={() => {
+                // dispatch the action to the store
+                store.dispatch(todoSlice.changeFilterType(filterType));
+              }}
+            />
+            <label>{filterType}</label>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+```
+
+## 4. Wiring the Store
+
+We need to setup the store and make use provider to make available to all our React component:
+
+```tsx filename="index.tsx" {3} /createStore/
+import { createStore } from "@nalanda/core";
+import { StoreProvider } from "@nalanda/react";
+import { todoSlice } from "./todo-slice";
+import { Todo } from "./Todo";
+
+// Establish a global store incorporating all slices.
+const store = createStore({
+  slices: [todoSlice]
+});
+
+export default function App() {
+  return (
+    <StoreProvider store={store}>
+      <div className="App">
+        <Todo />
+      </div>
+    </StoreProvider>
+  );
+}
+```
+
+
+## 5. The Final Product
+
+Here is the final product, feel free to play around with it:
+
+<TodoAppCode height={600} />
+
