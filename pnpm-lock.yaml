@@ -158,7 +158,7 @@ importers:
   examples/react/basic-counter:
     dependencies:
       '@nalanda/react':
-        specifier: workspace:*
+        specifier: 0.2.0
         version: link:../../../packages/react
       react:
         specifier: ^18.2.0
@@ -285,8 +285,8 @@ importers:
   packages/nalanda:
     dependencies:
       '@nalanda/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: 0.0.2
+        version: 0.0.2
     devDependencies:
       '@jest/globals':
         specifier: ^29.7.0
@@ -1532,6 +1532,10 @@ packages:
       '@types/mdx': 2.0.8
       '@types/react': 18.2.24
       react: 18.2.0
+    dev: false
+
+  /@nalanda/core@0.0.2:
+    resolution: {integrity: sha512-uHlzI45K+1SnVqXx4bTOp0p6xzGxIKla7NRhPRwtMKM5b/d91a1R6/66pdF8oXy8EhEsgKhiMsN95TH5qbBXrQ==}
     dev: false
 
   /@napi-rs/simple-git-android-arm-eabi@0.1.9:
