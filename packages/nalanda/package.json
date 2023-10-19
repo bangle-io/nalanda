@@ -37,7 +37,7 @@
     "src"
   ],
   "dependencies": {
-    "@nalanda/core": "workspace:*"
+    "@nalanda/core": "0.0.2"
   },
   "devDependencies": {
     "tsx": "^3.13.0",
