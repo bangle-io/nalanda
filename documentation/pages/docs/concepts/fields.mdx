@@ -78,7 +78,7 @@ If you are unfamiliar with Purity in Javascript, React has a good guide on this 
 
 ### Reading Data
 
-You'll require either [Store](/docs/guide/store) or [StoreState](/docs/guide/store) to read data from a Field.
+You'll require either [Store](/docs/concepts/store) or [StoreState](/docs/concepts/store) to read data from a Field.
 
 Nalanda offers access to StoreState, as seen in the [.derive()](/docs/api/key) method when creating a DerivedField:
 
@@ -89,7 +89,7 @@ const doubleCounterField = key.derive((state) => {
 });
 ```
 
-While [`.effect()`](/docs/guide/effects/) exposes Store as the first argument.
+While [`.effect()`](/docs/concepts/effects/) exposes Store as the first argument.
 With store you can get the current state by accessing `store.state`:
 
 ```ts filename="counter-slice.ts"
@@ -102,7 +102,7 @@ key.effect(store => {
 
 ### Updating Data
 
-In Nalanda we use [Transactions](/docs/guide/actions) to update the store state.
+In Nalanda we use [Transactions](/docs/concepts/actions) to update the store state.
 We recommend creating helper functions called Actions that return transactions for updating the store state.
 
 ```ts filename="counter-slice.ts"
