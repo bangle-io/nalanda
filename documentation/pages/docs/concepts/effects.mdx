@@ -66,12 +66,12 @@ doSomething(counter)
 
 ### Individual access
 
-If you donot like destructuring, you can track a single field directly:
+If you donot like destructuring, you can track a single field directly using the [`trackField`](/docs/api/slice/#trackfield) method.
 
 ```ts
 key.effect(store => {
-  const userName = userSlice.track.userName(store);
-  const userAddress = userSlice.track.userAddress(store);
+  const userName = userSlice.trackField(store, 'userName');
+  const userAddress = userSlice.trackField(store, 'userAddress');
 
   console.log(userName, userAddress);
 })

@@ -49,6 +49,19 @@ Returns:
 
 - [`DerivedField`](/docs/api/derived-field)
 
+
+Example:
+
+```ts
+const counterField = key.field(0);
+const positiveNumberField = key.derive((store) => {
+  return counterField.get(state) > 0;
+}, {
+  equal: (a, b) => a === b,
+});
+```
+
+
 ### `.effect()`
 
 Creates a new effect object.
@@ -86,12 +99,14 @@ Creates a new field object.
 Signature:
 
 ```ts
-key.field(initialValue: any)
+key.field(initialValue: any, options)
 ```
 
 Arguments:
 
 - `initialValue` - Initial value of the field.
+- `options`:
+    - `equal`: `(a: T, b: T) => boolean` A comparator function that compares the previous and current value of the field. If the comparator returns true, the field is not updated. Defaults to `Object.is`.
 
 Returns:
 

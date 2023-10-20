@@ -1,15 +1,17 @@
 
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
 ## Custom isEqual camparison
 
 By default `track` uses `Object.is` to compare values. But this might not be useful in all cases.
-Nalanda allows you to pass a custom `isEqual` function to `track.<field>` to decide when a slice field has changed and the effect should be re-run.
+Nalanda allows you to pass a custom `isEqual` function to a field to decide when a slice field has changed and the effect should be re-run.
 
 ```typescript
-const userName = userSlice.track.userName(store, {
-  // prevent re-running of effect if 'userName' differs only in case
-  isEqual: (a, b) => a.toLocaleLowerCase() === b.toLocaleLowerCase(),
-});
+const userNameField = key.field('userName', {
+  equal: (a, b) => a.toLocaleLowerCase() === b.toLocaleLowerCase(),
+})
 ```
+
 
 ## Not tracking changes
 
@@ -33,7 +35,7 @@ effect((store) => {
 
 ## Running Effects only once
 
-To do this, you can avoid using `track` and instead use `get` to read the state. This will not track any changes and the effect will run only once.
+To do this, you can avoid using `track` and instead use [`get`](/docs/api/slice/#get) or [`getField`](/docs/api/slice/#getfield) to read the state. This will not track any changes and the effect will run only once.
 
 ## Conditional tracking
 
