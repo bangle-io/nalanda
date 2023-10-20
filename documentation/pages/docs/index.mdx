@@ -33,26 +33,36 @@ With NSM, fetching data and updating state is straightforward:
 ```ts filename="fetch-user-slice.ts"
 import { cleanup, createKey } from '@nalanda/core';
 
-const key = createKey('fetch-user', [userSlice]);
+// key helps us build rest of the pieces in a type safe manner
+const key = createKey('login-user', []);
 
-key.effect(async function fetchUser(store) {
-  const { userLoggedIn } = userSlice.track(store);
-  if (userLoggedIn) {
+// initialize a state field
+const isLoggedInField = key.field(false);
+
+// effect is a function that runs when the state changes
+key.effect((store) => {
+  // .track ensures effect is only run when `isLoggedIn` changes
+  const isLoggedIn = isLoggedInField.track(store);
+
+  if (!isLoggedIn) {
     const abort = new AbortController();
+    // cleanup is called before the effect is run again
     cleanup(store, () => {
       abort.abort();
     });
 
-    const data = await fetch('https://api.quotable.io/random', { signal }).then(
-      (response) => response.json(),
+    await fetch('https://login-user.com', { signal: abort.signal });
+  
+    store.dispatch(
+      // update the state
+      isLoggedInField.update(true)
     );
-    store.dispatch(userSlice.setData(data));
   }
 });
 ```
 
 1. Encapsulating Effects: Forget the lengthy useEffect hooks. With NSM, effects are high-level, freeing you from tying them to specific UI components. 
-Your state's consumers (referred to as 'Slices') remain oblivious to any background effects, enhancing encapsulation and reusability.
+Your UI components remain oblivious to any background effects, enhancing encapsulation and separation of concerns.
 
 1. Auto tracking: NSM eliminates the hassle of handling hook dependencies. You'll appreciate the balanced mix of magic and explicitness. 
 Only values you track by doing `const { x } = slice.track()` get tracked. 

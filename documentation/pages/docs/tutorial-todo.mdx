@@ -48,7 +48,8 @@ type Todo = {
 
 ### State Fields
 
-Think of [State Fields](/docs/concepts/fields) as the foundational elements of your slice state. They can be kept internal to your slice or shared across your application (more on this later).
+Think of [State Fields](/docs/concepts/fields) as the foundational elements of your slice state. 
+They can be kept internal or shared across your application via a Slice (more on this later).
 
 ```ts filename="todo-slice.ts"
 const filterField = key.field<Filter>("all");
@@ -70,9 +71,10 @@ const filteredTodosField = key.derive((state) => {
 });
 ```
 
-### Definin the Slice
+### Defining the Slice
 
-Now, let's shape our state and make it accessible throughout the application.
+[Slices](/docs/concepts/slice/) are central to managing your app's state. 
+They wrap up your **exposed** fields and actions into a single object.
 
 ```ts filename="todo-slice.ts"
 export const todoSlice = key.slice({
@@ -83,11 +85,20 @@ export const todoSlice = key.slice({
 ```
 
 <Callout type="info">
-
 Take note: we intentionally omitted todosField in `key.slice({ })`.
 By doing so, we ensure it remains confined internally to our slice. 
 Such a strategy minimizes the externally accessible state, promoting a more robust and scalable architecture.
 </Callout>
+
+
+### Whats the difference between a Field and a Slice?
+
+- A [Field](/docs/concepts/fields) is a single piece of state that can be accessed and modified in a file.
+
+- A [Slice](/docs/concepts/slice) is a collection of fields and actions that can be accessed and modified outside of the file.
+
+> You will always be importing a Slice into your React components, never a field!
+
 
 ## 2. The Actions
 

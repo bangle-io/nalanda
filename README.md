@@ -28,7 +28,10 @@ Effortlessly Powerful State Management Simple to Start, Designed to Scale.
 ### Installation
 
 ```sh
-npm i @nalanda/nalanda
+npm i @nalanda/core
+
+# for react
+npm i @nalanda/react
 ```
 
 ## Quick Start
@@ -37,8 +40,8 @@ npm i @nalanda/nalanda
 
 Lets start by creating a simple counter slice.
 
-```tsx
-import { createKey } from '@nalanda/react';
+```tsx filename="counter-slice.ts"
+import { createKey } from '@nalanda/core';
 
 // The key is a local helper used to define various components of your slice.
 const key = createKey('counterSlice', []);
@@ -64,8 +67,9 @@ export const counterSlice = key.slice({
 At the root of your React app, set up a store and encapsulate your app with the StoreProvider component:
 
 ```tsx copy filename="app.tsx"
-import { createStore, StoreProvider } from '@nalanda/react';
-import { counterSlice } from './counterSlice';
+import { StoreProvider } from '@nalanda/react';
+import { createStore } from '@nalanda/core';
+import { counterSlice } from './counter-slice';
 
 // Establish a global store incorporating your slices.
 const store = createStore({
@@ -73,6 +77,7 @@ const store = createStore({
 });
 
 ReactDOM.render(
+  // use the StoreProvider to make the store available to the entire app.
   <StoreProvider store={store}>
     <App />
   </StoreProvider>,
@@ -86,7 +91,7 @@ With the store in place, employ the useSlice hook to access the state and action
 
 ```tsx copy filename="counter.tsx"
 import { useTrack, useStore } from '@nalanda/react';
-import { counterSlice } from './counterSlice';
+import { counterSlice } from './counter-slice';
 
 export function Counter() {
   // useTrack re-render the component whenever `counter` changes
