@@ -1,4 +1,76 @@
+import { Callout, Tabs, Tab } from 'nextra-theme-docs';
+
 # Common errors
+
+## Type errors
+
+
+### Dependency missing
+
+The most common type errors are related to slice dependencies. 
+
+For example if you have a slice that depends on another slice but you forgot to declare it in the [`createKey`](/docs/api/key/#createkey):
+
+```ts
+import { createKey } from '@nalanda/core';
+import { counterSlice } from './counter-slice';
+
+const key = createKey('todo-slice', [])
+//                                 ^^^ forgot to add counterSlice here
+
+
+key.effect(store => {
+  const { counter } = counterSlice.track(store)
+//                                  ^ Typescript will error
+})
+```
+
+This can be fixed by adding the missing slice to the `createKey`:
+
+```ts
+import { createKey } from '@nalanda/core';
+import { counterSlice } from './counter-slice';
+
+const key = createKey('todo-slice', [counterSlice])
+```
+
+### Creating circular reference by using local Slice
+
+You can create a circular reference and hence get weird type errors by using a local slice:
+
+```ts
+
+const key = createKey('counter-slice', []);
+
+const counterField = key.field(0);
+
+const isEvenField = key.derive(state => {
+    // ❌ Don't do this - this will create a circular reference
+    return counterSlice.get(state).counter % 2 === 0;
+})
+
+export const counterSlice = key.slice({
+    counter: counterField,
+    isEvent: isEvenField,
+})
+
+```
+
+This can be fixed by using the `counterField` directly:
+
+```ts
+const isEvenField = key.derive(state => {
+    // ✅ Do this - use the fields directly
+    return counterField.get(state) % 2 === 0;
+})
+```
+
+
+<Callout type="warning">
+
+You should never use a local Slice in locally defined fields or effects.
+
+</Callout>
 
 ## Store Context
 
