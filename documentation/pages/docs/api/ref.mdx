@@ -18,7 +18,7 @@ Creates a new ref with the given value.
 Signature:
 
 ```ts
-ref(value: T): Ref<T>
+ref(value: () => T): Ref<T>
 ```
 
 Returns:
@@ -31,7 +31,7 @@ Example:
 ```ts
 
 import { ref } from '@nalanda/core';
-const getCountRef = ref(0);
+const getCountRef = ref(() => 0);
 
 ```
 
