@@ -12,6 +12,10 @@ export class EffectStore<TSliceName extends string = any> extends BaseStore {
     return this._rootStore.state;
   }
 
+  get config(): Record<string, any> {
+    return this._rootStore.config;
+  }
+
   dispatch(txn: Transaction<any, any>) {
     // TODO consider freeze, where we prevent dispatching txns post effect cleanup
     // if user wants that behaviour

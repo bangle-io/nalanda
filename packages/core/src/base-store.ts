@@ -17,4 +17,6 @@ export abstract class BaseStore {
   abstract _rootStore: Store<any>;
 
   abstract dispatch(txn: Transaction<any, any> | Operation): void;
+
+  abstract readonly config: Record<string, any>;
 }
