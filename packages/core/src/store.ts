@@ -6,7 +6,7 @@ import type { Operation } from './effect/operation';
 import type { Slice } from './slice/slice';
 import type { SliceId } from './types';
 import { Transaction } from './transaction';
-import { genEffectId, genStoreId } from './helpers/id-generation';
+import { genStoreId } from './helpers/id-generation';
 import { onAbortOnce } from './effect/on-abort';
 import { calcReverseDependencies } from './helpers/dependency-helpers';
 import type {
@@ -21,7 +21,16 @@ export interface StoreOptions<TSliceName extends string> {
   name?: string;
   slices: Slice<any, TSliceName, any>[];
   debug?: DebugLogger;
+  /**
+   * If true, effects will be started automatically when the store is created.
+   * Defaults to true.
+   */
   autoStartEffects?: boolean | undefined;
+  /**
+   * config can be used to store any information about the store.
+   * This can come handy to pass config information to effects and slices
+   */
+  config?: Record<string, any>;
   overrides?: {
     stateOverride?: Record<SliceId, Record<string, unknown>>;
     /**
@@ -47,10 +56,15 @@ type DispatchTransaction<TSliceName extends string> = (
   tx: Transaction<any, any>,
 ) => void;
 
+const defaultOptions: StoreOptions<any> = {
+  autoStartEffects: true,
+  slices: [],
+};
+
 export function createStore<TSliceName extends string>(
   config: StoreOptions<TSliceName>,
 ): Store<TSliceName> {
-  return new Store<TSliceName>(config);
+  return new Store<TSliceName>({ ...defaultOptions, ...config });
 }
 
 type StoreComputed = {
@@ -102,6 +116,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
   public get destroySignal() {
     return this.destroyController.signal;
   }
+  public readonly config: Record<string, any>;
 
   // @internal
   readonly _computed: StoreComputed;
@@ -117,6 +132,7 @@ export class Store<TSliceName extends string = any> extends BaseStore {
   constructor(public readonly options: StoreOptions<TSliceName>) {
     super();
     this.uid = genStoreId.generate(options.name || 'unnamed-store');
+    this.config = options.config || {};
 
     this._state = StoreState.create({
       slices: options.slices,

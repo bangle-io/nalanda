@@ -14,6 +14,11 @@ export class OperationStore extends BaseStore {
   private readonly _cleanupCallbacks: Set<EffectCleanupCallback> = new Set();
 
   _rootStore: Store<any>;
+
+  get config(): Record<string, any> {
+    return this._rootStore.config;
+  }
+
   constructor(
     private rootStore: Store<any>,
     public readonly name: string,
