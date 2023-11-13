@@ -21,6 +21,10 @@ export interface StoreOptions<TSliceName extends string> {
   name?: string;
   slices: Slice<any, TSliceName, any>[];
   debug?: DebugLogger;
+  /**
+   * If true, effects will be started automatically when the store is created.
+   * Defaults to true.
+   */
   autoStartEffects?: boolean | undefined;
   /**
    * config can be used to store any information about the store.
