@@ -1,6 +1,6 @@
 import { SliceId } from './types';
 
-type LogTypes = TransactionLog | OperationLog | EffectLog;
+export type LogTypes = TransactionLog | OperationLog | EffectLog;
 
 export type DebugLogger = (log: LogTypes) => void;
 

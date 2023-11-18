@@ -20,3 +20,4 @@ export type {
   ExposedSliceFieldNames as _ExposedSliceFieldNames,
 } from './slice/slice';
 export type { AnyExternal as _AnyExternal } from './slice/key';
+export type * from './logger';
