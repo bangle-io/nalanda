@@ -27,7 +27,7 @@ export abstract class BaseField<
   }
 
   abstract get<TState extends StoreState<any>>(
-    storeState: IfSubsetOfState<TName | TDep, TState>,
+    storeState: IfSubsetOfState<TName, TState>,
   ): TVal;
 
   isEqual(a: TVal, b: TVal): boolean {
@@ -73,7 +73,7 @@ export class DerivedField<
   private prevValCache = new WeakMap<StoreState<any>['_ref'], TVal>();
 
   get<TState extends StoreState<any>>(
-    storeState: IfSubsetOfState<TName | TDep, TState>,
+    storeState: IfSubsetOfState<TName, TState>,
   ): TVal {
     if (!this.id) {
       throwValidationError(
@@ -130,7 +130,7 @@ export class StateField<
   }
 
   get<TState extends StoreState<any>>(
-    storeState: IfSubsetOfState<TName | TDep, TState>,
+    storeState: IfSubsetOfState<TName, TState>,
   ): TVal {
     if (!this.id) {
       throwValidationError(

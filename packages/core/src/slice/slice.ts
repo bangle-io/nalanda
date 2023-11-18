@@ -104,7 +104,7 @@ export class Slice<
   }
 
   get<TState extends StoreState<any>>(
-    storeState: IfSubsetOfState<TName | TDep, TState>,
+    storeState: IfSubsetOfState<TName, TState>,
   ): Simplify<InferSliceFieldState<TExternal>> {
     const existing = this.getCache.get(storeState);
 
@@ -171,14 +171,14 @@ export class Slice<
     T extends keyof InferSliceFieldState<TExternal>,
     TState extends StoreState<any>,
   >(
-    storeState: IfSubsetOfState<TName | TDep, TState>,
+    storeState: IfSubsetOfState<TName, TState>,
     fieldName: T,
   ): InferSliceFieldState<TExternal>[T] {
     return this._getFieldByName(fieldName as string).get(storeState) as any;
   }
 
   track<TEStore extends EffectStore>(
-    store: IfSubsetEffectStore<TName | TDep, TEStore>,
+    store: IfSubsetEffectStore<TName, TEStore>,
   ): Simplify<InferSliceFieldState<TExternal>> {
     return new Proxy(this.get(store.state), {
       get: (target, prop: string, receiver) => {
